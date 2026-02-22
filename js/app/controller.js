@@ -493,6 +493,41 @@
                         theme = findThemeById(themeId);
                     }
 
+                    // Phase 4: harden theme safety at apply-time as well (config can be edited outside the UI).
+                    var blocked = false;
+                    var blockedWhy = '';
+                    if (theme && theme.cssHref) {
+                        if (!isSafeLocalCssPath(theme.cssHref)) {
+                            blocked = true;
+                            blockedWhy = 'Theme CSS path must be a relative local path.';
+                        }
+                    }
+                    if (!blocked && theme && theme.cssText) {
+                        if (!isCssLocalOnly(theme.cssText)) {
+                            blocked = true;
+                            blockedWhy = 'Theme CSS must be local-only (no http/https, no protocol-relative //, no @import) and must not use scriptable CSS (expression/behaviour or javascript: URLs).';
+                        }
+                    }
+
+                    if (blocked) {
+                        try {
+                            reportError('theme.blocked', blockedWhy, 'Theme blocked', blockedWhy);
+                        } catch (e0) {
+                            // ignore
+                        }
+                        themeId = 'kfo-light';
+                        try {
+                            if ($scope.config && $scope.config.THEME) {
+                                $scope.config.THEME.activeThemeId = themeId;
+                                saveConfig();
+                            }
+                        } catch (e1) {
+                            // ignore
+                        }
+                        theme = findThemeById(themeId);
+                        showUserError('Theme blocked', blockedWhy);
+                    }
+
                     // Apply root classes (theme + UI)
                     $scope.applyRootClasses();
 
@@ -500,7 +535,8 @@
                     var themeLink = document.getElementById('kfo-theme-link');
                     if (themeLink) {
                         if (theme && theme.cssHref) {
-                            themeLink.href = theme.cssHref;
+                            // Defensive: re-check before applying
+                            themeLink.href = isSafeLocalCssPath(theme.cssHref) ? theme.cssHref : 'themes/kfo-light/theme.css';
                         } else {
                             themeLink.href = 'themes/kfo-light/theme.css';
                         }
@@ -509,7 +545,11 @@
                     // Apply imported theme css (optional)
                     var styleEl = ensureThemeStyleElement();
                     if (theme && theme.cssText) {
-                        styleEl.styleSheet ? (styleEl.styleSheet.cssText = theme.cssText) : (styleEl.innerHTML = theme.cssText);
+                        if (isCssLocalOnly(theme.cssText)) {
+                            styleEl.styleSheet ? (styleEl.styleSheet.cssText = theme.cssText) : (styleEl.innerHTML = theme.cssText);
+                        } else {
+                            styleEl.styleSheet ? (styleEl.styleSheet.cssText = '') : (styleEl.innerHTML = '');
+                        }
                     } else {
                         styleEl.styleSheet ? (styleEl.styleSheet.cssText = '') : (styleEl.innerHTML = '');
                     }
@@ -1760,7 +1800,7 @@
                     reader.onload = function (evt) {
                         var cssText = String(evt.target.result || '');
                         if (!isCssLocalOnly(cssText)) {
-                            showUserError('Theme import rejected', 'Themes must be local-only (no http/https or @import) and must not use IE scriptable CSS (expression/behaviour).');
+                            showUserError('Theme import rejected', 'Themes must be local-only (no http/https, no protocol-relative //, no @import) and must not use scriptable CSS (expression/behaviour or javascript: URLs).');
                             return;
                         }
                         $scope.$apply(function () {

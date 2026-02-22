@@ -4,6 +4,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 3.4.0
+
+- Harden theme safety checks (block protocol-relative URLs and scriptable URL schemes)
+- Validate theme safety at apply-time to defend against edited/corrupted config
+- Strengthen local-only audit to catch external URLs in CSS and legacy HTTP clients
+
 ## 3.3.0
 
 - Add export/import for settings (config + view state) as local JSON

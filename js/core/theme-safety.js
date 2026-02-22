@@ -7,17 +7,34 @@
         root.kfoThemeSafety = factory();
     }
 })(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : this), function () {
+    function stripCssComments(s) {
+        return String(s || '').replace(/\/\*[\s\S]*?\*\//g, '');
+    }
+
     function isCssLocalOnly(cssText) {
         // Best-effort guardrail: prevent accidental external loads in custom themes.
         // Users can still theme fully locally.
         try {
-            var s = String(cssText || '').toLowerCase();
-            if (s.indexOf('http://') !== -1) return false;
-            if (s.indexOf('https://') !== -1) return false;
-            if (s.indexOf('@import') !== -1) return false;
+            var s = stripCssComments(cssText).toLowerCase();
+
+            // External loads
+            if (/(^|[^a-z0-9])https?:\/\//.test(s)) return false;
+            if (/@import\b/.test(s)) return false;
+
+            // Protocol-relative remote references (e.g. url(//example.com/x.png))
+            if (/url\s*\(\s*["']?\s*\/\//.test(s)) return false;
+            // IE filter/legacy patterns that use src='//...'
+            if (/\bsrc\s*=\s*["']\s*\/\//.test(s)) return false;
+
+            // Scriptable URL schemes
+            if (/url\s*\(\s*["']?\s*javascript:/.test(s)) return false;
+            if (/url\s*\(\s*["']?\s*vbscript:/.test(s)) return false;
+            if (/\bsrc\s*=\s*["']\s*javascript:/.test(s)) return false;
+            if (/\bsrc\s*=\s*["']\s*vbscript:/.test(s)) return false;
+
             // IE-specific scriptable CSS features
-            if (s.indexOf('expression(') !== -1) return false;
-            if (s.indexOf('behavior:') !== -1) return false;
+            if (/\bexpression\s*\(/.test(s)) return false;
+            if (/\bbehavior\s*:/.test(s)) return false;
             return true;
         } catch (e) {
             return false;

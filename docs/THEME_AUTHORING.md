@@ -58,7 +58,7 @@ The app sanitises ids to lowercase `a-z`, `0-9`, and `-`. Use simple ids like `s
 ## Local-only expectations
 
 > [!NOTE]
-> Imported themes are rejected if they contain `http://`, `https://`, `@import`, or IE scriptable CSS (`expression(`, `behavior:`). Folder themes are not automatically scanned, but should follow the same rules.
+> Imported themes are rejected if they contain `http://`, `https://`, protocol-relative `//`, `@import`, `javascript:`/`vbscript:` URLs, or IE scriptable CSS (`expression(`, `behavior:`). Folder theme files are not automatically scanned, but should follow the same rules.
 
 Practical guidelines:
 

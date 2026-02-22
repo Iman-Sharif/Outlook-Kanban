@@ -28,6 +28,6 @@ Settings -> Appearance -> Import theme.
 
 Security guardrails:
 
-- Theme imports are rejected if they contain `http://`, `https://`, `@import`, or IE scriptable CSS (`expression(`, `behavior:`)
+- Theme imports are rejected if they contain `http://`, `https://`, protocol-relative `//`, `@import`, `javascript:`/`vbscript:` URLs, or IE scriptable CSS (`expression(`, `behavior:`)
 
 This keeps the app local-only.

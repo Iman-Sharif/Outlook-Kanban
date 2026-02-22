@@ -147,14 +147,26 @@ function auditCssFiles(relPaths, errors) {
     const raw = readText(relPath);
     const s = stripCssComments(raw);
 
+    // External loads (conservative)
+    if (/\bhttps?:\/\//i.test(s)) {
+      errors.push(relPath + ': contains http/https in CSS (disallowed)');
+    }
+
     if (/@import\b/i.test(s)) {
       errors.push(relPath + ': contains @import (disallowed)');
     }
     if (/url\s*\(\s*["']?\s*(https?:)?\/\//i.test(s)) {
       errors.push(relPath + ': contains remote/protocol-relative url(...)');
     }
+    // IE filter/legacy patterns that use src='//...'
+    if (/\bsrc\s*=\s*["']\s*\/\//i.test(s)) {
+      errors.push(relPath + ': contains protocol-relative src= (disallowed)');
+    }
     if (/url\s*\(\s*["']?\s*javascript:/i.test(s)) {
       errors.push(relPath + ': contains javascript: url(...)');
+    }
+    if (/\bsrc\s*=\s*["']\s*javascript:/i.test(s)) {
+      errors.push(relPath + ': contains javascript: src= (disallowed)');
     }
     if (/expression\s*\(/i.test(s)) {
       errors.push(relPath + ': contains IE scriptable CSS expression(...)');
@@ -181,6 +193,11 @@ function auditJsFiles(relPaths, errors) {
     }
     if (/\b\$\.ajax\b|\bjQuery\.ajax\b/.test(s)) {
       errors.push(relPath + ': references $.ajax/jQuery.ajax (disallowed)');
+    }
+
+    // ActiveX HTTP clients (IE)
+    if (/\bActiveXObject\s*\(\s*["']\s*(msxml2\.(?:server)?xmlhttp(?:\.[0-9.]+)?|microsoft\.xmlhttp|winhttp\.winhttprequest(?:\.[0-9.]+)?)\b/i.test(s)) {
+      errors.push(relPath + ': references ActiveX HTTP client (disallowed)');
     }
   }
 }
