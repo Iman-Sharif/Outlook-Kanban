@@ -194,6 +194,17 @@
                     <div class="kfo-grid">
                         <div class="kfo-gridCol">
                             <div class="kfo-card">
+                                <div class="kfo-cardTitle">Save</div>
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Actions</div>
+                                    <div class="kfo-rowControl">
+                                        <button class="kfo-btn" type="button" ng-click="saveAndReturn()">Save settings</button>
+                                        <button class="kfo-btn" type="button" ng-click="switchMode('board')">Back to board</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="kfo-card">
                                 <div class="kfo-cardTitle">Projects</div>
 
                                 <div class="kfo-row">
@@ -234,6 +245,7 @@
                                             <div class="kfo-listItemTitle">{{p.name}}</div>
                                             <div class="kfo-listItemMeta">
                                                 <span class="kfo-pill" ng-if="p.entryID == ui.projectEntryID">Selected</span>
+                                                <span class="kfo-pill" ng-if="p.isDefaultTasks">Default Tasks</span>
                                                 <span class="kfo-pill" ng-if="p.isHidden">Hidden</span>
                                                 <span class="kfo-pill" ng-if="p.isLinked">Linked</span>
                                             </div>
@@ -241,7 +253,7 @@
                                         <div class="kfo-listItemActions">
                                             <button class="kfo-btn" type="button" ng-click="selectProject(p.entryID)" ng-disabled="p.entryID == ui.projectEntryID">Select</button>
                                             <button class="kfo-btn" type="button" ng-click="openRenameProject(p)" ng-disabled="p.isDefaultTasks">Rename</button>
-                                            <button class="kfo-btn" type="button" ng-click="toggleProjectHidden(p)">{{p.isHidden ? 'Show' : 'Hide'}}</button>
+                                            <button class="kfo-btn" type="button" ng-click="toggleProjectHidden(p)" ng-disabled="p.isDefaultTasks">{{p.isHidden ? 'Show' : 'Hide'}}</button>
                                             <button class="kfo-btn" type="button" ng-if="p.isLinked" ng-click="unlinkProject(p.entryID)">Unlink</button>
                                         </div>
                                     </div>
@@ -528,16 +540,6 @@
                                 </div>
                             </div>
 
-                            <div class="kfo-card">
-                                <div class="kfo-cardTitle">Save</div>
-                                <div class="kfo-row">
-                                    <div class="kfo-rowLabel">Actions</div>
-                                    <div class="kfo-rowControl">
-                                        <button class="kfo-btn" type="button" ng-click="saveAndReturn()">Save settings</button>
-                                        <button class="kfo-btn" type="button" ng-click="switchMode('board')">Back to board</button>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </section>
@@ -548,7 +550,7 @@
                         <p><strong>Local-only</strong>: this app does not require or use network access.</p>
                         <p><strong>Projects</strong> are Outlook task folders. <strong>Lanes</strong> are stored on each task using a custom property.</p>
                         <p class="kfo-small">Maintainer: Iman Sharif. Credits: see ACKNOWLEDGEMENTS in the repository.</p>
-                        <p class="kfo-small">Disclaimer: this software is provided "AS IS" with no warranty.</p>
+                        <p class="kfo-small">Disclaimer: provided as-is (no warranty). See <code>DISCLAIMER.md</code>.</p>
                         <div class="kfo-divider"></div>
                         <button class="kfo-btn" type="button" ng-click="switchMode('board')">Back to board</button>
                     </div>
@@ -583,18 +585,22 @@
                         </div>
 
                         <div ng-if="ui.setupStep == 2">
-                            <p>Projects are Outlook task folders. We recommend using a dedicated root folder.</p>
+                            <p>Projects are Outlook task folders (optional). You can start with your default Tasks folder and create projects later.</p>
                             <div class="kfo-row">
                                 <div class="kfo-rowLabel">Root folder</div>
                                 <div class="kfo-rowControl">
                                     <input class="kfo-input" type="text" ng-model="config.PROJECTS.rootFolderName" />
-                                    <div class="kfo-small">We will create it if it does not exist.</div>
+                                    <div class="kfo-small">Used when creating project folders (we will create it if it does not exist).</div>
                                 </div>
                             </div>
                             <div class="kfo-row">
                                 <div class="kfo-rowLabel">Default project</div>
                                 <div class="kfo-rowControl">
                                     <div class="kfo-row" style="margin-bottom:8px;">
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="radio" ng-model="ui.setupProjectMode" value="default" />
+                                            Use default Tasks folder
+                                        </label>
                                         <label class="kfo-pill" style="margin:0;">
                                             <input type="radio" ng-model="ui.setupProjectMode" value="create" />
                                             Create a new folder
@@ -603,6 +609,10 @@
                                             <input type="radio" ng-model="ui.setupProjectMode" value="link" />
                                             Use an existing folder
                                         </label>
+                                    </div>
+
+                                    <div ng-if="ui.setupProjectMode == 'default'">
+                                        <div class="kfo-small">No folders will be created. Tasks will be created in your default Outlook Tasks folder.</div>
                                     </div>
 
                                     <div ng-if="ui.setupProjectMode == 'create'">
@@ -636,7 +646,6 @@
                         <div ng-if="ui.setupStep == 4">
                             <p>All set. Your data stays in Outlook. No external services are used.</p>
                             <p class="kfo-small">Next: create a few tasks and drag them between lanes.</p>
-                            <p class="kfo-small">Disclaimer: this software is provided "AS IS" with no warranty.</p>
                         </div>
                     </div>
                     <div class="kfo-modalFooter">

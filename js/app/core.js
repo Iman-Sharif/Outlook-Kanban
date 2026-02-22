@@ -21,8 +21,8 @@
     var DEFAULT_ROOT_FOLDER_NAME = 'Kanban Projects';
 
     var BUILTIN_THEMES = [
-        { id: 'kfo-light', name: 'Professional Light', cssHref: 'themes/kfo-light/theme.css', kind: 'builtin' },
-        { id: 'kfo-dark', name: 'Professional Dark', cssHref: 'themes/kfo-dark/theme.css', kind: 'builtin' }
+        { id: 'kfo-light', name: 'Light mode', cssHref: 'themes/kfo-light/theme.css', kind: 'builtin' },
+        { id: 'kfo-dark', name: 'Dark mode', cssHref: 'themes/kfo-dark/theme.css', kind: 'builtin' }
     ];
 
     function nowStamp() {

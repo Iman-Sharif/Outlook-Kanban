@@ -6,8 +6,8 @@ Themes are local CSS.
 
 ## Built-in themes
 
-- Professional Light
-- Professional Dark
+- Light mode
+- Dark mode
 
 ## Folder themes (recommended for power users)
 

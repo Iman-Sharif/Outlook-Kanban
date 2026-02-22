@@ -511,15 +511,17 @@
 }
 
 .kfo-grid {
+  /* Single-column layout (Outlook panes are often narrow) */
   display: flex;
-  flex-wrap: wrap;
-  margin: -6px;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  margin: 0;
 }
 
 .kfo-gridCol {
-  flex: 1 1 340px;
-  min-width: 300px;
-  padding: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
 }
 
 .kfo-row {
@@ -545,6 +547,15 @@
 
 .kfo-rowControl {
   flex: 1 1 auto;
+}
+
+/* Allow long settings rows to wrap inside the control area */
+.kfo-rowControl .kfo-row {
+  flex-wrap: wrap;
+}
+
+.kfo-rowControl .kfo-row > * {
+  margin-bottom: 6px;
 }
 
 .kfo-small {

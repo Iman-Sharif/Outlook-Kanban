@@ -3,14 +3,14 @@
   "themes": [
     {
       "id": "kfo-light",
-      "name": "Professional Light",
+      "name": "Light mode",
       "description": "Clean, high-contrast light theme.",
       "cssHref": "themes/kfo-light/theme.css",
       "kind": "builtin"
     },
     {
       "id": "kfo-dark",
-      "name": "Professional Dark",
+      "name": "Dark mode",
       "description": "Deep, low-glare dark theme.",
       "cssHref": "themes/kfo-dark/theme.css",
       "kind": "builtin"

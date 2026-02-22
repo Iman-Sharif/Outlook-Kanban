@@ -9,9 +9,8 @@ echo Kanban for Outlook - Installer
 echo Maintained by Iman Sharif
 echo ============================================================
 echo.
-echo DISCLAIMER:
-echo This software is provided "AS IS", without warranty of any kind,
-echo express or implied. Use at your own risk.
+echo Disclaimer: provided "AS IS" (no warranty).
+echo See DISCLAIMER.md for details.
 echo.
 echo This installer will:
 echo - Copy files to a local folder under your user profile

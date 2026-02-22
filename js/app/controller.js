@@ -76,7 +76,7 @@
                 showSetupWizard: false,
                 setupStep: 1,
                 setupDefaultProjectName: 'General',
-                setupProjectMode: 'create',
+                setupProjectMode: 'default',
                 setupExistingProjectEntryID: '',
                 setupLaneTemplate: 'personal',
                 showCreateProject: false,
@@ -750,20 +750,6 @@
             function loadAvailableProjectFolders() {
                 try {
                     var list = [];
-                    // Include default Tasks folder
-                    try {
-                        var tasksFolder = outlook && outlook.getTaskFolderExisting ? outlook.getTaskFolderExisting($scope.filter.mailbox, '') : null;
-                        if (tasksFolder) {
-                            list.push({
-                                name: tasksFolder.Name + ' (Tasks)',
-                                entryID: tasksFolder.EntryID,
-                                storeID: tasksFolder.StoreID
-                            });
-                        }
-                    } catch (e1) {
-                        // ignore
-                    }
-
                     // Include subfolders under Tasks
                     try {
                         var subs = outlook && outlook.listTaskSubFolders ? outlook.listTaskSubFolders($scope.filter.mailbox, '') : [];
@@ -805,19 +791,38 @@
                 }
             }
 
+            function getDefaultTasksFolderExisting() {
+                try {
+                    return outlook && outlook.getTaskFolderExisting ? outlook.getTaskFolderExisting($scope.filter.mailbox, '') : null;
+                } catch (e) {
+                    return null;
+                }
+            }
+
             function loadProjects() {
                 try {
                     var projects = [];
                     var hidden = ($scope.config.PROJECTS.hiddenProjectEntryIDs || []);
 
                     var defaultTasksEntryID = '';
+                    var defaultTasksStoreID = '';
                     try {
-                        var tf = outlook && outlook.getTaskFolderExisting ? outlook.getTaskFolderExisting($scope.filter.mailbox, '') : null;
+                        var tf = getDefaultTasksFolderExisting();
                         if (tf) {
                             defaultTasksEntryID = tf.EntryID;
+                            try { defaultTasksStoreID = tf.StoreID; } catch (e0b) { defaultTasksStoreID = ''; }
+
+                            // Always include the mailbox default Tasks folder so projects are optional.
+                            projects.push({
+                                name: (function () { try { return String(tf.Name || 'Tasks'); } catch (e0c) { return 'Tasks'; } })(),
+                                entryID: defaultTasksEntryID,
+                                storeID: defaultTasksStoreID,
+                                isLinked: false
+                            });
                         }
                     } catch (e0) {
                         defaultTasksEntryID = '';
+                        defaultTasksStoreID = '';
                     }
 
                     // Root subfolders
@@ -869,12 +874,14 @@
 
                     // Mark hidden/default
                     uniq.forEach(function (p) {
-                        p.isHidden = (hidden.indexOf(p.entryID) !== -1);
                         p.isDefaultTasks = (defaultTasksEntryID && p.entryID === defaultTasksEntryID);
+                        p.isHidden = (!p.isDefaultTasks && (hidden.indexOf(p.entryID) !== -1));
                     });
 
                     // Sort by name
                     uniq.sort(function (a, b) {
+                        if (a.isDefaultTasks && !b.isDefaultTasks) return -1;
+                        if (!a.isDefaultTasks && b.isDefaultTasks) return 1;
                         var an = (a.name || '').toLowerCase();
                         var bn = (b.name || '').toLowerCase();
                         if (an < bn) return -1;
@@ -894,8 +901,18 @@
                         }
                     }
                     if (!defaultOk) {
-                        if ($scope.projects.length > 0) {
-                            $scope.config.PROJECTS.defaultProjectEntryID = $scope.projects[0].entryID;
+                        var fallback = '';
+                        for (var j = 0; j < $scope.projects.length; j++) {
+                            if ($scope.projects[j].isDefaultTasks) {
+                                fallback = $scope.projects[j].entryID;
+                                break;
+                            }
+                        }
+                        if (!fallback && $scope.projects.length > 0) {
+                            fallback = $scope.projects[0].entryID;
+                        }
+                        if (fallback) {
+                            $scope.config.PROJECTS.defaultProjectEntryID = fallback;
                             saveConfig();
                         }
                     }
@@ -942,6 +959,10 @@
                 try {
                     var p = getSelectedProject();
                     if (!p) return null;
+                    if (p.isDefaultTasks) {
+                        var tf = getDefaultTasksFolderExisting();
+                        if (tf) return tf;
+                    }
                     if (p.entryID) {
                         var f = outlook && outlook.getFolderFromIDs ? outlook.getFolderFromIDs(p.entryID, p.storeID) : null;
                         if (f) return f;
@@ -1550,7 +1571,19 @@
 
                     var folder = getSelectedProjectFolder();
                     if (!folder) {
-                        showUserError('No project selected', 'Create or select a project first (Projects are Outlook Tasks folders).');
+                        // Fallback: allow using the default Tasks folder even when no project is selected.
+                        folder = getDefaultTasksFolderExisting();
+                        try {
+                            if (folder && folder.EntryID) {
+                                $scope.ui.projectEntryID = folder.EntryID;
+                            }
+                        } catch (e0) {
+                            // ignore
+                        }
+                    }
+
+                    if (!folder) {
+                        showUserError('Tasks folder not available', 'Could not access your Outlook Tasks folder.');
                         return;
                     }
 
@@ -1610,7 +1643,18 @@
                 try {
                     var folder = getSelectedProjectFolder();
                     if (!folder) {
-                        showUserError('No project selected', 'Create or select a project first (Projects are Outlook Tasks folders).');
+                        folder = getDefaultTasksFolderExisting();
+                        try {
+                            if (folder && folder.EntryID) {
+                                $scope.ui.projectEntryID = folder.EntryID;
+                            }
+                        } catch (e0) {
+                            // ignore
+                        }
+                    }
+
+                    if (!folder) {
+                        showUserError('Tasks folder not available', 'Could not access your Outlook Tasks folder.');
                         return;
                     }
                     var taskitem = folder.Items.Add();
@@ -1910,6 +1954,11 @@
             $scope.toggleProjectHidden = function (p) {
                 try {
                     if (!p || !p.entryID) return;
+
+                    if (p.isDefaultTasks) {
+                        showUserError('Cannot hide', 'The default Outlook Tasks folder is always available.');
+                        return;
+                    }
                     var hiding = !p.isHidden;
 
                     // Prevent hiding the last visible project
@@ -2544,19 +2593,22 @@
             $scope.nextSetupStep = function () {
                 try {
                     if ($scope.ui.setupStep === 2) {
-                        // Ensure root + default project exist
+                        // Setup default project (projects are optional)
                         var rootName = String($scope.config.PROJECTS.rootFolderName || DEFAULT_ROOT_FOLDER_NAME).trim();
                         if (!rootName) rootName = DEFAULT_ROOT_FOLDER_NAME;
                         $scope.config.PROJECTS.rootFolderName = rootName;
 
-                        // Always create root (recommended; used for new projects)
-                        var root = outlook && outlook.getTaskFolder ? outlook.getTaskFolder($scope.filter.mailbox, rootName) : null;
-                        if (!root) {
-                            showUserError('Setup', 'Could not access or create the root Tasks folder in Outlook.');
-                            return;
-                        }
-
-                        if ($scope.ui.setupProjectMode === 'link') {
+                        if ($scope.ui.setupProjectMode === 'default') {
+                            var tf = getDefaultTasksFolderExisting();
+                            if (!tf) {
+                                showUserError('Setup', 'Could not access your default Outlook Tasks folder.');
+                                return;
+                            }
+                            loadProjects();
+                            $scope.config.PROJECTS.defaultProjectEntryID = tf.EntryID;
+                            $scope.ui.projectEntryID = tf.EntryID;
+                            saveConfig();
+                        } else if ($scope.ui.setupProjectMode === 'link') {
                             var lf = linkExistingProject($scope.ui.setupExistingProjectEntryID);
                             if (!lf) {
                                 showUserError('Setup', 'Please select an existing folder to link.');
@@ -2566,6 +2618,12 @@
                             $scope.ui.projectEntryID = lf.entryID;
                             saveConfig();
                         } else {
+                            // Create a new project folder under the projects root
+                            var root = outlook && outlook.getTaskFolder ? outlook.getTaskFolder($scope.filter.mailbox, rootName) : null;
+                            if (!root) {
+                                showUserError('Setup', 'Could not access or create the projects root folder in Outlook.');
+                                return;
+                            }
                             var projName = String($scope.ui.setupDefaultProjectName || 'General').trim();
                             if (!projName) projName = 'General';
                             var pf = outlook && outlook.getOrCreateFolder ? outlook.getOrCreateFolder($scope.filter.mailbox, projName, root.Folders, OlDefaultFolders.olFolderTasks) : null;
@@ -3357,11 +3415,11 @@
                 loadProjects();
                 ensureSelectedProject();
 
-                // First run: if not set up or no projects exist
-                if (!$scope.config.SETUP.completed || $scope.projects.length === 0) {
+                // First run: show the setup wizard
+                if (!$scope.config.SETUP.completed) {
                     $scope.ui.showSetupWizard = true;
                     $scope.ui.setupStep = 1;
-                    $scope.ui.setupProjectMode = 'create';
+                    $scope.ui.setupProjectMode = 'default';
                     $scope.applyLaneTemplate($scope.ui.setupLaneTemplate);
                     saveConfig();
                 }

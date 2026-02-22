@@ -9,8 +9,8 @@ echo Kanban for Outlook - Uninstall
 echo Maintained by Iman Sharif
 echo ============================================================
 echo.
-echo DISCLAIMER:
-echo This software is provided "AS IS", without warranty of any kind.
+echo Disclaimer: provided "AS IS" (no warranty).
+echo See DISCLAIMER.md for details.
 echo.
 
 where choice >nul 2>&1

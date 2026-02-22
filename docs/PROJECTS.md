@@ -4,6 +4,8 @@
 
 Projects are Outlook Tasks folders.
 
+You can use the board without creating any projects: the default Outlook Tasks folder is always available.
+
 > [!NOTE]
 > Projects are purely a UI grouping. Your tasks remain in Outlook folders; nothing is uploaded anywhere.
 
