@@ -3,6 +3,23 @@
 var outlookApp;
 var outlookNS;
 
+// Best-effort host diagnostics (used by the app for messaging/diagnostics)
+var kfoBrowserSupport = { supported: false, method: 'none', error: '' };
+
+function kfoReportError(context, error) {
+    try {
+        if (typeof window !== 'undefined' && window.kfoReportError) {
+            window.kfoReportError(context, error);
+        }
+    } catch (e) {
+        // ignore
+    }
+}
+
+function getBrowserSupportDetails() {
+    return kfoBrowserSupport;
+}
+
 var SENSITIVITY = { olNormal: 0, olPrivate: 2 };
 var OlDefaultFolders = { olFolderTasks: 13 };
 var OlItemType = { olTaskItem: 3 };
@@ -13,22 +30,39 @@ var OlUserPropertyType = {
 };
 
 function checkBrowser() {
-    var isBrowserSupported
+    var isBrowserSupported;
+    kfoBrowserSupport = { supported: false, method: 'none', error: '' };
+
+    var errors = [];
+
+    // Preferred: Outlook Folder Home Page host
     if (window.external !== undefined && window.external.OutlookApplication !== undefined) {
-        isBrowserSupported = true;
-        outlookApp = window.external.OutlookApplication;
-        outlookNS = outlookApp.GetNameSpace("MAPI");
-    } else {
         try {
-            isBrowserSupported = true;
-            outlookApp = new ActiveXObject("Outlook.Application");
+            outlookApp = window.external.OutlookApplication;
             outlookNS = outlookApp.GetNameSpace("MAPI");
-        }
-        catch (e) {
-            isBrowserSupported = false;
+            isBrowserSupported = true;
+            kfoBrowserSupport = { supported: true, method: 'external', error: '' };
+            return true;
+        } catch (e0) {
+            errors.push('external: ' + String(e0));
         }
     }
-    return isBrowserSupported;
+
+    // Fallback: ActiveX in IE (not expected for Folder Home Pages, but kept for compatibility)
+    try {
+        outlookApp = new ActiveXObject("Outlook.Application");
+        outlookNS = outlookApp.GetNameSpace("MAPI");
+        isBrowserSupported = true;
+        kfoBrowserSupport = { supported: true, method: 'activex', error: '' };
+        return true;
+    }
+    catch (e) {
+        errors.push('activex: ' + String(e));
+    }
+
+    isBrowserSupported = false;
+    kfoBrowserSupport = { supported: false, method: 'none', error: errors.join(' | ') };
+    return false;
 }
 
 function getOutlookCategories() {
@@ -132,7 +166,8 @@ function getFolderIndex(folders, folder) {
         }
         return -1;
     } catch (error) {
-        alert('getFolderIndex error:' + error)
+        kfoReportError('getFolderIndex', error);
+        return -1;
     }
 }
 
@@ -145,7 +180,8 @@ function getTaskFolder(mailbox, folderName) {
         var returnFolder = getOrCreateFolder(mailbox, folderName, folder.Folders, OlDefaultFolders.olFolderTasks);
         return returnFolder;
     } catch (error) {
-        alert('getTaskFolder error:' + error)
+        kfoReportError('getTaskFolder', error);
+        return null;
     }
 }
 
@@ -161,7 +197,7 @@ function getTaskFolderExisting(mailbox, folderName) {
         }
         return folder.Folders(folderName);
     } catch (error) {
-        alert('getTaskFolderExisting error:' + error);
+        kfoReportError('getTaskFolderExisting', error);
         return null;
     }
 }
@@ -200,7 +236,7 @@ function listTaskSubFolders(mailbox, parentFolderName) {
         });
         return result;
     } catch (error) {
-        alert('listTaskSubFolders error:' + error);
+        kfoReportError('listTaskSubFolders', error);
         return [];
     }
 }
@@ -232,7 +268,8 @@ function getOrCreateFolder(mailbox, folderName, inFolders, folderType) {
         }
         return inFolders(folderName);
     } catch (error) {
-        alert('getOrCreateFolder error creating folder ' + folderName + ' in ' + mailbox + '  error: ' + error)
+        kfoReportError('getOrCreateFolder', error);
+        return null;
     }
 }
 
@@ -300,11 +337,11 @@ function getPureJournalItem(subject) {
 function saveJournalItem(subject, body) {
     var folder = getJournalFolder();
     var configItems = folder.Items.Restrict('[Subject] = "' + subject + '"');
+    var configItem;
     if (configItems.Count == 0) {
-        var configItem = newJournalItem();
+        configItem = newJournalItem();
         configItem.Subject = subject;
-    }
-    else {
+    } else {
         configItem = configItems(1);
     }
     configItem.Body = body;
@@ -354,6 +391,6 @@ function setUserProperty(item, prop, value, type) {
         }
         userprop.Value = value;
     } catch (error) {
-        alert('setUserProperty error: ' + error);
+        kfoReportError('setUserProperty', error);
     }
 }

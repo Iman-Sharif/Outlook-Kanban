@@ -31,13 +31,35 @@
 
         <div ng-if="!isBrowserSupported" class="container" style="padding: 18px;">
             <h3>Kanban for Outlook</h3>
-            <p>This app is designed to run as a Folder Home Page inside classic Outlook for Windows.</p>
-            <p><strong>Local setup</strong></p>
+            <p>This app is designed to run as a Folder Home Page inside <strong>classic Outlook for Windows</strong> (not the new Outlook).</p>
+
+            <p><strong>Common causes</strong></p>
+            <ul>
+                <li>You opened <code>kanban.html</code> in a normal browser instead of inside Outlook.</li>
+                <li>Your organisation may have disabled Folder Home Pages by policy.</li>
+                <li>ActiveX / scripting is blocked for Folder Home Pages.</li>
+            </ul>
+
+            <p><strong>Next steps</strong></p>
             <ol>
                 <li>Extract this folder to a location you control (for example under your user profile).</li>
                 <li>Run <code>install-local.cmd</code> to register the home page for Outlook.</li>
                 <li>Restart Outlook.</li>
             </ol>
+
+            <p>
+                <a href="docs/SETUP.md">Setup guide</a>
+                &nbsp;•&nbsp;
+                <a href="docs/TROUBLESHOOTING.md">Troubleshooting</a>
+            </p>
+
+            <div class="kfo-small" style="margin-top: 10px;">
+                Detected host: <code>{{browserSupport.method}}</code>
+                <span ng-if="browserSupport.error">&nbsp;•&nbsp;Error: <code>{{browserSupport.error}}</code></span>
+            </div>
+            <div class="kfo-small" style="margin-top: 6px;">
+                Location: <code>{{env.href}}</code>
+            </div>
             <p class="text-muted">No network access is required or used by this application.</p>
         </div>
 
@@ -75,6 +97,9 @@
 
                     <button class="kfo-iconBtn" type="button" ng-click="refreshTasks()" aria-label="Refresh" ng-class="{'kfo-refreshing': ui.isRefreshing}">
                         <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
+                    </button>
+                    <button class="kfo-iconBtn kfo-iconBtn--danger" type="button" ng-if="ui.lastError" ng-click="openErrorDetails()" aria-label="Error details" title="Error details">
+                        <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
                     </button>
                     <button class="kfo-iconBtn" type="button" ng-click="switchMode('settings')" aria-label="Settings">
                         <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
@@ -641,12 +666,34 @@
                         </button>
                     </div>
                     <div class="kfo-modalBody">
-                        <p class="kfo-small">This is stored locally in Outlook. Copy/paste only if you choose to share it.</p>
+                        <p class="kfo-small">This is generated locally. Some parts are stored in Outlook (config/state/log). Copy/paste only if you choose to share it.</p>
                         <textarea class="kfo-input" style="height: 260px; width: 100%; border-radius: 14px;" readonly="readonly">{{diagnosticsText}}</textarea>
                     </div>
                     <div class="kfo-modalFooter">
                         <button class="kfo-btn" type="button" ng-click="copyDiagnostics()">Copy</button>
                         <button class="kfo-btn" type="button" ng-click="ui.showDiagnostics = false">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error details modal -->
+            <div class="kfo-modalBackdrop" ng-if="ui.showErrorDetails">
+                <div class="kfo-modal">
+                    <div class="kfo-modalHeader">
+                        <h3 class="kfo-modalTitle">Error details (Local)</h3>
+                        <button class="kfo-iconBtn" type="button" ng-click="ui.showErrorDetails = false" aria-label="Close">
+                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="kfo-modalBody">
+                        <p class="kfo-small">This stays local. Use it to understand what happened and to share details only if you choose to.</p>
+                        <textarea class="kfo-input" style="height: 260px; width: 100%; border-radius: 14px;" readonly="readonly">{{errorDetailsText}}</textarea>
+                    </div>
+                    <div class="kfo-modalFooter">
+                        <button class="kfo-btn" type="button" ng-click="copyErrorDetails()">Copy</button>
+                        <button class="kfo-btn" type="button" ng-click="openDiagnostics(); ui.showErrorDetails = false">Open diagnostics</button>
+                        <button class="kfo-btn" type="button" ng-click="clearLastError()">Clear</button>
+                        <button class="kfo-btn" type="button" ng-click="ui.showErrorDetails = false">Close</button>
                     </div>
                 </div>
             </div>

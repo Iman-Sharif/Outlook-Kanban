@@ -459,6 +459,19 @@
   justify-content: center;
 }
 
+.kfo-iconBtn--danger {
+  border-color: rgba(239, 68, 68, 0.30);
+}
+
+.kfo-iconBtn--danger .glyphicon {
+  color: #ef4444;
+}
+
+.kfo-iconBtn--danger:hover {
+  background: rgba(239, 68, 68, 0.10);
+  border-color: rgba(239, 68, 68, 0.55);
+}
+
 .kfo-view {
   flex: 1 1 auto;
   overflow: auto;

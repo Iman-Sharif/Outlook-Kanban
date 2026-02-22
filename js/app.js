@@ -183,6 +183,15 @@
                 projectEntryID: '',
                 isRefreshing: false,
                 toast: { show: false, type: 'info', title: '', message: '' },
+                lastError: null,
+                showErrorDetails: false,
+                storage: {
+                    journal: { ok: null, lastOkAt: '', lastFailAt: '', lastError: '' },
+                    config: { readOk: null, writeOk: null, lastReadAt: '', lastWriteAt: '', lastError: '' },
+                    state: { readOk: null, writeOk: null, lastReadAt: '', lastWriteAt: '', lastError: '' },
+                    log: { readOk: null, writeOk: null, lastReadAt: '', lastWriteAt: '', lastError: '' }
+                },
+                perf: { lastRefresh: null, history: [] },
                 showSetupWizard: false,
                 setupStep: 1,
                 setupDefaultProjectName: 'General',
@@ -248,29 +257,204 @@
             $scope.migrationLaneOptions = [];
             $scope.allThemes = [];
             $scope.diagnosticsText = '';
+            $scope.errorDetailsText = '';
 
             var outlookCategories;
 
             var toastTimer;
+            var sessionLog = [];
+            var lastErrorToastSig = '';
+            var lastErrorToastAt = 0;
+            var storageFailureNotified = false;
 
             function showToast(type, title, message, ms) {
                 try {
                     if (!$scope.ui) return;
-                    $scope.ui.toast = {
-                        show: true,
-                        type: type || 'info',
-                        title: title || '',
-                        message: message || ''
-                    };
-                    if (toastTimer) {
-                        $timeout.cancel(toastTimer);
-                        toastTimer = null;
-                    }
-                    toastTimer = $timeout(function () {
-                        if ($scope.ui && $scope.ui.toast) {
-                            $scope.ui.toast.show = false;
+                    // Ensure updates are applied even if called outside a digest.
+                    $timeout(function () {
+                        try {
+                            if (!$scope.ui) return;
+                            $scope.ui.toast = {
+                                show: true,
+                                type: type || 'info',
+                                title: title || '',
+                                message: message || ''
+                            };
+                            if (toastTimer) {
+                                $timeout.cancel(toastTimer);
+                                toastTimer = null;
+                            }
+                            toastTimer = $timeout(function () {
+                                if ($scope.ui && $scope.ui.toast) {
+                                    $scope.ui.toast.show = false;
+                                }
+                            }, ms || 3200);
+                        } catch (e) {
+                            // ignore
                         }
-                    }, ms || 3200);
+                    }, 0);
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            function nowIso() {
+                try {
+                    return (new Date()).toISOString();
+                } catch (e) {
+                    return String(new Date());
+                }
+            }
+
+            function safeErrorString(e) {
+                try {
+                    if (e === null || e === undefined) return '';
+                    if (typeof e === 'string') return e;
+                    if (e.message) return String(e.message);
+                    return String(e);
+                } catch (err) {
+                    return 'unknown error';
+                }
+            }
+
+            function pushSessionLog(line) {
+                try {
+                    sessionLog.unshift(String(line || ''));
+                    if (sessionLog.length > 200) {
+                        sessionLog.pop();
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            function reportError(context, err, userTitle, userMessage) {
+                try {
+                    var at = nowIso();
+                    var ctx = String(context || '');
+                    var msg = safeErrorString(err);
+                    var stack = '';
+                    try { stack = err && err.stack ? String(err.stack) : ''; } catch (e1) { stack = ''; }
+
+                    var last = {
+                        at: at,
+                        context: ctx,
+                        message: msg,
+                        stack: stack
+                    };
+                    $scope.ui.lastError = last;
+
+                    // Always keep a lightweight session log, even if persistent logging is disabled.
+                    pushSessionLog(at + '  ERROR  ' + ctx + (msg ? (': ' + msg) : ''));
+
+                    // De-dupe noisy error toasts
+                    var sig = (userTitle || '') + '|' + (userMessage || '') + '|' + ctx + '|' + msg;
+                    var nowMs = (new Date()).getTime();
+                    if (sig !== lastErrorToastSig || (nowMs - lastErrorToastAt) > 2500) {
+                        lastErrorToastSig = sig;
+                        lastErrorToastAt = nowMs;
+                        showToast('error', userTitle || 'Error', userMessage || 'Something went wrong. Click the ! icon for details.', 5200);
+                    }
+
+                    // Ensure UI picks up lastError updates even if no toast is shown.
+                    try { $timeout(function () { }, 0); } catch (e2) { /* ignore */ }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            function showUserError(title, message) {
+                showToast('error', title || 'Error', message || '', 4200);
+            }
+
+            function markStorage(kind, op, ok, err) {
+                try {
+                    if (!$scope.ui || !$scope.ui.storage) return;
+                    var k = $scope.ui.storage[kind];
+                    if (!k) return;
+                    var at = nowIso();
+                    if (op === 'read') {
+                        k.readOk = !!ok;
+                        k.lastReadAt = at;
+                    }
+                    if (op === 'write') {
+                        k.writeOk = !!ok;
+                        k.lastWriteAt = at;
+                    }
+                    if (!ok) {
+                        k.lastError = safeErrorString(err);
+                        $scope.ui.storage.journal.ok = false;
+                        $scope.ui.storage.journal.lastFailAt = at;
+                        $scope.ui.storage.journal.lastError = safeErrorString(err);
+                    } else {
+                        // best-effort: treat any successful storage operation as journal being available
+                        $scope.ui.storage.journal.ok = true;
+                        $scope.ui.storage.journal.lastOkAt = at;
+                        $scope.ui.storage.journal.lastError = '';
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            function storageRead(subject, kind, notifyOnFail) {
+                try {
+                    var raw = getJournalItem(subject);
+                    markStorage(kind, 'read', true);
+                    return raw;
+                } catch (e) {
+                    markStorage(kind, 'read', false, e);
+                    if (notifyOnFail && !storageFailureNotified) {
+                        storageFailureNotified = true;
+                        reportError('storage.' + kind + '.read', e, 'Local storage unavailable', 'Settings and diagnostics may not be saved. Click the ! icon for details.');
+                    }
+                    return null;
+                }
+            }
+
+            function storageWrite(subject, body, kind, notifyOnFail) {
+                try {
+                    saveJournalItem(subject, body);
+                    markStorage(kind, 'write', true);
+                    return true;
+                } catch (e) {
+                    markStorage(kind, 'write', false, e);
+                    if (notifyOnFail && !storageFailureNotified) {
+                        storageFailureNotified = true;
+                        reportError('storage.' + kind + '.write', e, 'Local storage unavailable', 'Settings and diagnostics may not be saved. Click the ! icon for details.');
+                    }
+                    return false;
+                }
+            }
+
+            function runStorageHealthCheck() {
+                // Best-effort read/write check for local Outlook storage.
+                // Uses existing subjects and writes the current in-memory values.
+                try {
+                    // Config
+                    try {
+                        storageRead(CONFIG_ID, 'config', false);
+                        storageWrite(CONFIG_ID, JSON.stringify($scope.config || DEFAULT_CONFIG_V3(), null, 2), 'config', false);
+                    } catch (e1) {
+                        // ignore
+                    }
+
+                    // State (only if enabled)
+                    try {
+                        if ($scope.config && $scope.config.BOARD && $scope.config.BOARD.saveState) {
+                            storageRead(STATE_ID, 'state', false);
+                            var state = {
+                                private: $scope.filter.private,
+                                search: $scope.filter.search,
+                                category: $scope.filter.category,
+                                mailbox: $scope.filter.mailbox,
+                                projectEntryID: $scope.ui.projectEntryID
+                            };
+                            storageWrite(STATE_ID, JSON.stringify(state, null, 2), 'state', false);
+                        }
+                    } catch (e2) {
+                        // ignore
+                    }
                 } catch (e) {
                     // ignore
                 }
@@ -278,13 +462,16 @@
 
             function writeLog(message) {
                 try {
-                    if (!$scope.config || !$scope.config.LOG_ERRORS) {
-                        return;
-                    }
                     var now = new Date();
                     var datetimeString = now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate() + ' ' + now.getHours() + ':' + now.getMinutes();
                     var line = datetimeString + '  ' + message;
-                    var logRaw = getJournalItem(LOG_ID);
+                    pushSessionLog(line);
+
+                    if (!$scope.config || !$scope.config.LOG_ERRORS) {
+                        return;
+                    }
+
+                    var logRaw = storageRead(LOG_ID, 'log', false);
                     var log = [];
                     if (logRaw !== null) {
                         try { log = JSON.parse(logRaw); } catch (e) { log = []; }
@@ -293,16 +480,39 @@
                     if (log.length > 800) {
                         log.pop();
                     }
-                    saveJournalItem(LOG_ID, JSON.stringify(log, null, 2));
+                    storageWrite(LOG_ID, JSON.stringify(log, null, 2), 'log', false);
                 } catch (e) {
                     // keep silent
                 }
             }
 
+            // Allow the Outlook bridge (js/exchange.js) to report errors without using alert().
+            try {
+                window.kfoReportError = function (context, error) {
+                    reportError('outlook.' + String(context || ''), error, 'Outlook error', 'An Outlook operation failed. Click the ! icon for details.');
+                };
+            } catch (e) {
+                // ignore
+            }
+
+            // Best-effort capture of unexpected script errors into session diagnostics.
+            try {
+                window.onerror = function (msg, url, line, col, error) {
+                    try {
+                        reportError('window.onerror', error || msg, 'Unexpected error', 'A script error occurred. Click the ! icon for details.');
+                    } catch (e1) {
+                        // ignore
+                    }
+                    return false;
+                };
+            } catch (e) {
+                // ignore
+            }
+
             function backupLegacyConfig(raw) {
                 try {
                     var subject = CONFIG_ID + '.legacy.' + nowStamp();
-                    saveJournalItem(subject, String(raw || ''));
+                    storageWrite(subject, String(raw || ''), 'config', false);
                 } catch (e) {
                     // ignore
                 }
@@ -418,7 +628,7 @@
             function readConfig() {
                 if (hasReadConfig) return;
                 try {
-                    var raw = getJournalItem(CONFIG_ID);
+                    var raw = storageRead(CONFIG_ID, 'config', true);
                     if (raw === null) {
                         $scope.config = DEFAULT_CONFIG_V3();
                         saveConfig();
@@ -428,7 +638,7 @@
                     try {
                         $scope.config = JSON.parse(JSON.minify(raw));
                     } catch (e) {
-                        alert('Configuration JSON is invalid. A new configuration will be created.');
+                        reportError('readConfig.parse', e, 'Configuration reset', 'Your configuration could not be read and has been reset. Click the ! icon for details.');
                         backupLegacyConfig(raw);
                         $scope.config = DEFAULT_CONFIG_V3();
                         saveConfig();
@@ -481,7 +691,7 @@
                     }
 
                 } catch (error) {
-                    alert('Failed to read configuration: ' + error);
+                    reportError('readConfig', error, 'Configuration error', 'Failed to read configuration. Defaults will be used. Click the ! icon for details.');
                     $scope.config = DEFAULT_CONFIG_V3();
                     saveConfig();
                 }
@@ -506,9 +716,16 @@
                         if (motion !== 'full' && motion !== 'subtle' && motion !== 'off') motion = 'full';
                         $scope.config.UI.motion = motion;
                     }
-                    saveJournalItem(CONFIG_ID, JSON.stringify($scope.config, null, 2));
+                    var ok = storageWrite(CONFIG_ID, JSON.stringify($scope.config, null, 2), 'config', false);
+                    if (!ok) {
+                        var why = '';
+                        try { why = ($scope.ui && $scope.ui.storage && $scope.ui.storage.config) ? $scope.ui.storage.config.lastError : ''; } catch (e0) { why = ''; }
+                        reportError('saveConfig', why || 'write failed', 'Settings not saved', 'Could not save settings to Outlook storage. Click the ! icon for details.');
+                    }
+                    return !!ok;
                 } catch (e) {
-                    alert('Failed to save configuration: ' + e);
+                    reportError('saveConfig', e, 'Settings not saved', 'Could not save settings to Outlook storage. Click the ! icon for details.');
+                    return false;
                 }
             }
 
@@ -526,11 +743,11 @@
                         mailbox: '',
                         projectEntryID: ''
                     };
-                    var raw = getJournalItem(STATE_ID);
+                    var raw = storageRead(STATE_ID, 'state', false);
                     if (raw !== null) {
                         try { state = JSON.parse(raw); } catch (e) { /* ignore */ }
                     } else {
-                        saveJournalItem(STATE_ID, JSON.stringify(state, null, 2));
+                        storageWrite(STATE_ID, JSON.stringify(state, null, 2), 'state', false);
                     }
 
                     $scope.filter.private = state.private || $scope.privacyFilter.all.value;
@@ -556,7 +773,7 @@
                         mailbox: $scope.filter.mailbox,
                         projectEntryID: $scope.ui.projectEntryID
                     };
-                    saveJournalItem(STATE_ID, JSON.stringify(state, null, 2));
+                    storageWrite(STATE_ID, JSON.stringify(state, null, 2), 'state', false);
                 } catch (e) {
                     writeLog('saveState: ' + e);
                 }
@@ -1167,22 +1384,78 @@
             };
 
             function doRefreshTasks() {
+                var perf = {
+                    at: nowIso(),
+                    ok: true,
+                    mailbox: $scope.filter.mailbox,
+                    projectEntryID: $scope.ui.projectEntryID,
+                    counts: { tasks: 0, lanes: 0, filtered: 0 },
+                    stepsMs: {},
+                    totalMs: 0,
+                    error: ''
+                };
+                var t0 = (new Date()).getTime();
                 try {
                     if (!$scope.ui.projectEntryID) {
                         loadProjects();
                         ensureSelectedProject();
                     }
+                    var t1 = (new Date()).getTime();
+
                     var folder = getSelectedProjectFolder();
+                    var t2 = (new Date()).getTime();
+                    perf.stepsMs.ensureProject = t1 - t0;
+                    perf.stepsMs.selectFolder = t2 - t1;
+
                     if (!folder) {
                         $scope.lanes = buildLanes([]);
                         $scope.applyFilters();
+                        perf.counts.lanes = ($scope.lanes || []).length;
+                        perf.totalMs = (new Date()).getTime() - t0;
                         return;
                     }
+
                     var tasks = readTasksFromOutlookFolder(folder);
+                    var t3 = (new Date()).getTime();
+                    perf.stepsMs.readTasks = t3 - t2;
+                    perf.counts.tasks = (tasks || []).length;
+
                     $scope.lanes = buildLanes(tasks);
+                    var t4 = (new Date()).getTime();
+                    perf.stepsMs.buildLanes = t4 - t3;
+                    perf.counts.lanes = ($scope.lanes || []).length;
+
                     $scope.applyFilters();
+                    var t5 = (new Date()).getTime();
+                    perf.stepsMs.applyFilters = t5 - t4;
+
+                    // filtered count
+                    try {
+                        var n = 0;
+                        ($scope.lanes || []).forEach(function (lane) {
+                            n += (lane.filteredTasks || []).length;
+                        });
+                        perf.counts.filtered = n;
+                    } catch (eCount) {
+                        // ignore
+                    }
+
+                    perf.totalMs = t5 - t0;
                 } catch (e) {
-                    writeLog('refreshTasks: ' + e);
+                    perf.ok = false;
+                    perf.error = safeErrorString(e);
+                    perf.totalMs = (new Date()).getTime() - t0;
+                    reportError('refreshTasks', e, 'Refresh failed', 'Could not read tasks from Outlook. Click the ! icon for details.');
+                } finally {
+                    try {
+                        $scope.ui.perf.lastRefresh = perf;
+                        $scope.ui.perf.history.unshift(perf);
+                        if ($scope.ui.perf.history.length > 12) {
+                            $scope.ui.perf.history.pop();
+                        }
+                    } catch (e2) {
+                        // ignore
+                    }
                 }
             }
 
@@ -1308,7 +1581,7 @@
 
                         // WIP limit guard
                         if (toLane.wipLimit && toLane.wipLimit > 0 && toLane.filteredTasks.length > toLane.wipLimit) {
-                            alert('WIP limit reached for this lane.');
+                            showUserError('WIP limit reached', 'This lane is over its WIP limit. Move or complete something first, or raise the WIP limit in Settings.');
                             ui.item.sortable.cancel();
                             return;
                         }
@@ -1345,7 +1618,7 @@
                 try {
                     var folder = getSelectedProjectFolder();
                     if (!folder) {
-                        alert('Please create/select a project first.');
+                        showUserError('No project selected', 'Create or select a project first (Projects are Outlook Tasks folders).');
                         return;
                     }
                     var taskitem = folder.Items.Add();
@@ -1375,6 +1648,7 @@
                     }
                 } catch (e) {
                     writeLog('addTask: ' + e);
+                    reportError('addTask', e, 'Add task failed', 'Could not create a new task in Outlook. Click the ! icon for details.');
                 }
             };
 
@@ -1390,6 +1664,7 @@
                     }
                 } catch (e) {
                     writeLog('editTask: ' + e);
+                    reportError('editTask', e, 'Open task failed', 'Could not open this task in Outlook. Click the ! icon for details.');
                 }
             };
 
@@ -1405,6 +1680,7 @@
                     $scope.refreshTasks();
                 } catch (e) {
                     writeLog('deleteTask: ' + e);
+                    reportError('deleteTask', e, 'Delete failed', 'Could not delete this task. Click the ! icon for details.');
                 }
             };
 
@@ -1419,6 +1695,7 @@
                     return false;
                 } catch (e) {
                     writeLog('openOneNoteURL: ' + e);
+                    reportError('openOneNoteURL', e, 'Open link failed', 'Could not open the link. Click the ! icon for details.');
                 }
             };
 
@@ -1447,16 +1724,16 @@
                 var id = sanitizeId($scope.ui.newLaneId || title);
                 var color = ($scope.ui.newLaneColor || '').trim();
                 if (!title || !id) {
-                    alert('Lane title and id are required.');
+                    showUserError('Lane details required', 'Lane title and id are required.');
                     return;
                 }
                 if (color && !isValidHexColor(color)) {
-                    alert('Lane color must be in #RRGGBB format.');
+                    showUserError('Invalid colour', 'Lane colour must be in #RRGGBB format.');
                     return;
                 }
                 for (var i = 0; i < $scope.config.LANES.length; i++) {
                     if (sanitizeId($scope.config.LANES[i].id) === id) {
-                        alert('Lane id already exists.');
+                        showUserError('Lane id already exists', 'Choose a different id (letters, numbers, and dashes).');
                         return;
                     }
                 }
@@ -1512,13 +1789,13 @@
                 try {
                     var fileInput = document.getElementById('themeCssFile');
                     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-                        alert('Choose a .css file first.');
+                        showUserError('Theme import', 'Choose a .css file first.');
                         return;
                     }
                     var name = ($scope.ui.importThemeName || '').trim();
                     var id = sanitizeId($scope.ui.importThemeId || name);
                     if (!name || !id) {
-                        alert('Theme name and id are required.');
+                        showUserError('Theme import', 'Theme name and id are required.');
                         return;
                     }
                     var file = fileInput.files[0];
@@ -1526,7 +1803,7 @@
                     reader.onload = function (evt) {
                         var cssText = String(evt.target.result || '');
                         if (!isCssLocalOnly(cssText)) {
-                            alert('Theme import rejected. Themes must be local-only (no http/https/@import), and must not use IE-specific scriptable CSS (expression/behavior).');
+                            showUserError('Theme import rejected', 'Themes must be local-only (no http/https or @import) and must not use IE scriptable CSS (expression/behaviour).');
                             return;
                         }
                         $scope.$apply(function () {
@@ -1542,11 +1819,12 @@
                         });
                     };
                     reader.onerror = function () {
-                        alert('Failed to read theme file.');
+                        showUserError('Theme import failed', 'Failed to read theme file.');
                     };
                     reader.readAsText(file);
                 } catch (e) {
                     writeLog('importThemeFromFile: ' + e);
+                    reportError('importThemeFromFile', e, 'Theme import failed', 'Could not import the theme. Click the ! icon for details.');
                 }
             };
 
@@ -1555,11 +1833,11 @@
                 var id = sanitizeId($scope.ui.folderThemeId || name);
                 var href = ($scope.ui.folderThemeHref || '').trim();
                 if (!name || !id || !href) {
-                    alert('Theme name, id and CSS path are required.');
+                    showUserError('Folder theme', 'Theme name, id and CSS path are required.');
                     return;
                 }
                 if (!isSafeLocalCssPath(href)) {
-                    alert('Folder theme path must be a relative local path (for example: themes/my-theme/theme.css).');
+                    showUserError('Folder theme', 'Folder theme path must be a relative local path (for example: themes/my-theme/theme.css).');
                     return;
                 }
                 $scope.config.THEME.folderThemes.push({ id: id, name: name, cssHref: href });
@@ -1639,7 +1917,7 @@
 
                     // Prevent hiding the last visible project
                     if (hiding && $scope.projects.length <= 1) {
-                        alert('At least one project must remain visible.');
+                        showUserError('Cannot hide project', 'At least one project must remain visible.');
                         return;
                     }
 
@@ -1709,7 +1987,7 @@
             $scope.openRenameProject = function (p) {
                 if (!p || !p.entryID) return;
                 if (p.isDefaultTasks) {
-                    alert('The default Tasks folder cannot be renamed from here.');
+                    showUserError('Cannot rename folder', 'The default Tasks folder cannot be renamed from here.');
                     return;
                 }
                 $scope.ui.renameProjectEntryID = p.entryID;
@@ -1725,13 +2003,13 @@
                     var newName = String($scope.ui.renameProjectName || '').trim();
                     if (!entryID) return;
                     if (!newName) {
-                        alert('Project name is required.');
+                        showUserError('Project name required', 'Project name is required.');
                         return;
                     }
 
                     var folder = getFolderFromIDs(entryID, storeID);
                     if (!folder) {
-                        alert('Could not locate the project folder in Outlook.');
+                        showUserError('Folder not found', 'Could not locate the project folder in Outlook.');
                         return;
                     }
                     folder.Name = newName;
@@ -1748,14 +2026,14 @@
                     showToast('success', 'Project renamed', newName);
                 } catch (e) {
                     writeLog('submitRenameProject: ' + e);
-                    alert('Rename failed: ' + e);
+                    reportError('submitRenameProject', e, 'Rename failed', 'Could not rename the project. Click the ! icon for details.');
                 }
             };
 
             function linkExistingProject(entryID) {
                 var id = String(entryID || '').trim();
                 if (!id) {
-                    alert('Please select a folder.');
+                    showUserError('Select a folder', 'Please select a folder.');
                     return null;
                 }
                 var folder = null;
@@ -1766,7 +2044,7 @@
                     }
                 }
                 if (!folder) {
-                    alert('Selected folder is not available.');
+                    showUserError('Folder not available', 'Selected folder is not available.');
                     return null;
                 }
                 if (!$scope.config.PROJECTS.linkedProjects) {
@@ -1810,7 +2088,7 @@
                 try {
                     var projectName = String(name || '').trim();
                     if (!projectName) {
-                        alert('Project name is required.');
+                        showUserError('Project name required', 'Project name is required.');
                         return;
                     }
 
@@ -1834,7 +2112,7 @@
                     $scope.refreshTasks();
                 } catch (e) {
                     writeLog('createProject: ' + e);
-                    alert('Failed to create project: ' + e);
+                    reportError('createProject', e, 'Project not created', 'Failed to create the project folder in Outlook. Click the ! icon for details.');
                 }
             };
 
@@ -1865,7 +2143,7 @@
 
             $scope.closeMoveTasks = function () {
                 if ($scope.ui.move && $scope.ui.move.running) {
-                    alert('Move is in progress.');
+                    showUserError('Move in progress', 'Please wait for the move to complete.');
                     return;
                 }
                 $scope.ui.showMoveTasks = false;
@@ -1884,18 +2162,18 @@
                     var fromId = $scope.ui.move.fromProjectEntryID;
                     var toId = $scope.ui.move.toProjectEntryID;
                     if (!fromId || !toId) {
-                        alert('Please select both source and destination projects.');
+                        showUserError('Move tasks', 'Please select both source and destination projects.');
                         return;
                     }
                     if (fromId === toId) {
-                        alert('Source and destination must be different.');
+                        showUserError('Move tasks', 'Source and destination must be different.');
                         return;
                     }
 
                     var fromFolder = getProjectFolderByEntryID(fromId);
                     var toFolder = getProjectFolderByEntryID(toId);
                     if (!fromFolder || !toFolder) {
-                        alert('Could not locate one of the project folders in Outlook.');
+                        showUserError('Move tasks', 'Could not locate one of the project folders in Outlook.');
                         return;
                     }
 
@@ -1905,7 +2183,7 @@
                     var mode = $scope.ui.move.mode;
                     var laneFilter = sanitizeId($scope.ui.move.laneId);
                     if (mode === 'lane' && !laneFilter) {
-                        alert('Please select a lane.');
+                        showUserError('Move tasks', 'Please select a lane.');
                         return;
                     }
 
@@ -1948,7 +2226,7 @@
                     }
 
                     if (moveList.length === 0) {
-                        alert('No tasks matched your selection.');
+                        showUserError('Move tasks', 'No tasks matched your selection.');
                         return;
                     }
 
@@ -2007,7 +2285,7 @@
                     $timeout(step, 0);
                 } catch (e) {
                     writeLog('runMoveTasks: ' + e);
-                    alert('Move failed: ' + e);
+                    reportError('runMoveTasks', e, 'Move failed', 'Failed to move tasks between projects. Click the ! icon for details.');
                     $scope.ui.move.running = false;
                 }
             };
@@ -2139,7 +2417,7 @@
 
             $scope.closeMigration = function () {
                 if ($scope.ui.migration && $scope.ui.migration.running) {
-                    alert('Migration is in progress.');
+                    showUserError('Migration in progress', 'Please wait for migration to complete.');
                     return;
                 }
                 $scope.ui.showMigration = false;
@@ -2150,7 +2428,7 @@
                     if ($scope.ui.migration.running) return;
                     var scan = $scope.ui.migration.scanTasks || [];
                     if (scan.length === 0) {
-                        alert('No tasks found in the current project.');
+                        showUserError('Migration', 'No tasks found in the current project.');
                         return;
                     }
 
@@ -2185,7 +2463,7 @@
                     });
 
                     if (work.length === 0) {
-                        alert('No tasks matched your migration scope.');
+                        showUserError('Migration', 'No tasks matched your migration scope.');
                         return;
                     }
 
@@ -2231,7 +2509,7 @@
                     $timeout(step, 0);
                 } catch (e) {
                     writeLog('runMigration: ' + e);
-                    alert('Migration failed: ' + e);
+                    reportError('runMigration', e, 'Migration failed', 'Failed to assign lanes. Click the ! icon for details.');
                     $scope.ui.migration.running = false;
                 }
             };
@@ -2261,7 +2539,7 @@
                         if ($scope.ui.setupProjectMode === 'link') {
                             var lf = linkExistingProject($scope.ui.setupExistingProjectEntryID);
                             if (!lf) {
-                                alert('Please select an existing folder to link.');
+                                showUserError('Setup', 'Please select an existing folder to link.');
                                 return;
                             }
                             $scope.config.PROJECTS.defaultProjectEntryID = lf.entryID;
@@ -2282,20 +2560,24 @@
                     }
                 } catch (e) {
                     writeLog('nextSetupStep: ' + e);
-                    alert('Setup failed: ' + e);
+                    reportError('nextSetupStep', e, 'Setup failed', 'Setup could not be completed. Click the ! icon for details.');
                 }
             };
 
             $scope.finishSetup = function () {
                 try {
                     $scope.config.SETUP.completed = true;
-                    saveConfig();
+                    var ok = saveConfig();
                     $scope.ui.showSetupWizard = false;
                     $scope.ui.mode = 'board';
                     loadProjects();
                     ensureSelectedProject();
                     $scope.applyTheme();
-                    showToast('success', 'Setup complete', '');
+                    if (ok) {
+                        showToast('success', 'Setup complete', '');
+                    } else {
+                        showUserError('Setup not saved', 'Your setup could not be saved to Outlook storage. The app will still run, but settings may reset next time.');
+                    }
                     $scope.refreshTasks();
                 } catch (e) {
                     writeLog('finishSetup: ' + e);
@@ -2303,37 +2585,77 @@
             };
 
             $scope.saveAndReturn = function () {
-                saveConfig();
+                var ok = saveConfig();
                 $scope.applyTheme();
                 loadProjects();
                 ensureSelectedProject();
                 $scope.switchMode('board');
-                showToast('success', 'Settings saved', '');
+                if (ok) {
+                    showToast('success', 'Settings saved', '');
+                } else {
+                    showUserError('Settings not saved', 'Your settings could not be saved to Outlook storage.');
+                }
                 $scope.refreshTasks();
             };
 
             // Diagnostics
             $scope.openDiagnostics = function () {
                 try {
-                    var logRaw = getJournalItem(LOG_ID);
-                    var log = [];
-                    if (logRaw !== null) {
-                        try { log = JSON.parse(logRaw); } catch (e) { log = []; }
+                    runStorageHealthCheck();
+
+                    var persistedLogRaw = storageRead(LOG_ID, 'log', false);
+                    var persistedLog = [];
+                    if (persistedLogRaw !== null) {
+                        try { persistedLog = JSON.parse(persistedLogRaw); } catch (e) { persistedLog = []; }
                     }
+
+                    var support = (function () {
+                        try {
+                            if (typeof getBrowserSupportDetails === 'function') {
+                                return getBrowserSupportDetails();
+                            }
+                        } catch (e) {
+                            // ignore
+                        }
+                        return { supported: !!$scope.isBrowserSupported, method: 'unknown', error: '' };
+                    })();
+
+                    var outlookVersion = (function () { try { return getOutlookVersion(); } catch (e) { return 'unknown'; } })();
+                    var outlookTodayHome = (function () { try { return getOutlookTodayHomePageFolder(); } catch (e) { return 'unknown'; } })();
+
+                    var selectedProject = null;
+                    try { selectedProject = getProjectAll($scope.ui.projectEntryID); } catch (e) { selectedProject = null; }
+
                     var payload = {
                         app: 'Kanban for Outlook',
                         version: $scope.version,
-                        outlookVersion: (function () { try { return getOutlookVersion(); } catch (e) { return 'unknown'; } })(),
-                        mailbox: $scope.filter.mailbox,
-                        projectEntryID: $scope.ui.projectEntryID,
+                        generatedAt: nowIso(),
+                        host: {
+                            href: (function () { try { return String(window.location.href || ''); } catch (e) { return ''; } })(),
+                            userAgent: (function () { try { return String(navigator.userAgent || ''); } catch (e) { return ''; } })(),
+                            browserSupport: support
+                        },
+                        outlook: {
+                            version: outlookVersion,
+                            todayHomePageFolder: outlookTodayHome
+                        },
+                        selection: {
+                            mailbox: $scope.filter.mailbox,
+                            projectEntryID: $scope.ui.projectEntryID,
+                            projectName: selectedProject ? selectedProject.name : ''
+                        },
                         filter: $scope.filter,
-                        config: $scope.config,
-                        recentLog: log.slice(0, 50)
+                        perf: $scope.ui.perf,
+                        storage: $scope.ui.storage,
+                        lastError: $scope.ui.lastError,
+                        sessionLog: sessionLog.slice(0, 200),
+                        persistedLog: persistedLog.slice(0, 200),
+                        config: $scope.config
                     };
                     $scope.diagnosticsText = JSON.stringify(payload, null, 2);
                     $scope.ui.showDiagnostics = true;
                 } catch (e) {
-                    writeLog('openDiagnostics: ' + e);
+                    reportError('openDiagnostics', e, 'Diagnostics failed', 'Could not build diagnostics output. Click the ! icon for details.');
                 }
             };
 
@@ -2352,7 +2674,72 @@
                     document.execCommand('copy');
                     document.body.removeChild(ta);
                 } catch (e) {
-                    alert('Copy failed. You can still select and copy from the text box.');
+                    showUserError('Copy failed', 'You can still select and copy from the text box.');
+                }
+            };
+
+            $scope.openErrorDetails = function () {
+                try {
+                    var support = (function () {
+                        try {
+                            if (typeof getBrowserSupportDetails === 'function') {
+                                return getBrowserSupportDetails();
+                            }
+                        } catch (e) {
+                            // ignore
+                        }
+                        return { supported: !!$scope.isBrowserSupported, method: 'unknown', error: '' };
+                    })();
+
+                    var payload = {
+                        app: 'Kanban for Outlook',
+                        version: $scope.version,
+                        generatedAt: nowIso(),
+                        lastError: $scope.ui.lastError,
+                        perf: $scope.ui.perf,
+                        storage: $scope.ui.storage,
+                        selection: {
+                            mailbox: $scope.filter.mailbox,
+                            projectEntryID: $scope.ui.projectEntryID
+                        },
+                        host: {
+                            href: (function () { try { return String(window.location.href || ''); } catch (e) { return ''; } })(),
+                            userAgent: (function () { try { return String(navigator.userAgent || ''); } catch (e) { return ''; } })(),
+                            browserSupport: support
+                        },
+                        outlookVersion: (function () { try { return getOutlookVersion(); } catch (e) { return 'unknown'; } })()
+                    };
+                    $scope.errorDetailsText = JSON.stringify(payload, null, 2);
+                    $scope.ui.showErrorDetails = true;
+                } catch (e) {
+                    reportError('openErrorDetails', e, 'Error details failed', 'Could not build error details output.');
+                }
+            };
+
+            $scope.copyErrorDetails = function () {
+                try {
+                    var text = $scope.errorDetailsText || '';
+                    if (window.clipboardData && window.clipboardData.setData) {
+                        window.clipboardData.setData('Text', text);
+                        return;
+                    }
+                    var ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                } catch (e) {
+                    showUserError('Copy failed', 'You can still select and copy from the text box.');
+                }
+            };
+
+            $scope.clearLastError = function () {
+                try {
+                    $scope.ui.lastError = null;
+                    $scope.ui.showErrorDetails = false;
+                } catch (e) {
+                    // ignore
                 }
             };
 
@@ -2368,7 +2755,22 @@
 
             // Init
             $scope.init = function () {
+                // Capture basic host info even when Outlook integration is not available.
+                try {
+                    $scope.env = {
+                        href: (function () { try { return String(window.location.href || ''); } catch (e) { return ''; } })(),
+                        userAgent: (function () { try { return String(navigator.userAgent || ''); } catch (e) { return ''; } })()
+                    };
+                } catch (e) {
+                    $scope.env = { href: '', userAgent: '' };
+                }
+
                 $scope.isBrowserSupported = checkBrowser();
+                try {
+                    $scope.browserSupport = (typeof getBrowserSupportDetails === 'function') ? getBrowserSupportDetails() : { supported: !!$scope.isBrowserSupported, method: 'unknown', error: '' };
+                } catch (e) {
+                    $scope.browserSupport = { supported: !!$scope.isBrowserSupported, method: 'unknown', error: '' };
+                }
                 if (!$scope.isBrowserSupported) {
                     return;
                 }
