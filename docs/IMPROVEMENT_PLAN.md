@@ -36,7 +36,7 @@ Success criteria:
 
 Deliverables:
 
-- Split `js/app.js` into ES5-compatible modules loaded by script tags
+- Split the AngularJS controller (previously `js/app.js`) into ES5-compatible modules loaded by script tags
 - Introduce an "Outlook adapter" wrapper around `js/exchange.js` so COM exceptions are handled in one place
 - Add basic unit tests for pure functions (sorting, filtering, id sanitising, theme safety checks) using Node only
 

@@ -1,168 +1,49 @@
 'use strict';
 
 (function () {
-    var CONFIG_ID = 'KanbanConfig';
-    var STATE_ID = 'KanbanState';
-    var LOG_ID = 'KanbanErrorLog';
+    // ES5 modules loaded via script tags (see kanban.html)
+    var core = (typeof kfoAppCore !== 'undefined') ? kfoAppCore : null;
+    var board = core ? core.board : null;
+    var outlook = core ? core.outlook : null;
 
-    var SCHEMA_VERSION = 3;
-
-    // Outlook task user properties (stored locally in Outlook)
-    var PROP_LANE_ID = 'KFO_LaneId';
-    var PROP_LANE_ORDER = 'KFO_LaneOrder';
-
-    var DEFAULT_ROOT_FOLDER_NAME = 'Kanban Projects';
-
-    var BUILTIN_THEMES = [
-        { id: 'kfo-light', name: 'Professional Light', cssHref: 'themes/kfo-light/theme.css', kind: 'builtin' },
-        { id: 'kfo-dark', name: 'Professional Dark', cssHref: 'themes/kfo-dark/theme.css', kind: 'builtin' }
-    ];
+    var CONFIG_ID = core ? core.CONFIG_ID : 'KanbanConfig';
+    var STATE_ID = core ? core.STATE_ID : 'KanbanState';
+    var LOG_ID = core ? core.LOG_ID : 'KanbanErrorLog';
+    var SCHEMA_VERSION = core ? core.SCHEMA_VERSION : 3;
+    var PROP_LANE_ID = core ? core.PROP_LANE_ID : 'KFO_LaneId';
+    var PROP_LANE_ORDER = core ? core.PROP_LANE_ORDER : 'KFO_LaneOrder';
+    var BUILTIN_THEMES = core ? core.BUILTIN_THEMES : [];
 
     function nowStamp() {
-        var d = new Date();
-        function pad(n) { return (n < 10 ? '0' : '') + n; }
-        return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+        return core && core.nowStamp ? core.nowStamp() : '';
     }
 
     function sanitizeId(raw) {
-        if (!raw) return '';
-        return String(raw)
-            .toLowerCase()
-            .replace(/\s+/g, '-')
-            .replace(/[^a-z0-9\-]/g, '')
-            .replace(/\-\-+/g, '-')
-            .replace(/^\-+|\-+$/g, '');
+        return core && core.sanitizeId ? core.sanitizeId(raw) : '';
     }
 
     function isValidHexColor(s) {
-        return /^#[0-9a-fA-F]{6}$/.test(s || '');
+        return core && core.isValidHexColor ? core.isValidHexColor(s) : false;
     }
 
     function isCssLocalOnly(cssText) {
-        // Best-effort guardrail: prevent accidental external loads in custom themes.
-        // Users can still theme fully locally.
-        try {
-            var s = String(cssText || '').toLowerCase();
-            if (s.indexOf('http://') !== -1) return false;
-            if (s.indexOf('https://') !== -1) return false;
-            if (s.indexOf('@import') !== -1) return false;
-            // IE-specific scriptable CSS features
-            if (s.indexOf('expression(') !== -1) return false;
-            if (s.indexOf('behavior:') !== -1) return false;
-            return true;
-        } catch (e) {
-            return false;
-        }
+        return core && core.isCssLocalOnly ? core.isCssLocalOnly(cssText) : false;
     }
 
     function isSafeLocalCssPath(href) {
-        // Restrict to relative paths within the install folder.
-        // Example: themes/my-theme/theme.css
-        try {
-            var s = String(href || '').trim();
-            if (!s) return false;
-            if (s.indexOf('..') !== -1) return false;
-            if (s.indexOf('\\') !== -1) return false;
-            if (s.indexOf(':') !== -1) return false;
-            if (s[0] === '/' || s[0] === '.') return false;
-            if (!/\.css$/i.test(s)) return false;
-            if (!/^[a-zA-Z0-9_\-\/\.]+$/.test(s)) return false;
-            return true;
-        } catch (e) {
-            return false;
-        }
+        return core && core.isSafeLocalCssPath ? core.isSafeLocalCssPath(href) : false;
     }
 
     function isRealDate(d) {
-        try {
-            if (!d) return false;
-            if (isNaN(d.getTime())) return false;
-            if (d.getFullYear && d.getFullYear() === 4501) return false;
-            return true;
-        } catch (e) {
-            return false;
-        }
+        return core && core.isRealDate ? core.isRealDate(d) : false;
     }
 
-            function DEFAULT_CONFIG_V3() {
-                return {
-            SCHEMA_VERSION: SCHEMA_VERSION,
-            SETUP: {
-                completed: false
-            },
-            PROJECTS: {
-                rootFolderName: DEFAULT_ROOT_FOLDER_NAME,
-                defaultProjectEntryID: '',
-                linkedProjects: [],
-                hiddenProjectEntryIDs: []
-            },
-            UI: {
-                density: 'comfortable',
-                motion: 'full',
-                laneWidthPx: 320,
-                showDueDate: true,
-                showNotes: true,
-                showCategories: true,
-                showOnlyFirstCategory: false,
-                showPriorityPill: true,
-                showPrivacyIcon: true,
-                showLaneCounts: true
-            },
-            AUTOMATION: {
-                setOutlookStatusOnLaneMove: true
-            },
-            LANES: [
-                { id: 'backlog', title: 'Backlog', color: '#94a3b8', wipLimit: 0, enabled: true, outlookStatus: 0 },
-                { id: 'doing', title: 'In Progress', color: '#60a5fa', wipLimit: 5, enabled: true, outlookStatus: 1 },
-                { id: 'waiting', title: 'Waiting', color: '#fbbf24', wipLimit: 0, enabled: true, outlookStatus: 3 },
-                { id: 'done', title: 'Done', color: '#34d399', wipLimit: 0, enabled: true, outlookStatus: 2 }
-            ],
-            THEME: {
-                activeThemeId: 'kfo-light',
-                folderThemes: [],
-                customThemes: []
-            },
-            BOARD: {
-                taskNoteMaxLen: 140,
-                saveState: true,
-                saveOrder: true
-            },
-            USE_CATEGORY_COLORS: true,
-            USE_CATEGORY_COLOR_FOOTERS: false,
-            DATE_FORMAT: 'DD-MMM',
-            MULTI_MAILBOX: false,
-            ACTIVE_MAILBOXES: [],
-                    LOG_ERRORS: false
-                };
-            }
+    function DEFAULT_CONFIG_V3() {
+        return core && core.DEFAULT_CONFIG_V3 ? core.DEFAULT_CONFIG_V3() : { SCHEMA_VERSION: SCHEMA_VERSION };
+    }
 
     function laneTemplate(templateId) {
-        if (templateId === 'gtd') {
-            return [
-                { id: 'inbox', title: 'Inbox', color: '#93c5fd', wipLimit: 0, enabled: true, outlookStatus: 0 },
-                { id: 'next', title: 'Next', color: '#60a5fa', wipLimit: 20, enabled: true, outlookStatus: 1 },
-                { id: 'waiting', title: 'Waiting', color: '#fbbf24', wipLimit: 0, enabled: true, outlookStatus: 3 },
-                { id: 'someday', title: 'Someday', color: '#a78bfa', wipLimit: 0, enabled: true, outlookStatus: 0 },
-                { id: 'done', title: 'Done', color: '#34d399', wipLimit: 0, enabled: true, outlookStatus: 2 }
-            ];
-        }
-        if (templateId === 'scrum') {
-            return [
-                { id: 'backlog', title: 'Backlog', color: '#94a3b8', wipLimit: 0, enabled: true, outlookStatus: 0 },
-                { id: 'sprint', title: 'Sprint', color: '#60a5fa', wipLimit: 0, enabled: true, outlookStatus: 0 },
-                { id: 'doing', title: 'Doing', color: '#38bdf8', wipLimit: 5, enabled: true, outlookStatus: 1 },
-                { id: 'review', title: 'Review', color: '#f59e0b', wipLimit: 0, enabled: true, outlookStatus: 1 },
-                { id: 'done', title: 'Done', color: '#34d399', wipLimit: 0, enabled: true, outlookStatus: 2 }
-            ];
-        }
-        // personal (default)
-        return [
-            { id: 'backlog', title: 'Backlog', color: '#94a3b8', wipLimit: 0, enabled: true, outlookStatus: 0 },
-            { id: 'next', title: 'Next', color: '#60a5fa', wipLimit: 20, enabled: true, outlookStatus: 0 },
-            { id: 'doing', title: 'In Progress', color: '#38bdf8', wipLimit: 5, enabled: true, outlookStatus: 1 },
-            { id: 'waiting', title: 'Waiting', color: '#fbbf24', wipLimit: 0, enabled: true, outlookStatus: 3 },
-            { id: 'done', title: 'Done', color: '#34d399', wipLimit: 0, enabled: true, outlookStatus: 2 }
-        ];
+        return core && core.laneTemplate ? core.laneTemplate(templateId) : [];
     }
 
     angular
@@ -299,22 +180,11 @@
             }
 
             function nowIso() {
-                try {
-                    return (new Date()).toISOString();
-                } catch (e) {
-                    return String(new Date());
-                }
+                return core && core.nowIso ? core.nowIso() : String(new Date());
             }
 
             function safeErrorString(e) {
-                try {
-                    if (e === null || e === undefined) return '';
-                    if (typeof e === 'string') return e;
-                    if (e.message) return String(e.message);
-                    return String(e);
-                } catch (err) {
-                    return 'unknown error';
-                }
+                return core && core.safeErrorString ? core.safeErrorString(e) : String(e || '');
             }
 
             function pushSessionLog(line) {
@@ -398,33 +268,45 @@
             }
 
             function storageRead(subject, kind, notifyOnFail) {
-                try {
-                    var raw = getJournalItem(subject);
-                    markStorage(kind, 'read', true);
-                    return raw;
-                } catch (e) {
-                    markStorage(kind, 'read', false, e);
-                    if (notifyOnFail && !storageFailureNotified) {
-                        storageFailureNotified = true;
-                        reportError('storage.' + kind + '.read', e, 'Local storage unavailable', 'Settings and diagnostics may not be saved. Click the ! icon for details.');
-                    }
-                    return null;
+                var r;
+                if (outlook && outlook.tryGetJournalItem) {
+                    r = outlook.tryGetJournalItem(subject);
+                } else {
+                    r = { ok: false, value: null, error: 'Outlook adapter not available' };
                 }
+
+                if (r && r.ok) {
+                    markStorage(kind, 'read', true);
+                    return r.value;
+                }
+
+                markStorage(kind, 'read', false, (r && r.error) ? r.error : 'read failed');
+                if (notifyOnFail && !storageFailureNotified) {
+                    storageFailureNotified = true;
+                    reportError('storage.' + kind + '.read', (r && r.error) ? r.error : 'read failed', 'Local storage unavailable', 'Settings and diagnostics may not be saved. Click the ! icon for details.');
+                }
+                return null;
             }
 
             function storageWrite(subject, body, kind, notifyOnFail) {
-                try {
-                    saveJournalItem(subject, body);
+                var r;
+                if (outlook && outlook.trySaveJournalItem) {
+                    r = outlook.trySaveJournalItem(subject, body);
+                } else {
+                    r = { ok: false, value: false, error: 'Outlook adapter not available' };
+                }
+
+                if (r && r.ok) {
                     markStorage(kind, 'write', true);
                     return true;
-                } catch (e) {
-                    markStorage(kind, 'write', false, e);
-                    if (notifyOnFail && !storageFailureNotified) {
-                        storageFailureNotified = true;
-                        reportError('storage.' + kind + '.write', e, 'Local storage unavailable', 'Settings and diagnostics may not be saved. Click the ! icon for details.');
-                    }
-                    return false;
                 }
+
+                markStorage(kind, 'write', false, (r && r.error) ? r.error : 'write failed');
+                if (notifyOnFail && !storageFailureNotified) {
+                    storageFailureNotified = true;
+                    reportError('storage.' + kind + '.write', (r && r.error) ? r.error : 'write failed', 'Local storage unavailable', 'Settings and diagnostics may not be saved. Click the ! icon for details.');
+                }
+                return false;
             }
 
             function runStorageHealthCheck() {
@@ -782,7 +664,7 @@
             function initCategories() {
                 $scope.categories = ['<All Categories>', '<No Category>'];
                 try {
-                    outlookCategories = getOutlookCategories();
+                    outlookCategories = outlook && outlook.getOutlookCategories ? outlook.getOutlookCategories() : { names: [], colors: [] };
                     outlookCategories.names.forEach(function (name) {
                         $scope.categories.push(name);
                     });
@@ -795,7 +677,7 @@
             function initMailboxes() {
                 $scope.mailboxes = [];
                 try {
-                    var mb = getOutlookMailboxes(!!($scope.config && $scope.config.MULTI_MAILBOX));
+                    var mb = outlook && outlook.getOutlookMailboxes ? outlook.getOutlookMailboxes(!!($scope.config && $scope.config.MULTI_MAILBOX)) : [];
                     mb.forEach(function (m) {
                         $scope.mailboxes.push(m);
                     });
@@ -812,7 +694,7 @@
                     var list = [];
                     // Include default Tasks folder
                     try {
-                        var tasksFolder = getTaskFolderExisting($scope.filter.mailbox, '');
+                        var tasksFolder = outlook && outlook.getTaskFolderExisting ? outlook.getTaskFolderExisting($scope.filter.mailbox, '') : null;
                         if (tasksFolder) {
                             list.push({
                                 name: tasksFolder.Name + ' (Tasks)',
@@ -826,7 +708,7 @@
 
                     // Include subfolders under Tasks
                     try {
-                        var subs = listTaskSubFolders($scope.filter.mailbox, '');
+                        var subs = outlook && outlook.listTaskSubFolders ? outlook.listTaskSubFolders($scope.filter.mailbox, '') : [];
                         subs.forEach(function (f) {
                             list.push(f);
                         });
@@ -859,7 +741,7 @@
 
             function getProjectsRootFolderExisting() {
                 try {
-                    return getTaskFolderExisting($scope.filter.mailbox, $scope.config.PROJECTS.rootFolderName);
+                    return outlook && outlook.getTaskFolderExisting ? outlook.getTaskFolderExisting($scope.filter.mailbox, $scope.config.PROJECTS.rootFolderName) : null;
                 } catch (e) {
                     return null;
                 }
@@ -872,7 +754,7 @@
 
                     var defaultTasksEntryID = '';
                     try {
-                        var tf = getTaskFolderExisting($scope.filter.mailbox, '');
+                        var tf = outlook && outlook.getTaskFolderExisting ? outlook.getTaskFolderExisting($scope.filter.mailbox, '') : null;
                         if (tf) {
                             defaultTasksEntryID = tf.EntryID;
                         }
@@ -883,7 +765,7 @@
                     // Root subfolders
                     var root = getProjectsRootFolderExisting();
                     if (root) {
-                        var subs = listTaskSubFolders($scope.filter.mailbox, $scope.config.PROJECTS.rootFolderName);
+                        var subs = outlook && outlook.listTaskSubFolders ? outlook.listTaskSubFolders($scope.filter.mailbox, $scope.config.PROJECTS.rootFolderName) : [];
                         subs.forEach(function (p) {
                             projects.push({
                                 name: p.name,
@@ -901,7 +783,7 @@
                         var name = p.name || 'Linked project';
                         var storeID = p.storeID;
                         try {
-                            var f = getFolderFromIDs(p.entryID, p.storeID);
+                            var f = outlook && outlook.getFolderFromIDs ? outlook.getFolderFromIDs(p.entryID, p.storeID) : null;
                             if (f) {
                                 name = f.Name;
                                 try { storeID = f.StoreID; } catch (e1) { /* ignore */ }
@@ -1003,7 +885,7 @@
                     var p = getSelectedProject();
                     if (!p) return null;
                     if (p.entryID) {
-                        var f = getFolderFromIDs(p.entryID, p.storeID);
+                        var f = outlook && outlook.getFolderFromIDs ? outlook.getFolderFromIDs(p.entryID, p.storeID) : null;
                         if (f) return f;
                     }
                 } catch (e) {
@@ -1118,74 +1000,14 @@
             };
 
             function buildLanes(tasks) {
-                var lanes = [];
-                var enabledLanes = [];
-                ($scope.config.LANES || []).forEach(function (l) {
-                    var id = sanitizeId(l.id);
-                    if (!id) return;
-                    enabledLanes.push({
-                        id: id,
-                        title: l.title || id,
-                        color: isValidHexColor(l.color) ? l.color : '#94a3b8',
-                        wipLimit: Number(l.wipLimit || 0),
-                        enabled: (l.enabled !== false),
-                        outlookStatus: (l.outlookStatus === undefined ? null : l.outlookStatus),
-                        tasks: [],
-                        filteredTasks: []
-                    });
-                });
-
-                // Default to at least one lane
-                if (enabledLanes.length === 0) {
-                    enabledLanes.push({ id: 'backlog', title: 'Backlog', color: '#94a3b8', wipLimit: 0, enabled: true, outlookStatus: 0, tasks: [], filteredTasks: [] });
+                try {
+                    if (board && board.buildLanes) {
+                        return board.buildLanes(tasks, $scope.config);
+                    }
+                } catch (e) {
+                    writeLog('buildLanes: ' + e);
                 }
-
-                var defaultLaneId = enabledLanes[0].id;
-
-                tasks.forEach(function (t) {
-                    var laneId = sanitizeId(t.laneId) || defaultLaneId;
-                    var lane = null;
-                    for (var i = 0; i < enabledLanes.length; i++) {
-                        if (enabledLanes[i].id === laneId) {
-                            lane = enabledLanes[i];
-                            break;
-                        }
-                    }
-                    if (!lane) {
-                        lane = enabledLanes[0];
-                    }
-                    lane.tasks.push(t);
-                });
-
-                // Sorting
-                enabledLanes.forEach(function (lane) {
-                    lane.tasks.sort(function (a, b) {
-                        if ($scope.config.BOARD.saveOrder) {
-                            var ao = (a.laneOrder === undefined || a.laneOrder === null) ? 999999 : a.laneOrder;
-                            var bo = (b.laneOrder === undefined || b.laneOrder === null) ? 999999 : b.laneOrder;
-                            if (ao !== bo) return ao - bo;
-                        }
-
-                        // due date asc (missing due dates last)
-                        var ad = a.dueDateMs || 9999999999999;
-                        var bd = b.dueDateMs || 9999999999999;
-                        if (ad !== bd) return ad - bd;
-
-                        // priority desc
-                        if (a.priority !== b.priority) return (b.priority || 0) - (a.priority || 0);
-
-                        // subject asc
-                        var as = (a.subject || '').toLowerCase();
-                        var bs = (b.subject || '').toLowerCase();
-                        if (as < bs) return -1;
-                        if (as > bs) return 1;
-                        return 0;
-                    });
-                    lane.filteredTasks = lane.tasks.slice(0);
-                });
-
-                lanes = enabledLanes;
-                return lanes;
+                return [];
             }
 
             function readTasksFromOutlookFolder(folder) {
@@ -1227,10 +1049,8 @@
                                 }
                             }
 
-                            var laneId = '';
-                            try { laneId = getUserProperty(task, PROP_LANE_ID); } catch (e1) { laneId = ''; }
-                            var laneOrderRaw = '';
-                            try { laneOrderRaw = getUserProperty(task, PROP_LANE_ORDER); } catch (e2) { laneOrderRaw = ''; }
+                            var laneId = outlook && outlook.getUserProperty ? outlook.getUserProperty(task, PROP_LANE_ID) : '';
+                            var laneOrderRaw = outlook && outlook.getUserProperty ? outlook.getUserProperty(task, PROP_LANE_ORDER) : '';
                             var laneOrder = null;
                             if (laneOrderRaw !== '' && laneOrderRaw !== null && laneOrderRaw !== undefined) {
                                 var n = parseInt(laneOrderRaw, 10);
@@ -1251,7 +1071,7 @@
                                 categoriesCsv: task.Categories,
                                 categories: getCategoryStyles(task.Categories),
                                 notes: taskBodyNotes(task.Body, $scope.config.BOARD.taskNoteMaxLen),
-                                oneNoteURL: (function () { try { return getUserProperty(task, 'OneNoteURL'); } catch (e3) { return ''; } })(),
+                                oneNoteURL: (outlook && outlook.getUserProperty) ? outlook.getUserProperty(task, 'OneNoteURL') : '',
                                 laneId: laneId,
                                 laneOrder: laneOrder
                             });
@@ -1331,49 +1151,13 @@
 
             $scope.applyFilters = function () {
                 try {
-                    var search = ($scope.filter.search || '').toLowerCase();
-                    var category = $scope.filter.category || '<All Categories>';
-                    var privacy = $scope.filter.private;
-
-                    $scope.lanes.forEach(function (lane) {
-                        lane.filteredTasks = lane.tasks.filter(function (t) {
-                            // privacy
-                            if (privacy === $scope.privacyFilter.private.value) {
-                                if (t.sensitivity !== 2) return false;
-                            }
-                            if (privacy === $scope.privacyFilter.public.value) {
-                                if (t.sensitivity === 2) return false;
-                            }
-
-                            // search
-                            if (search) {
-                                var hay = ((t.subject || '') + ' ' + (t.notes || '')).toLowerCase();
-                                if (hay.indexOf(search) === -1) return false;
-                            }
-
-                            // category
-                            if (category && category !== '<All Categories>') {
-                                if (category === '<No Category>') {
-                                    if ((t.categoriesCsv || '').trim() !== '') return false;
-                                } else {
-                                    var found = false;
-                                    (t.categories || []).forEach(function (c) {
-                                        if (c.label === category) found = true;
-                                    });
-                                    if (!found) return false;
-                                }
-                            }
-
-                            return true;
-                        });
-                    });
+                    var filtersActive = false;
+                    if (board && board.applyFilters) {
+                        filtersActive = board.applyFilters($scope.lanes, $scope.filter, $scope.privacyFilter);
+                    }
 
                     // To avoid persisting partial ordering, disable drag/drop while filters are active.
                     if ($scope.sortableOptions) {
-                        var filtersActive = false;
-                        if (($scope.filter.search || '').trim() !== '') filtersActive = true;
-                        if (($scope.filter.category || '<All Categories>') !== '<All Categories>') filtersActive = true;
-                        if (String($scope.filter.private) !== String($scope.privacyFilter.all.value)) filtersActive = true;
                         $scope.sortableOptions.disabled = filtersActive;
                     }
 
@@ -1511,18 +1295,27 @@
 
             function getTaskItemSafe(entryID, storeID) {
                 try {
-                    if (typeof getTaskItemFromIDs === 'function') {
-                        return getTaskItemFromIDs(entryID, storeID);
+                    if (outlook && outlook.getTaskItemFromIDs && storeID) {
+                        var it = outlook.getTaskItemFromIDs(entryID, storeID);
+                        if (it) return it;
                     }
                 } catch (e) {
                     // ignore
                 }
-                return getTaskItem(entryID);
+                return outlook && outlook.getTaskItem ? outlook.getTaskItem(entryID) : null;
             }
 
             function setTaskLane(taskEntryID, storeID, laneId) {
                 var taskitem = getTaskItemSafe(taskEntryID, storeID);
-                setUserProperty(taskitem, PROP_LANE_ID, laneId);
+                if (!taskitem) {
+                    reportError('setTaskLane', 'task not available', 'Move failed', 'Could not update the task in Outlook. Click the ! icon for details.');
+                    return;
+                }
+                if (!(outlook && outlook.setUserProperty)) {
+                    reportError('setTaskLane', 'Outlook adapter not available', 'Move failed', 'Outlook integration is not available. Click the ! icon for details.');
+                    return;
+                }
+                outlook.setUserProperty(taskitem, PROP_LANE_ID, laneId);
                 taskitem.Save();
             }
 
@@ -1530,6 +1323,7 @@
                 try {
                     if (statusValue === null || statusValue === undefined) return;
                     var taskitem = getTaskItemSafe(taskEntryID, storeID);
+                    if (!taskitem) return;
                     if (taskitem.Status != statusValue) {
                         taskitem.Status = statusValue;
                         taskitem.Save();
@@ -1542,10 +1336,17 @@
             function fixLaneOrder(lane) {
                 try {
                     if (!$scope.config.BOARD.saveOrder) return;
+                    if (!(outlook && outlook.setUserProperty)) {
+                        reportError('fixLaneOrder', 'Outlook adapter not available', 'Ordering failed', 'Outlook integration is not available. Click the ! icon for details.');
+                        return;
+                    }
                     for (var i = 0; i < lane.filteredTasks.length; i++) {
                         var t = lane.filteredTasks[i];
                         var taskitem = getTaskItemSafe(t.entryID, t.storeID);
-                        setUserProperty(taskitem, PROP_LANE_ORDER, i, OlUserPropertyType.olNumber);
+                        if (!taskitem) {
+                            continue;
+                        }
+                        outlook.setUserProperty(taskitem, PROP_LANE_ORDER, i, OlUserPropertyType.olNumber);
                         taskitem.Save();
                     }
                 } catch (e) {
@@ -1629,8 +1430,13 @@
                     }
 
                     if (lane && lane.id) {
-                        setUserProperty(taskitem, PROP_LANE_ID, lane.id, OlUserPropertyType.olText);
-                        setUserProperty(taskitem, PROP_LANE_ORDER, 0, OlUserPropertyType.olNumber);
+                        if (outlook && outlook.setUserProperty) {
+                            outlook.setUserProperty(taskitem, PROP_LANE_ID, lane.id, OlUserPropertyType.olText);
+                            outlook.setUserProperty(taskitem, PROP_LANE_ORDER, 0, OlUserPropertyType.olNumber);
+                        } else {
+                            // Allow task creation to proceed even if lane metadata cannot be stored.
+                            reportError('addTask', 'Outlook adapter not available', 'Lane not set', 'The task was created but could not be placed on a lane. Click the ! icon for details.');
+                        }
                         if ($scope.config && $scope.config.AUTOMATION && $scope.config.AUTOMATION.setOutlookStatusOnLaneMove) {
                             if (lane.outlookStatus !== null && lane.outlookStatus !== undefined) {
                                 taskitem.Status = lane.outlookStatus;
@@ -2007,7 +1813,7 @@
                         return;
                     }
 
-                    var folder = getFolderFromIDs(entryID, storeID);
+                    var folder = outlook && outlook.getFolderFromIDs ? outlook.getFolderFromIDs(entryID, storeID) : null;
                     if (!folder) {
                         showUserError('Folder not found', 'Could not locate the project folder in Outlook.');
                         return;
@@ -2093,9 +1899,17 @@
                     }
 
                     // Create (or reuse) root folder
-                    var root = getTaskFolder($scope.filter.mailbox, $scope.config.PROJECTS.rootFolderName);
+                    var root = outlook && outlook.getTaskFolder ? outlook.getTaskFolder($scope.filter.mailbox, $scope.config.PROJECTS.rootFolderName) : null;
+                    if (!root) {
+                        showUserError('Project not created', 'Could not access or create the root Tasks folder in Outlook.');
+                        return;
+                    }
                     // Create project folder under root
-                    var pf = getOrCreateFolder($scope.filter.mailbox, projectName, root.Folders, OlDefaultFolders.olFolderTasks);
+                    var pf = outlook && outlook.getOrCreateFolder ? outlook.getOrCreateFolder($scope.filter.mailbox, projectName, root.Folders, OlDefaultFolders.olFolderTasks) : null;
+                    if (!pf) {
+                        showUserError('Project not created', 'Could not create the project folder in Outlook.');
+                        return;
+                    }
 
                     // Refresh projects and select
                     loadProjects();
@@ -2152,7 +1966,7 @@
             function getProjectFolderByEntryID(entryID) {
                 var p = getProjectAll(entryID);
                 if (!p) return null;
-                return getFolderFromIDs(p.entryID, p.storeID);
+                return outlook && outlook.getFolderFromIDs ? outlook.getFolderFromIDs(p.entryID, p.storeID) : null;
             }
 
             $scope.runMoveTasks = function () {
@@ -2195,11 +2009,11 @@
                         try {
                             var it = items(i);
                             var currentLane = '';
-                            try { currentLane = sanitizeId(getUserProperty(it, PROP_LANE_ID)); } catch (e1) { currentLane = ''; }
+                            currentLane = sanitizeId((outlook && outlook.getUserProperty) ? outlook.getUserProperty(it, PROP_LANE_ID) : '');
 
                             var laneOrder = null;
                             try {
-                                var laneOrderRaw = getUserProperty(it, PROP_LANE_ORDER);
+                                var laneOrderRaw = (outlook && outlook.getUserProperty) ? outlook.getUserProperty(it, PROP_LANE_ORDER) : '';
                                 if (laneOrderRaw !== '' && laneOrderRaw !== null && laneOrderRaw !== undefined) {
                                     var n = parseInt(laneOrderRaw, 10);
                                     if (!isNaN(n)) laneOrder = n;
@@ -2249,16 +2063,22 @@
                         for (; idx < end; idx++) {
                             try {
                                 var w = moveList[idx];
-                                var taskitem = getTaskItemFromIDs(w.entryID, fromStoreID);
+                                var taskitem = outlook && outlook.getTaskItemFromIDs ? outlook.getTaskItemFromIDs(w.entryID, fromStoreID) : null;
+                                if (!taskitem) {
+                                    writeLog('move task: task not found');
+                                    continue;
+                                }
                                 var moved = taskitem.Move(toFolder);
                                 // Ensure lane metadata remains on the moved task
                                 try {
                                     if (moved) {
-                                        if (w.laneId) {
-                                            setUserProperty(moved, PROP_LANE_ID, w.laneId, OlUserPropertyType.olText);
-                                        }
-                                        if (w.laneOrder !== null && w.laneOrder !== undefined) {
-                                            setUserProperty(moved, PROP_LANE_ORDER, w.laneOrder, OlUserPropertyType.olNumber);
+                                        if (outlook && outlook.setUserProperty) {
+                                            if (w.laneId) {
+                                                outlook.setUserProperty(moved, PROP_LANE_ID, w.laneId, OlUserPropertyType.olText);
+                                            }
+                                            if (w.laneOrder !== null && w.laneOrder !== undefined) {
+                                                outlook.setUserProperty(moved, PROP_LANE_ORDER, w.laneOrder, OlUserPropertyType.olNumber);
+                                            }
                                         }
                                         moved.Save();
                                     }
@@ -2395,8 +2215,7 @@
                     for (var j = 1; j <= count; j++) {
                         try {
                             var it = items(j);
-                            var laneId = '';
-                            try { laneId = getUserProperty(it, PROP_LANE_ID); } catch (e1) { laneId = ''; }
+                            var laneId = (outlook && outlook.getUserProperty) ? outlook.getUserProperty(it, PROP_LANE_ID) : '';
                             scan.push({
                                 entryID: it.EntryID,
                                 storeID: folderStoreID,
@@ -2486,8 +2305,14 @@
                         for (; idx < end; idx++) {
                             try {
                                 var w = work[idx];
-                                var taskitem = getTaskItemFromIDs(w.entryID, w.storeID);
-                                setUserProperty(taskitem, PROP_LANE_ID, w.laneId, OlUserPropertyType.olText);
+                                var taskitem = outlook && outlook.getTaskItemFromIDs ? outlook.getTaskItemFromIDs(w.entryID, w.storeID) : null;
+                                if (!taskitem) {
+                                    throw 'task not found';
+                                }
+                                if (!(outlook && outlook.setUserProperty)) {
+                                    throw 'Outlook adapter not available';
+                                }
+                                outlook.setUserProperty(taskitem, PROP_LANE_ID, w.laneId, OlUserPropertyType.olText);
                                 taskitem.Save();
                                 $scope.ui.migration.progress.updated++;
                             } catch (e1) {
@@ -2534,7 +2359,11 @@
                         $scope.config.PROJECTS.rootFolderName = rootName;
 
                         // Always create root (recommended; used for new projects)
-                        var root = getTaskFolder($scope.filter.mailbox, rootName);
+                        var root = outlook && outlook.getTaskFolder ? outlook.getTaskFolder($scope.filter.mailbox, rootName) : null;
+                        if (!root) {
+                            showUserError('Setup', 'Could not access or create the root Tasks folder in Outlook.');
+                            return;
+                        }
 
                         if ($scope.ui.setupProjectMode === 'link') {
                             var lf = linkExistingProject($scope.ui.setupExistingProjectEntryID);
@@ -2548,7 +2377,11 @@
                         } else {
                             var projName = String($scope.ui.setupDefaultProjectName || 'General').trim();
                             if (!projName) projName = 'General';
-                            var pf = getOrCreateFolder($scope.filter.mailbox, projName, root.Folders, OlDefaultFolders.olFolderTasks);
+                            var pf = outlook && outlook.getOrCreateFolder ? outlook.getOrCreateFolder($scope.filter.mailbox, projName, root.Folders, OlDefaultFolders.olFolderTasks) : null;
+                            if (!pf) {
+                                showUserError('Setup', 'Could not create the default project folder in Outlook.');
+                                return;
+                            }
                             loadProjects();
                             $scope.config.PROJECTS.defaultProjectEntryID = pf.EntryID;
                             $scope.ui.projectEntryID = pf.EntryID;
@@ -2611,8 +2444,8 @@
 
                     var support = (function () {
                         try {
-                            if (typeof getBrowserSupportDetails === 'function') {
-                                return getBrowserSupportDetails();
+                            if (outlook && outlook.getBrowserSupportDetails) {
+                                return outlook.getBrowserSupportDetails();
                             }
                         } catch (e) {
                             // ignore
@@ -2620,8 +2453,8 @@
                         return { supported: !!$scope.isBrowserSupported, method: 'unknown', error: '' };
                     })();
 
-                    var outlookVersion = (function () { try { return getOutlookVersion(); } catch (e) { return 'unknown'; } })();
-                    var outlookTodayHome = (function () { try { return getOutlookTodayHomePageFolder(); } catch (e) { return 'unknown'; } })();
+                    var outlookVersion = (outlook && outlook.getOutlookVersion) ? outlook.getOutlookVersion() : 'unknown';
+                    var outlookTodayHome = (outlook && outlook.getOutlookTodayHomePageFolder) ? outlook.getOutlookTodayHomePageFolder() : 'unknown';
 
                     var selectedProject = null;
                     try { selectedProject = getProjectAll($scope.ui.projectEntryID); } catch (e) { selectedProject = null; }
@@ -2682,8 +2515,8 @@
                 try {
                     var support = (function () {
                         try {
-                            if (typeof getBrowserSupportDetails === 'function') {
-                                return getBrowserSupportDetails();
+                            if (outlook && outlook.getBrowserSupportDetails) {
+                                return outlook.getBrowserSupportDetails();
                             }
                         } catch (e) {
                             // ignore
@@ -2707,7 +2540,7 @@
                             userAgent: (function () { try { return String(navigator.userAgent || ''); } catch (e) { return ''; } })(),
                             browserSupport: support
                         },
-                        outlookVersion: (function () { try { return getOutlookVersion(); } catch (e) { return 'unknown'; } })()
+                        outlookVersion: (outlook && outlook.getOutlookVersion) ? outlook.getOutlookVersion() : 'unknown'
                     };
                     $scope.errorDetailsText = JSON.stringify(payload, null, 2);
                     $scope.ui.showErrorDetails = true;
@@ -2765,9 +2598,9 @@
                     $scope.env = { href: '', userAgent: '' };
                 }
 
-                $scope.isBrowserSupported = checkBrowser();
+                $scope.isBrowserSupported = outlook && outlook.checkBrowser ? outlook.checkBrowser() : false;
                 try {
-                    $scope.browserSupport = (typeof getBrowserSupportDetails === 'function') ? getBrowserSupportDetails() : { supported: !!$scope.isBrowserSupported, method: 'unknown', error: '' };
+                    $scope.browserSupport = (outlook && outlook.getBrowserSupportDetails) ? outlook.getBrowserSupportDetails() : { supported: !!$scope.isBrowserSupported, method: 'unknown', error: '' };
                 } catch (e) {
                     $scope.browserSupport = { supported: !!$scope.isBrowserSupported, method: 'unknown', error: '' };
                 }

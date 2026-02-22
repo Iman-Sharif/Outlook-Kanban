@@ -13,8 +13,13 @@ This project is a static HTML/CSS/JS application that runs inside classic Outloo
 .
 ├─ kanban.html                 # App entrypoint (Folder Home Page)
 ├─ js/
-│  ├─ app.js                   # AngularJS controller + UI logic
+│  ├─ app/                     # AngularJS controller split into modules
+│  │  ├─ core.js                # App constants + helpers
+│  │  └─ controller.js          # AngularJS controller + UI logic
+│  ├─ board/                   # Pure board logic (testable)
+│  ├─ core/                    # Pure utilities (testable)
 │  ├─ exchange.js              # Outlook COM/MAPI bridge
+│  ├─ outlook/                 # Outlook adapter boundary
 │  └─ version.js               # App version
 ├─ css/
 │  ├─ kfo.css                  # Base UI components (theme-agnostic)
@@ -31,10 +36,10 @@ This project is a static HTML/CSS/JS application that runs inside classic Outloo
 `kanban.html` loads:
 
 - Vendor libraries from `vendor/` (jQuery, jQuery UI, AngularJS, ui-sortable, Moment, JSON.minify)
-- App code from `js/version.js`, `js/exchange.js`, `js/app.js`
+- App code from `js/version.js`, `js/exchange.js`, `js/app/core.js`, `js/app/controller.js`
 - Base styles from `css/kfo.css` + a theme from `themes/.../theme.css`
 
-The AngularJS controller (`taskboardController`) is declared in `js/app.js`.
+The AngularJS controller (`taskboardController`) is declared in `js/app/controller.js`.
 
 ## Outlook integration
 
