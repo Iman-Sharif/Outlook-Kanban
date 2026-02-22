@@ -4,6 +4,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 3.5.1
+
+- Make downloads clearer for non-technical users (direct latest-release links and warnings about source zips)
+- Include `START_HERE.html` in the release zip
+
 ## 3.5.0
 
 - Add tag-driven GitHub Releases that publish `kanban-for-outlook.zip` + `.sha256`
