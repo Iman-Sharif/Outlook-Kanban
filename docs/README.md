@@ -25,7 +25,9 @@
 ## Maintainers
 
 - [`docs/SIGNING.md`](SIGNING.md): why signing helps SmartScreen (maintainer doc)
+- [`CONTRIBUTING.md`](../CONTRIBUTING.md): contribution guide + maintainer checks
 
 ## Reference
 
 - [`docs/ARCHITECTURE.md`](ARCHITECTURE.md): repo structure + runtime design
+- [`docs/IMPROVEMENT_PLAN.md`](IMPROVEMENT_PLAN.md): actionable plan for future releases

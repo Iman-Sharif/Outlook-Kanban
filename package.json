@@ -1,0 +1,14 @@
+{
+  "name": "kanban-for-outlook",
+  "private": true,
+  "description": "Maintainer tooling for Kanban for Outlook (no runtime dependencies).",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "check:local-only": "node tools/audit-local-only.js",
+    "check:links": "node tools/check-internal-links.js",
+    "check": "npm run check:local-only && npm run check:links"
+  }
+}

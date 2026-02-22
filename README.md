@@ -94,3 +94,7 @@ This project is provided "AS IS" with no warranty. See [`DISCLAIMER.md`](DISCLAI
 ## License
 
 MIT, see [`LICENSE`](LICENSE).
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md).
