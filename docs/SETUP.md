@@ -56,7 +56,7 @@ Signed installers display a Publisher name and typically trigger fewer warnings 
    - Enable: "Show home page by default for this folder"
 
 > [!TIP]
-> If your organization disables Folder Home Pages via policy, the app cannot run. See [`docs/TROUBLESHOOTING.md`](TROUBLESHOOTING.md).
+> If your organisation disables Folder Home Pages via policy, the app cannot run. See [`docs/TROUBLESHOOTING.md`](TROUBLESHOOTING.md).
 
 ## Uninstall
 

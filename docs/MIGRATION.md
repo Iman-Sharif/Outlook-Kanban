@@ -17,7 +17,7 @@ Older JanBan-based installations may have relied on Outlook Status and/or multip
 
 ## Scope options
 
-- Only tasks without a lane: avoids overwriting tasks that you already organized in the new system.
+- Only tasks without a lane: avoids overwriting tasks that you already organised in the new system.
 - Treat unknown lanes as unassigned: helps clean up tasks that have a non-existent lane id.
 
 ## Notes

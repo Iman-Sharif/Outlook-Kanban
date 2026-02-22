@@ -28,7 +28,7 @@
   <!-- Left copy -->
   <g transform="translate(70 70)" fill="#0f172a">
     <text x="0" y="0" font-family="Segoe UI, Tahoma, Arial, sans-serif" font-weight="800" font-size="42">Kanban for Outlook</text>
-    <text x="0" y="36" font-family="Segoe UI, Tahoma, Arial, sans-serif" font-weight="400" font-size="16" fill="#334155">Local-only Kanban board for classic Microsoft Outlook Tasks (Windows desktop).</text>
+    <text x="0" y="36" font-family="Segoe UI, Tahoma, Arial, sans-serif" font-weight="400" font-size="16" fill="#334155">Local-only board that turns Outlook Tasks into a drag-and-drop workflow.</text>
 
     <!-- Pills -->
     <g transform="translate(0 60)">

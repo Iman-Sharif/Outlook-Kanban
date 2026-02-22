@@ -30,7 +30,7 @@
 - Appearance: theme, density, motion, lane width, card fields
 - Board: manual ordering, remember filters/project, note preview length, date format
 - Projects: create/link/hide/rename projects
-- Lanes: create lanes, reorder them, set colors, optional Outlook Status sync
+- Lanes: create lanes, reorder them, set colours, optional Outlook Status sync
 
 ## Tools
 

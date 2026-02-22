@@ -53,7 +53,7 @@ So your theme must scope under:
 .kfo.theme-<id> .kfo-topbar { ... }
 ```
 
-The app sanitizes ids to lowercase `a-z`, `0-9`, and `-`. Use simple ids like `sandstone`, `paper-light`, `midnight-ink`.
+The app sanitises ids to lowercase `a-z`, `0-9`, and `-`. Use simple ids like `sandstone`, `paper-light`, `midnight-ink`.
 
 ## Local-only expectations
 

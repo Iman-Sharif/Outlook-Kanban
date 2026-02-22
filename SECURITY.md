@@ -12,7 +12,7 @@ Please report security issues via GitHub Security Advisories (preferred) or by o
 
 ## Local-only design
 
-This fork aims to minimize risk by:
+This fork aims to minimise risk by:
 
 - Bundling all dependencies locally (no CDN)
 - Avoiding network calls (no update checks / telemetry)

@@ -7,7 +7,7 @@ Kanban for Outlook is designed to run fully locally inside classic Outlook for W
 ## What data it accesses
 
 - Outlook Tasks from the currently selected project folder
-- Outlook Categories (for optional color display)
+- Outlook Categories (for optional colour display)
 
 ## Where it stores data
 
