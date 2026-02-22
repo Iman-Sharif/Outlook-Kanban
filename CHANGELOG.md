@@ -4,6 +4,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 3.5.2
+
+- Make projects optional by always including the default Outlook Tasks folder
+- Rename built-in themes to Light/Dark mode and tune Dark mode to match Outlook colours
+- Switch Settings to a single-column layout and reduce repetitive disclaimer messaging
+
 ## 3.5.1
 
 - Make downloads clearer for non-technical users (direct latest-release links and warnings about source zips)
