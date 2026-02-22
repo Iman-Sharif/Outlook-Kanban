@@ -31,8 +31,12 @@
   flex-wrap: wrap;
 }
 
-.kfo-topbar > * + * {
-  margin-left: 10px;
+.kfo-topbar > * {
+  margin: 4px 10px 4px 0;
+}
+
+.kfo-topbar > *:last-child {
+  margin-right: 0;
 }
 
 .kfo-brand {
@@ -59,10 +63,15 @@
 .kfo-topbarSection {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
 }
 
-.kfo-topbarSection > * + * {
-  margin-left: 8px;
+.kfo-topbarSection > * {
+  margin: 4px 8px 4px 0;
+}
+
+.kfo-topbarSection > *:last-child {
+  margin-right: 0;
 }
 
 .kfo-topbarGrow {
@@ -80,17 +89,21 @@
   top: 8px;
   opacity: 0.55;
   pointer-events: none;
+  z-index: 0;
 }
 
 .kfo-searchInput {
   padding-left: 30px;
   padding-right: 34px;
+  position: relative;
+  z-index: 1;
 }
 
 .kfo-searchClear {
   position: absolute;
   right: 4px;
   top: 2px;
+  z-index: 2;
 }
 
 .kfo-input {
@@ -117,6 +130,13 @@
   outline: none;
 }
 
+/* Focus ring (keyboard accessibility) */
+.kfo-input:focus,
+.kfo-select:focus {
+  border-color: rgba(0,120,212,0.85);
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.22);
+}
+
 .kfo-btn {
   height: 30px;
   padding: 0 10px;
@@ -134,6 +154,15 @@
 
 .kfo-btn:focus {
   outline: none;
+  border-color: rgba(0,120,212,0.85);
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.22);
+}
+
+.kfo-iconBtn:focus,
+.kfo-pillBtn:focus {
+  outline: none;
+  border-color: rgba(0,120,212,0.85);
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.22);
 }
 
 .kfo-pill {
@@ -145,6 +174,12 @@
   white-space: nowrap;
 }
 
+.kfo-pillBtn {
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+
 .kfo-pill > * + * {
   margin-left: 6px;
 }
@@ -153,12 +188,16 @@
   flex: 1 1 auto;
   overflow: hidden;
   display: flex;
+  min-height: 0;
+  min-width: 0;
 }
 
 .kfo-board {
   flex: 1 1 auto;
   overflow: auto;
   padding: 12px;
+  min-height: 0;
+  min-width: 0;
 }
 
 .kfo-lanes {
@@ -496,12 +535,48 @@
   flex: 1 1 auto;
   overflow: auto;
   padding: 12px;
+  min-height: 0;
+  min-width: 0;
 }
 
 .kfo-card {
   border-radius: 14px;
   padding: 12px;
   margin-bottom: 12px;
+}
+
+/* Board empty state */
+.kfo-emptyWrap {
+  padding: 12px;
+}
+
+.kfo-empty {
+  max-width: 640px;
+  margin: 10px auto 0 auto;
+}
+
+.kfo-emptyTitle {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  margin-bottom: 6px;
+}
+
+.kfo-emptyMsg {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 10px;
+}
+
+.kfo-emptyActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.kfo-emptyActions > * + * {
+  margin-left: 8px;
 }
 
 .kfo-cardTitle {
@@ -565,8 +640,9 @@
 
 .kfo-divider {
   height: 1px;
-  opacity: 0.2;
+  opacity: 1;
   margin: 10px 0;
+  background: rgba(127,127,127,0.18);
 }
 
 .kfo-modalBackdrop {
@@ -576,17 +652,21 @@
   bottom: 0;
   left: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 20px;
-  z-index: 9999;
+  overflow: auto;
+  z-index: 12000;
 }
 
 .kfo-modal {
   width: 760px;
   max-width: 100%;
+  max-height: calc(100vh - 40px);
   border-radius: 16px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .kfo-modalHeader {
@@ -604,12 +684,17 @@
 
 .kfo-modalBody {
   padding: 14px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 .kfo-modalFooter {
   padding: 12px 14px;
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .kfo-modalFooter > * + * {
@@ -667,6 +752,83 @@
 }
 
 .kfo-listItemActions > * + * {
+  margin-left: 8px;
+}
+
+/* Stacked field layout (used in Settings) */
+.kfo-fieldRow {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.kfo-fieldRow > * + * {
+  margin-left: 10px;
+}
+
+.kfo-field {
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+
+.kfo-fieldLabel {
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0.85;
+  margin-bottom: 6px;
+}
+
+.kfo-field .kfo-input,
+.kfo-field .kfo-select {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Lane editor */
+.kfo-laneItem {
+  display: block;
+}
+
+.kfo-laneItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.kfo-laneItemHeaderLeft {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.kfo-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(127,127,127,0.25);
+  margin-right: 8px;
+  flex: 0 0 auto;
+}
+
+.kfo-laneItemName {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 420px;
+}
+
+.kfo-laneItemHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 10px;
+}
+
+.kfo-laneItemHeaderActions > * + * {
   margin-left: 8px;
 }
 

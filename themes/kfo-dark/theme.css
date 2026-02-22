@@ -95,3 +95,56 @@
 .kfo.theme-kfo-dark .kfo-modalBackdrop {
   background: rgba(0,0,0,0.60);
 }
+
+/* Inputs */
+.kfo.theme-kfo-dark .kfo-input::placeholder {
+  color: rgba(243,242,241,0.55);
+}
+
+/* IE11 placeholder */
+.kfo.theme-kfo-dark .kfo-input:-ms-input-placeholder {
+  color: rgba(243,242,241,0.55);
+}
+
+.kfo.theme-kfo-dark .kfo-input::-ms-input-placeholder {
+  color: rgba(243,242,241,0.55);
+}
+
+/* Select dropdown list (best-effort; host may still override option styling) */
+.kfo.theme-kfo-dark select option {
+  background: #201f1e;
+  color: #f3f2f1;
+}
+
+/* Semantic due date colours (Office-like) */
+.kfo.theme-kfo-dark .kfo-due--overdue { color: #d13438; }
+.kfo.theme-kfo-dark .kfo-due--today { color: #0078d4; }
+.kfo.theme-kfo-dark .kfo-due--soon { color: #f7630c; }
+
+/* Divider opacity in dark mode */
+.kfo.theme-kfo-dark .kfo-divider {
+  opacity: 1;
+  background: rgba(255,255,255,0.12);
+}
+
+/* Pills/tags definition */
+.kfo.theme-kfo-dark .kfo-pill,
+.kfo.theme-kfo-dark .kfo-tag {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10);
+}
+
+/* Progress */
+.kfo.theme-kfo-dark .kfo-progress {
+  border-color: rgba(255,255,255,0.14);
+  background: #201f1e;
+}
+
+.kfo.theme-kfo-dark .kfo-progressBar {
+  background: #0078d4;
+}
+
+/* Drag/drop placeholder */
+.kfo.theme-kfo-dark .kfo-sort-placeholder {
+  border-color: rgba(255,255,255,0.20);
+  background: rgba(255,255,255,0.06);
+}

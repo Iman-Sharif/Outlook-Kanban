@@ -82,6 +82,10 @@
                         <span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span>
                         <span>Project</span>
                     </button>
+                    <button class="kfo-btn" type="button" ng-click="openNewTask()" title="Quick add in the current folder">
+                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                        <span>New task</span>
+                    </button>
                 </div>
 
                 <div class="kfo-topbarGrow kfo-search">
@@ -100,6 +104,12 @@
                         <option value="{{privacyFilter.public.value}}">{{privacyFilter.public.text}}</option>
                     </select>
 
+                    <button class="kfo-pill kfo-pillBtn" type="button" ng-if="ui.filtersActive" ng-click="clearFilters()" title="Clear filters (reordering is disabled while filtered)">
+                        <span class="glyphicon glyphicon-filter" aria-hidden="true"></span>
+                        <span>Filtered</span>
+                        <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                    </button>
+
                     <button class="kfo-iconBtn" type="button" ng-click="refreshTasks()" aria-label="Refresh" ng-class="{'kfo-refreshing': ui.isRefreshing}">
                         <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
                     </button>
@@ -117,8 +127,41 @@
 
             <main class="kfo-main">
                 <section class="kfo-board" ng-if="ui.mode == 'board'">
+                    <div class="kfo-emptyWrap" ng-if="isBoardNoMatch()">
+                        <div class="kfo-card kfo-empty">
+                            <div class="kfo-emptyTitle">No tasks match your filters</div>
+                            <div class="kfo-emptyMsg">Clear search/category/privacy filters to see tasks again.</div>
+                            <div class="kfo-emptyActions">
+                                <button class="kfo-btn" type="button" ng-click="clearFilters()">Clear filters</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kfo-emptyWrap" ng-if="isBoardEmpty()">
+                        <div class="kfo-card kfo-empty">
+                            <div class="kfo-emptyTitle">No tasks yet</div>
+                            <div class="kfo-emptyMsg">Create your first task. Projects are optional.</div>
+                            <div class="kfo-emptyActions">
+                                <button class="kfo-btn" type="button" ng-if="config.BOARD.quickAddEnabled !== false" ng-click="openQuickAddBacklog()">Quick add to Backlog</button>
+                                <button class="kfo-btn" type="button" ng-click="openNewTask()">New task</button>
+                            </div>
+                            <div class="kfo-small">Tip: use the Project picker to switch folders, or create a project when you want to organise by folder.</div>
+                        </div>
+                    </div>
+
+                    <div class="kfo-emptyWrap" ng-if="isBoardHiddenByLanes()">
+                        <div class="kfo-card kfo-empty">
+                            <div class="kfo-emptyTitle">Tasks are hidden</div>
+                            <div class="kfo-emptyMsg">Your tasks are currently assigned to lanes that are disabled.</div>
+                            <div class="kfo-emptyActions">
+                                <button class="kfo-btn" type="button" ng-click="enableAllLanes()">Enable all lanes</button>
+                                <button class="kfo-btn" type="button" ng-click="switchMode('settings')">Review lanes</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="kfo-lanes">
-                        <div class="kfo-lane" ng-repeat="lane in lanes track by lane.id" ng-if="lane.enabled" ng-style="laneContainerStyle(lane, $index)">
+                        <div class="kfo-lane" id="kfo-lane-{{lane.id}}" ng-repeat="lane in lanes track by lane.id" ng-if="lane.enabled" ng-style="laneContainerStyle(lane, $index)">
                             <div class="kfo-laneHeader" ng-style="laneHeaderStyle(lane)">
                                 <div class="kfo-laneHeaderLeft">
                                     <div class="kfo-laneTitle">{{lane.title}}</div>
@@ -451,44 +494,89 @@
                             <div class="kfo-card">
                                 <div class="kfo-cardTitle">Lanes</div>
 
-                                <div class="kfo-row" ng-repeat="lane in config.LANES">
-                                    <div class="kfo-rowLabel">Lane</div>
-                                    <div class="kfo-rowControl">
-                                        <div class="kfo-row">
-                                            <input class="kfo-input" type="text" ng-model="lane.title" placeholder="Title" />
-                                            <input class="kfo-input" type="text" ng-model="lane.id" placeholder="Id" />
-                                            <input class="kfo-input" type="text" ng-model="lane.color" placeholder="#RRGGBB" />
-                                            <input class="kfo-input" type="number" ng-model="lane.wipLimit" placeholder="WIP" style="max-width:90px;" />
-                                            <select class="kfo-select" ng-model="lane.outlookStatus" title="Optional: sync Outlook Status">
-                                                <option ng-value="null">No status sync</option>
-                                                <option ng-value="0">Not Started</option>
-                                                <option ng-value="1">In Progress</option>
-                                                <option ng-value="3">Waiting</option>
-                                                <option ng-value="4">Deferred</option>
-                                                <option ng-value="2">Completed</option>
-                                            </select>
-                                            <label class="kfo-pill" style="margin:0;">
-                                                <input type="checkbox" ng-model="lane.enabled" />
-                                                Enabled
-                                            </label>
-                                            <button class="kfo-btn" type="button" ng-click="moveLaneUp($index)">Up</button>
-                                            <button class="kfo-btn" type="button" ng-click="moveLaneDown($index)">Down</button>
-                                            <button class="kfo-btn" type="button" ng-click="removeLane($index)">Remove</button>
+                                <div class="kfo-small" style="margin-bottom:8px;">Lane ids are stored on tasks via <code>KFO_LaneId</code>. Disabling a lane hides it from the board.</div>
+
+                                <div class="kfo-laneEditor">
+                                    <div class="kfo-listItem kfo-laneItem" ng-repeat="lane in config.LANES">
+                                        <div class="kfo-laneItemHeader">
+                                            <div class="kfo-laneItemHeaderLeft">
+                                                <span class="kfo-swatch" ng-style="{'background-color': lane.color}"></span>
+                                                <div class="kfo-laneItemName">{{lane.title || lane.id || 'Lane'}}</div>
+                                                <span class="kfo-pill" ng-if="lane.enabled === false">Disabled</span>
+                                            </div>
+                                            <div class="kfo-laneItemHeaderActions">
+                                                <button class="kfo-btn" type="button" ng-click="moveLaneUp($index)">Up</button>
+                                                <button class="kfo-btn" type="button" ng-click="moveLaneDown($index)">Down</button>
+                                                <button class="kfo-btn" type="button" ng-click="removeLane($index)">Remove</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="kfo-laneItemBody">
+                                            <div class="kfo-fieldRow">
+                                                <div class="kfo-field">
+                                                    <div class="kfo-fieldLabel">Title</div>
+                                                    <input class="kfo-input" type="text" ng-model="lane.title" placeholder="Backlog" />
+                                                </div>
+                                                <div class="kfo-field">
+                                                    <div class="kfo-fieldLabel">Id</div>
+                                                    <input class="kfo-input" type="text" ng-model="lane.id" placeholder="backlog" />
+                                                </div>
+                                            </div>
+                                            <div class="kfo-fieldRow">
+                                                <div class="kfo-field">
+                                                    <div class="kfo-fieldLabel">Colour</div>
+                                                    <input class="kfo-input" type="text" ng-model="lane.color" placeholder="#RRGGBB" />
+                                                </div>
+                                                <div class="kfo-field">
+                                                    <div class="kfo-fieldLabel">WIP limit</div>
+                                                    <input class="kfo-input" type="number" ng-model="lane.wipLimit" placeholder="0" />
+                                                </div>
+                                            </div>
+                                            <div class="kfo-fieldRow">
+                                                <div class="kfo-field">
+                                                    <div class="kfo-fieldLabel">Status sync</div>
+                                                    <select class="kfo-select" ng-model="lane.outlookStatus" title="Optional: sync Outlook Status">
+                                                        <option ng-value="null">No status sync</option>
+                                                        <option ng-value="0">Not Started</option>
+                                                        <option ng-value="1">In Progress</option>
+                                                        <option ng-value="3">Waiting</option>
+                                                        <option ng-value="4">Deferred</option>
+                                                        <option ng-value="2">Completed</option>
+                                                    </select>
+                                                </div>
+                                                <div class="kfo-field">
+                                                    <div class="kfo-fieldLabel">Enabled</div>
+                                                    <label class="kfo-pill" style="margin:0;">
+                                                        <input type="checkbox" ng-model="lane.enabled" ng-change="onLaneEnabledChanged(lane)" />
+                                                        Enabled
+                                                    </label>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="kfo-divider"></div>
 
-                                <div class="kfo-row">
-                                    <div class="kfo-rowLabel">New lane</div>
-                                    <div class="kfo-rowControl">
-                                        <div class="kfo-row">
-                                            <input class="kfo-input" type="text" ng-model="ui.newLaneTitle" placeholder="Title" />
-                                            <input class="kfo-input" type="text" ng-model="ui.newLaneId" placeholder="Id" />
-                                            <input class="kfo-input" type="text" ng-model="ui.newLaneColor" placeholder="#RRGGBB" />
-                                            <button class="kfo-btn" type="button" ng-click="addLane()">Add</button>
-                                        </div>
+                                <div class="kfo-cardTitle" style="margin-top:4px;">New lane</div>
+                                <div class="kfo-fieldRow">
+                                    <div class="kfo-field">
+                                        <div class="kfo-fieldLabel">Title</div>
+                                        <input class="kfo-input" type="text" ng-model="ui.newLaneTitle" placeholder="Title" />
+                                    </div>
+                                    <div class="kfo-field">
+                                        <div class="kfo-fieldLabel">Id</div>
+                                        <input class="kfo-input" type="text" ng-model="ui.newLaneId" placeholder="Id" />
+                                    </div>
+                                </div>
+                                <div class="kfo-fieldRow">
+                                    <div class="kfo-field">
+                                        <div class="kfo-fieldLabel">Colour</div>
+                                        <input class="kfo-input" type="text" ng-model="ui.newLaneColor" placeholder="#RRGGBB" />
+                                    </div>
+                                    <div class="kfo-field">
+                                        <div class="kfo-fieldLabel">&nbsp;</div>
+                                        <button class="kfo-btn" type="button" ng-click="addLane()">Add lane</button>
                                     </div>
                                 </div>
                             </div>

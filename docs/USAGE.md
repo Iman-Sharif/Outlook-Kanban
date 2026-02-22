@@ -11,6 +11,7 @@
 
 - By default, the board uses your Outlook Tasks folder.
 - Pick a Project from the header if you want to work within a specific Tasks folder.
+- Use "New task" in the header to quick add a task in the current folder (default Tasks by default).
 - Drag a task card between lanes.
 - Double-click a card to open it in Outlook.
 - Quick add: click the lightning icon on a lane, type a subject, then press Enter.
