@@ -12,6 +12,7 @@
 - Pick a Project from the header.
 - Drag a task card between lanes.
 - Double-click a card to open it in Outlook.
+- Quick add: click the lightning icon on a lane, type a subject, then press Enter.
 
 > [!NOTE]
 > If "Sync Outlook status on move" is enabled and a lane maps to an Outlook Status, dragging a task can update the Outlook task Status.
@@ -28,14 +29,16 @@
 ## Settings
 
 - Appearance: theme, density, motion, lane width, card fields
-- Board: manual ordering, remember filters/project, note preview length, date format
+- Board: manual ordering, remember filters/project, note preview length, date format, keyboard shortcuts (opt-in)
 - Projects: create/link/hide/rename projects
 - Lanes: create lanes, reorder them, set colours, optional Outlook Status sync
+- Settings transfer: export/import config + view state as JSON (local file)
 
 ## Tools
 
 - Migrate lanes: bulk-assign lanes based on existing Outlook Task Status
 - Move between projects: move tasks between Outlook folders while keeping lane metadata
+- Export / import settings: save and restore config + view state as JSON
 
 Related docs:
 

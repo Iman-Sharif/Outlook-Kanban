@@ -102,6 +102,7 @@
                     progress: { total: 0, done: 0, percent: 0, updated: 0, skipped: 0, errors: 0 }
                 },
                 showDiagnostics: false,
+                showShortcuts: false,
                 createProjectMode: 'create',
                 linkProjectEntryID: '',
                 newProjectName: '',
@@ -112,7 +113,20 @@
                 importThemeId: '',
                 folderThemeName: '',
                 folderThemeId: '',
-                folderThemeHref: ''
+                folderThemeHref: '',
+
+                // Phase 3: settings transfer
+                showSettingsTransfer: false,
+                settingsExportIncludeState: true,
+                settingsExportText: '',
+                settingsImportText: '',
+                settingsImportApplyConfig: true,
+                settingsImportApplyState: true,
+
+                // Phase 3: quick add
+                quickAddLaneId: '',
+                quickAddText: '',
+                quickAddSaving: false
             };
 
             $scope.privacyFilter = {
@@ -147,6 +161,8 @@
             var lastErrorToastSig = '';
             var lastErrorToastAt = 0;
             var storageFailureNotified = false;
+
+            var keyboardShortcutsBound = false;
 
             function showToast(type, title, message, ms) {
                 try {
@@ -550,12 +566,14 @@
                     if ($scope.config.UI.showPriorityPill === undefined) $scope.config.UI.showPriorityPill = DEFAULT_CONFIG_V3().UI.showPriorityPill;
                     if ($scope.config.UI.showPrivacyIcon === undefined) $scope.config.UI.showPrivacyIcon = DEFAULT_CONFIG_V3().UI.showPrivacyIcon;
                     if ($scope.config.UI.showLaneCounts === undefined) $scope.config.UI.showLaneCounts = DEFAULT_CONFIG_V3().UI.showLaneCounts;
+                    if ($scope.config.UI.keyboardShortcuts === undefined) $scope.config.UI.keyboardShortcuts = DEFAULT_CONFIG_V3().UI.keyboardShortcuts;
                     if ($scope.config.AUTOMATION.setOutlookStatusOnLaneMove === undefined) {
                         $scope.config.AUTOMATION.setOutlookStatusOnLaneMove = DEFAULT_CONFIG_V3().AUTOMATION.setOutlookStatusOnLaneMove;
                     }
                     if (!$scope.config.LANES) $scope.config.LANES = DEFAULT_CONFIG_V3().LANES;
                     if (!$scope.config.THEME) $scope.config.THEME = DEFAULT_CONFIG_V3().THEME;
                     if (!$scope.config.BOARD) $scope.config.BOARD = DEFAULT_CONFIG_V3().BOARD;
+                    if ($scope.config.BOARD.quickAddEnabled === undefined) $scope.config.BOARD.quickAddEnabled = DEFAULT_CONFIG_V3().BOARD.quickAddEnabled;
                     if ($scope.config.USE_CATEGORY_COLORS === undefined) $scope.config.USE_CATEGORY_COLORS = true;
                     if ($scope.config.USE_CATEGORY_COLOR_FOOTERS === undefined) $scope.config.USE_CATEGORY_COLOR_FOOTERS = false;
                     if (!$scope.config.DATE_FORMAT) $scope.config.DATE_FORMAT = 'DD-MMM';
@@ -1412,6 +1430,139 @@
                     } catch (error) {
                         writeLog('drag/drop: ' + error);
                     }
+                }
+            };
+
+            // Quick add (no inspector)
+            $scope.toggleQuickAdd = function (lane) {
+                try {
+                    if (!$scope.ui) return;
+                    if (!lane || !lane.id) return;
+
+                    if ($scope.ui.quickAddLaneId === lane.id) {
+                        $scope.closeQuickAdd();
+                        return;
+                    }
+
+                    $scope.ui.quickAddLaneId = lane.id;
+                    $scope.ui.quickAddText = '';
+                    $scope.ui.quickAddSaving = false;
+
+                    $timeout(function () {
+                        try {
+                            var el = document.getElementById('kfo-quickadd-' + lane.id);
+                            if (el && el.focus) {
+                                el.focus();
+                            }
+                        } catch (e1) {
+                            // ignore
+                        }
+                    }, 0);
+                } catch (e) {
+                    writeLog('toggleQuickAdd: ' + e);
+                }
+            };
+
+            $scope.closeQuickAdd = function () {
+                try {
+                    if (!$scope.ui) return;
+                    $scope.ui.quickAddLaneId = '';
+                    $scope.ui.quickAddText = '';
+                    $scope.ui.quickAddSaving = false;
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.quickAddKeyDown = function (ev, lane) {
+                try {
+                    var e = ev || window.event;
+                    var code = e ? (e.keyCode || e.which) : 0;
+
+                    // Enter
+                    if (code === 13) {
+                        try { if (e.preventDefault) e.preventDefault(); } catch (e1) { /* ignore */ }
+                        $scope.submitQuickAdd(lane);
+                        return false;
+                    }
+
+                    // Esc
+                    if (code === 27) {
+                        try { if (e.preventDefault) e.preventDefault(); } catch (e2) { /* ignore */ }
+                        $scope.closeQuickAdd();
+                        return false;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.submitQuickAdd = function (lane) {
+                try {
+                    if (!$scope.ui || $scope.ui.quickAddSaving) return;
+
+                    var subject = String($scope.ui.quickAddText || '');
+                    subject = subject.replace(/^\s+|\s+$/g, '');
+                    if (!subject) {
+                        showUserError('Quick add', 'Enter a task subject first.');
+                        return;
+                    }
+
+                    var folder = getSelectedProjectFolder();
+                    if (!folder) {
+                        showUserError('No project selected', 'Create or select a project first (Projects are Outlook Tasks folders).');
+                        return;
+                    }
+
+                    $scope.ui.quickAddSaving = true;
+
+                    var taskitem = folder.Items.Add();
+                    taskitem.Subject = subject;
+
+                    // Default sensitivity based on current filter
+                    if ($scope.filter.private == $scope.privacyFilter.private.value) {
+                        taskitem.Sensitivity = SENSITIVITY.olPrivate;
+                    }
+
+                    if (lane && lane.id) {
+                        if (outlook && outlook.setUserProperty) {
+                            outlook.setUserProperty(taskitem, PROP_LANE_ID, lane.id, OlUserPropertyType.olText);
+                            outlook.setUserProperty(taskitem, PROP_LANE_ORDER, 0, OlUserPropertyType.olNumber);
+                        } else {
+                            // Allow task creation to proceed even if lane metadata cannot be stored.
+                            reportError('quickAdd', 'Outlook adapter not available', 'Lane not set', 'The task was created but could not be placed on a lane. Click the ! icon for details.');
+                        }
+                        if ($scope.config && $scope.config.AUTOMATION && $scope.config.AUTOMATION.setOutlookStatusOnLaneMove) {
+                            if (lane.outlookStatus !== null && lane.outlookStatus !== undefined) {
+                                taskitem.Status = lane.outlookStatus;
+                            }
+                        }
+                    }
+
+                    taskitem.Save();
+
+                    $scope.ui.quickAddText = '';
+                    $scope.ui.quickAddSaving = false;
+                    showToast('success', 'Task added', subject, 1400);
+
+                    // Refresh to pick up EntryID + Outlook-calculated fields
+                    $scope.refreshTasks();
+
+                    // Re-focus input for rapid entry
+                    $timeout(function () {
+                        try {
+                            if ($scope.ui && $scope.ui.quickAddLaneId && lane && lane.id && $scope.ui.quickAddLaneId === lane.id) {
+                                var el = document.getElementById('kfo-quickadd-' + lane.id);
+                                if (el && el.focus) el.focus();
+                            }
+                        } catch (e3) {
+                            // ignore
+                        }
+                    }, 0);
+                } catch (e) {
+                    try { if ($scope.ui) $scope.ui.quickAddSaving = false; } catch (e1) { /* ignore */ }
+                    writeLog('quickAdd: ' + e);
+                    reportError('quickAdd', e, 'Add task failed', 'Could not create a new task in Outlook. Click the ! icon for details.');
                 }
             };
 
@@ -2431,6 +2582,544 @@
                 $scope.refreshTasks();
             };
 
+            // Settings transfer (export/import)
+            function buildViewStateObject() {
+                return {
+                    private: $scope.filter.private,
+                    search: $scope.filter.search,
+                    category: $scope.filter.category,
+                    mailbox: $scope.filter.mailbox,
+                    projectEntryID: $scope.ui.projectEntryID
+                };
+            }
+
+            function buildSettingsExport(includeState) {
+                var payload = {
+                    kind: 'kfo-settings',
+                    app: 'Kanban for Outlook',
+                    version: $scope.version,
+                    exportedAt: nowIso(),
+                    schemaVersion: SCHEMA_VERSION,
+                    config: $scope.config || DEFAULT_CONFIG_V3()
+                };
+                if (includeState) {
+                    payload.state = buildViewStateObject();
+                }
+                return payload;
+            }
+
+            function tryDownloadTextFile(filename, text, contentType) {
+                try {
+                    var type = contentType || 'application/octet-stream';
+                    var blob = null;
+                    try {
+                        blob = new Blob([String(text || '')], { type: type });
+                    } catch (e1) {
+                        blob = null;
+                    }
+
+                    if (blob && window.navigator && window.navigator.msSaveBlob) {
+                        window.navigator.msSaveBlob(blob, filename);
+                        return true;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+                return false;
+            }
+
+            function backupCurrentSettingsToOutlook() {
+                try {
+                    var ts = nowStamp();
+                    try {
+                        var cfgRaw = storageRead(CONFIG_ID, 'config', false);
+                        if (cfgRaw !== null) {
+                            storageWrite(CONFIG_ID + '.backup.' + ts, String(cfgRaw), 'config', false);
+                        }
+                    } catch (e1) {
+                        // ignore
+                    }
+                    try {
+                        var stateRaw = storageRead(STATE_ID, 'state', false);
+                        if (stateRaw !== null) {
+                            storageWrite(STATE_ID + '.backup.' + ts, String(stateRaw), 'state', false);
+                        }
+                    } catch (e2) {
+                        // ignore
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            function normaliseConfigObject(cfg) {
+                // Applies defaults defensively to avoid runtime errors after import.
+                var c = (cfg && typeof cfg === 'object') ? cfg : {};
+                var d = DEFAULT_CONFIG_V3();
+
+                if (!c.PROJECTS) c.PROJECTS = d.PROJECTS;
+                if (!c.PROJECTS.linkedProjects) c.PROJECTS.linkedProjects = [];
+                if (!c.PROJECTS.hiddenProjectEntryIDs) c.PROJECTS.hiddenProjectEntryIDs = [];
+
+                if (!c.UI) c.UI = d.UI;
+                if (!c.AUTOMATION) c.AUTOMATION = d.AUTOMATION;
+                if (!c.LANES) c.LANES = d.LANES;
+                if (!c.THEME) c.THEME = d.THEME;
+                if (!c.BOARD) c.BOARD = d.BOARD;
+
+                // UI defaults
+                if (c.UI.density === undefined) c.UI.density = d.UI.density;
+                if (c.UI.motion === undefined) c.UI.motion = d.UI.motion;
+                if (c.UI.laneWidthPx === undefined) c.UI.laneWidthPx = d.UI.laneWidthPx;
+                if (c.UI.showDueDate === undefined) c.UI.showDueDate = d.UI.showDueDate;
+                if (c.UI.showNotes === undefined) c.UI.showNotes = d.UI.showNotes;
+                if (c.UI.showCategories === undefined) c.UI.showCategories = d.UI.showCategories;
+                if (c.UI.showOnlyFirstCategory === undefined) c.UI.showOnlyFirstCategory = d.UI.showOnlyFirstCategory;
+                if (c.UI.showPriorityPill === undefined) c.UI.showPriorityPill = d.UI.showPriorityPill;
+                if (c.UI.showPrivacyIcon === undefined) c.UI.showPrivacyIcon = d.UI.showPrivacyIcon;
+                if (c.UI.showLaneCounts === undefined) c.UI.showLaneCounts = d.UI.showLaneCounts;
+                if (c.UI.keyboardShortcuts === undefined) c.UI.keyboardShortcuts = d.UI.keyboardShortcuts;
+
+                if (c.AUTOMATION.setOutlookStatusOnLaneMove === undefined) {
+                    c.AUTOMATION.setOutlookStatusOnLaneMove = d.AUTOMATION.setOutlookStatusOnLaneMove;
+                }
+
+                if (c.USE_CATEGORY_COLORS === undefined) c.USE_CATEGORY_COLORS = true;
+                if (c.USE_CATEGORY_COLOR_FOOTERS === undefined) c.USE_CATEGORY_COLOR_FOOTERS = false;
+                if (!c.DATE_FORMAT) c.DATE_FORMAT = d.DATE_FORMAT || 'DD-MMM';
+                if (c.LOG_ERRORS === undefined) c.LOG_ERRORS = false;
+                if (c.MULTI_MAILBOX === undefined) c.MULTI_MAILBOX = d.MULTI_MAILBOX;
+                if (!c.ACTIVE_MAILBOXES) c.ACTIVE_MAILBOXES = d.ACTIVE_MAILBOXES || [];
+
+                if (c.BOARD.quickAddEnabled === undefined) c.BOARD.quickAddEnabled = d.BOARD.quickAddEnabled;
+
+                // Clamp lane width
+                try {
+                    var w = parseInt(c.UI.laneWidthPx, 10);
+                    if (isNaN(w)) w = d.UI.laneWidthPx;
+                    if (w < 240) w = 240;
+                    if (w > 520) w = 520;
+                    c.UI.laneWidthPx = w;
+                } catch (e) {
+                    c.UI.laneWidthPx = d.UI.laneWidthPx;
+                }
+
+                // Clamp density + motion
+                try {
+                    var density = String(c.UI.density || 'comfortable');
+                    if (density !== 'compact' && density !== 'comfortable') density = 'comfortable';
+                    c.UI.density = density;
+                } catch (e2) {
+                    c.UI.density = 'comfortable';
+                }
+                try {
+                    var motion = String(c.UI.motion || 'full');
+                    if (motion !== 'full' && motion !== 'subtle' && motion !== 'off') motion = 'full';
+                    c.UI.motion = motion;
+                } catch (e3) {
+                    c.UI.motion = 'full';
+                }
+
+                return c;
+            }
+
+            function parseSettingsImportText(text) {
+                var raw = String(text || '');
+                if (raw.replace(/\s+/g, '') === '') {
+                    return { ok: false, error: 'No JSON provided' };
+                }
+
+                var obj = null;
+                try {
+                    var cleaned = raw;
+                    try {
+                        if (typeof JSON !== 'undefined' && JSON.minify) {
+                            cleaned = JSON.minify(raw);
+                        }
+                    } catch (e1) {
+                        cleaned = raw;
+                    }
+                    obj = JSON.parse(cleaned);
+                } catch (e) {
+                    return { ok: false, error: 'Invalid JSON: ' + safeErrorString(e) };
+                }
+
+                // Supported shapes:
+                // 1) { kind: 'kfo-settings', config: {...}, state: {...} }
+                // 2) { config: {...}, state: {...} }
+                // 3) { SCHEMA_VERSION: 3, ... } (config only)
+                var cfg = null;
+                var state = null;
+
+                if (obj && typeof obj === 'object' && obj.config) {
+                    cfg = obj.config;
+                    state = obj.state || null;
+                } else if (obj && typeof obj === 'object' && obj.SCHEMA_VERSION) {
+                    cfg = obj;
+                } else {
+                    return { ok: false, error: 'Unrecognised settings format' };
+                }
+
+                if (!cfg || typeof cfg !== 'object') {
+                    return { ok: false, error: 'Missing config' };
+                }
+
+                if (!cfg.SCHEMA_VERSION || cfg.SCHEMA_VERSION < SCHEMA_VERSION) {
+                    return { ok: false, error: 'This settings file is for an older version and cannot be imported safely.' };
+                }
+
+                if (cfg.SCHEMA_VERSION > SCHEMA_VERSION) {
+                    return { ok: false, error: 'This settings file is from a newer version. Please upgrade this app first.' };
+                }
+
+                if (state && typeof state !== 'object') {
+                    state = null;
+                }
+
+                return { ok: true, config: cfg, state: state };
+            }
+
+            function applyImportedSettings(parsed) {
+                if (!parsed || !parsed.ok) {
+                    showUserError('Import failed', parsed ? String(parsed.error || 'Invalid settings') : 'Invalid settings');
+                    return;
+                }
+
+                // backup current values before overwriting
+                backupCurrentSettingsToOutlook();
+
+                if ($scope.ui && $scope.ui.settingsImportApplyConfig) {
+                    $scope.config = normaliseConfigObject(parsed.config);
+                    var ok1 = saveConfig();
+                    if (!ok1) {
+                        showUserError('Import failed', 'Could not save imported config to Outlook storage.');
+                        return;
+                    }
+                }
+
+                if ($scope.ui && $scope.ui.settingsImportApplyState && parsed.state) {
+                    try {
+                        var st = parsed.state;
+                        $scope.filter.private = st.private || $scope.privacyFilter.all.value;
+                        $scope.filter.search = st.search || '';
+                        $scope.filter.category = st.category || '<All Categories>';
+                        $scope.filter.mailbox = st.mailbox || '';
+                        $scope.ui.projectEntryID = st.projectEntryID || '';
+                        storageWrite(STATE_ID, JSON.stringify(buildViewStateObject(), null, 2), 'state', false);
+                    } catch (e1) {
+                        writeLog('import state: ' + e1);
+                    }
+                }
+
+                try {
+                    showToast('success', 'Import complete', 'Reloading...', 1500);
+                    $timeout(function () {
+                        try { window.location.reload(); } catch (e2) { /* ignore */ }
+                    }, 600);
+                } catch (e3) {
+                    // ignore
+                }
+            }
+
+            $scope.openSettingsTransfer = function () {
+                try {
+                    if (!$scope.ui) return;
+                    if ($scope.ui.settingsExportIncludeState === undefined) {
+                        $scope.ui.settingsExportIncludeState = true;
+                    }
+                    if ($scope.ui.settingsImportApplyConfig === undefined) {
+                        $scope.ui.settingsImportApplyConfig = true;
+                    }
+                    if ($scope.ui.settingsImportApplyState === undefined) {
+                        $scope.ui.settingsImportApplyState = true;
+                    }
+
+                    $scope.ui.settingsImportText = '';
+                    $scope.refreshSettingsExportText();
+                    $scope.ui.showSettingsTransfer = true;
+                } catch (e) {
+                    reportError('openSettingsTransfer', e, 'Export/import failed', 'Could not open settings transfer. Click the ! icon for details.');
+                }
+            };
+
+            $scope.refreshSettingsExportText = function () {
+                try {
+                    if (!$scope.ui) return;
+                    $scope.ui.settingsExportText = JSON.stringify(buildSettingsExport(!!$scope.ui.settingsExportIncludeState), null, 2);
+                } catch (e) {
+                    writeLog('refreshSettingsExportText: ' + e);
+                }
+            };
+
+            $scope.closeSettingsTransfer = function () {
+                try {
+                    if ($scope.ui) {
+                        $scope.ui.showSettingsTransfer = false;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.copySettingsExport = function () {
+                try {
+                    $scope.refreshSettingsExportText();
+                    var text = ($scope.ui && $scope.ui.settingsExportText) ? $scope.ui.settingsExportText : '';
+                    if (window.clipboardData && window.clipboardData.setData) {
+                        window.clipboardData.setData('Text', text);
+                        return;
+                    }
+                    var ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                } catch (e) {
+                    showUserError('Copy failed', 'You can still select and copy from the text box.');
+                }
+            };
+
+            $scope.downloadSettingsExport = function () {
+                try {
+                    if (!$scope.ui) return;
+                    $scope.refreshSettingsExportText();
+                    var name = 'kanban-for-outlook-settings-' + nowStamp() + '.json';
+                    var ok = tryDownloadTextFile(name, $scope.ui.settingsExportText, 'application/json;charset=utf-8');
+                    if (!ok) {
+                        showUserError('Download not supported', 'Use Copy JSON, then save it into a .json file locally.');
+                    }
+                } catch (e) {
+                    reportError('downloadSettingsExport', e, 'Export failed', 'Could not export settings. Click the ! icon for details.');
+                }
+            };
+
+            $scope.importSettingsFromText = function () {
+                try {
+                    var parsed = parseSettingsImportText($scope.ui ? $scope.ui.settingsImportText : '');
+                    applyImportedSettings(parsed);
+                } catch (e) {
+                    reportError('importSettingsFromText', e, 'Import failed', 'Could not import settings. Click the ! icon for details.');
+                }
+            };
+
+            $scope.importSettingsFromFile = function () {
+                try {
+                    var input = document.getElementById('kfoSettingsFile');
+                    if (!input || !input.files || input.files.length === 0) {
+                        showUserError('Import', 'Choose a .json file first.');
+                        return;
+                    }
+                    var file = input.files[0];
+                    if (!window.FileReader) {
+                        showUserError('Import', 'File import is not supported in this host. Paste JSON instead.');
+                        return;
+                    }
+
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                        $timeout(function () {
+                            try {
+                                var text = '';
+                                try { text = String(e && e.target ? e.target.result : ''); } catch (e1) { text = ''; }
+                                var parsed = parseSettingsImportText(text);
+                                applyImportedSettings(parsed);
+                            } catch (err) {
+                                reportError('importSettingsFromFile', err, 'Import failed', 'Could not import settings from file.');
+                            }
+                        }, 0);
+                    };
+                    reader.onerror = function () {
+                        $timeout(function () {
+                            showUserError('Import failed', 'Could not read the selected file.');
+                        }, 0);
+                    };
+                    reader.readAsText(file);
+                } catch (e) {
+                    reportError('importSettingsFromFile', e, 'Import failed', 'Could not import settings. Click the ! icon for details.');
+                }
+            };
+
+            // Keyboard shortcuts (opt-in)
+            function isKeyboardShortcutsEnabled() {
+                try {
+                    return !!($scope.config && $scope.config.UI && $scope.config.UI.keyboardShortcuts);
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            function isTypingTarget(target) {
+                try {
+                    if (!target) return false;
+                    var tag = '';
+                    try { tag = String(target.tagName || '').toLowerCase(); } catch (e1) { tag = ''; }
+                    if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+                    if (target.isContentEditable) return true;
+                } catch (e) {
+                    // ignore
+                }
+                return false;
+            }
+
+            function focusSearchInput() {
+                try {
+                    var el = document.getElementById('kfo-search-input');
+                    if (el && el.focus) {
+                        el.focus();
+                        try { el.select(); } catch (e1) { /* ignore */ }
+                        return true;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+                return false;
+            }
+
+            function closeOverlaysOrReturnToBoard() {
+                var closed = false;
+                try {
+                    if (!$scope.ui) return false;
+
+                    if ($scope.ui.quickAddLaneId) {
+                        $scope.closeQuickAdd();
+                        closed = true;
+                    }
+
+                    if ($scope.ui.showShortcuts) {
+                        $scope.ui.showShortcuts = false;
+                        closed = true;
+                    }
+                    if ($scope.ui.showSettingsTransfer) {
+                        $scope.ui.showSettingsTransfer = false;
+                        closed = true;
+                    }
+                    if ($scope.ui.showErrorDetails) {
+                        $scope.ui.showErrorDetails = false;
+                        closed = true;
+                    }
+                    if ($scope.ui.showDiagnostics) {
+                        $scope.ui.showDiagnostics = false;
+                        closed = true;
+                    }
+                    if ($scope.ui.showRenameProject) {
+                        $scope.ui.showRenameProject = false;
+                        closed = true;
+                    }
+                    if ($scope.ui.showCreateProject) {
+                        $scope.ui.showCreateProject = false;
+                        closed = true;
+                    }
+                    if ($scope.ui.showMoveTasks) {
+                        $scope.closeMoveTasks();
+                        closed = true;
+                    }
+                    if ($scope.ui.showMigration) {
+                        $scope.closeMigration();
+                        closed = true;
+                    }
+                    if ($scope.ui.showSetupWizard) {
+                        $scope.closeSetupWizard();
+                        closed = true;
+                    }
+
+                    if (!closed && $scope.ui.mode !== 'board') {
+                        $scope.ui.mode = 'board';
+                        closed = true;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+                return closed;
+            }
+
+            function bindKeyboardShortcuts() {
+                if (keyboardShortcutsBound) return;
+                keyboardShortcutsBound = true;
+
+                function onKeyDown(e) {
+                    var ev = e || window.event;
+                    if (!ev) return;
+
+                    var code = ev.keyCode || ev.which;
+                    var shift = !!ev.shiftKey;
+
+                    if (!isKeyboardShortcutsEnabled()) return;
+                    if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
+
+                    // Ignore while typing
+                    var tgt = ev.target || ev.srcElement;
+                    if (isTypingTarget(tgt)) return;
+
+                    var handled = false;
+
+                    // ? (Shift + /)
+                    if (code === 191 && shift) {
+                        handled = true;
+                        $timeout(function () { $scope.openShortcuts(); }, 0);
+                    }
+
+                    // / focuses search
+                    if (!handled && code === 191 && !shift) {
+                        handled = focusSearchInput();
+                    }
+
+                    // r refreshes
+                    if (!handled && code === 82) {
+                        handled = true;
+                        $timeout(function () { $scope.refreshTasks(); }, 0);
+                    }
+
+                    // Esc closes dialogs / returns to board
+                    if (!handled && code === 27) {
+                        handled = true;
+                        $timeout(function () { closeOverlaysOrReturnToBoard(); }, 0);
+                    }
+
+                    if (handled) {
+                        try {
+                            if (ev.preventDefault) ev.preventDefault();
+                            ev.returnValue = false;
+                        } catch (e1) {
+                            // ignore
+                        }
+                        return false;
+                    }
+                }
+
+                try {
+                    if (document.addEventListener) {
+                        document.addEventListener('keydown', onKeyDown, false);
+                    } else if (document.attachEvent) {
+                        document.attachEvent('onkeydown', onKeyDown);
+                    } else {
+                        document.onkeydown = onKeyDown;
+                    }
+                } catch (e) {
+                    writeLog('bindKeyboardShortcuts: ' + e);
+                }
+            }
+
+            $scope.openShortcuts = function () {
+                try {
+                    if ($scope.ui) {
+                        $scope.ui.showShortcuts = true;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.closeShortcuts = function () {
+                try {
+                    if ($scope.ui) {
+                        $scope.ui.showShortcuts = false;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            };
+
             // Diagnostics
             $scope.openDiagnostics = function () {
                 try {
@@ -2609,6 +3298,7 @@
                 }
 
                 readConfig();
+                bindKeyboardShortcuts();
                 rebuildLaneOptions();
                 rebuildThemeList();
                 $scope.applyTheme();

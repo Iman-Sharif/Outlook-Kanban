@@ -79,7 +79,10 @@
                 showOnlyFirstCategory: false,
                 showPriorityPill: true,
                 showPrivacyIcon: true,
-                showLaneCounts: true
+                showLaneCounts: true,
+
+                // Opt-in (avoid Outlook conflicts)
+                keyboardShortcuts: false
             },
             AUTOMATION: {
                 setOutlookStatusOnLaneMove: true
@@ -98,7 +101,10 @@
             BOARD: {
                 taskNoteMaxLen: 140,
                 saveState: true,
-                saveOrder: true
+                saveOrder: true,
+
+                // Quick add in lanes (no inspector)
+                quickAddEnabled: true
             },
             USE_CATEGORY_COLORS: true,
             USE_CATEGORY_COLOR_FOOTERS: false,

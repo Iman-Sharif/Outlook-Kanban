@@ -212,6 +212,26 @@
   margin-left: 6px;
 }
 
+/* Quick add */
+.kfo-quickAdd {
+  padding: 0 10px 8px 10px;
+  display: flex;
+  align-items: center;
+}
+
+.kfo-quickAdd > * + * {
+  margin-left: 6px;
+}
+
+.kfo-quickAddInput {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kfo-quickAddHint {
+  padding: 0 10px 10px 10px;
+}
+
 .kfo-tasklist {
   list-style: none;
   margin: 0;

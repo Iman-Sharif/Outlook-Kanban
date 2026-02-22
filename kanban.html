@@ -86,7 +86,7 @@
 
                 <div class="kfo-topbarGrow kfo-search">
                     <span class="glyphicon glyphicon-search kfo-searchIcon" aria-hidden="true"></span>
-                    <input class="kfo-input kfo-searchInput" type="text" ng-model="filter.search" placeholder="Search tasks" ng-change="applyFilters()" />
+                    <input id="kfo-search-input" class="kfo-input kfo-searchInput" type="text" ng-model="filter.search" placeholder="Search tasks" ng-change="applyFilters()" />
                     <button class="kfo-iconBtn kfo-searchClear" type="button" ng-if="filter.search" ng-click="filter.search=''; applyFilters();" aria-label="Clear search">
                         <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
                     </button>
@@ -127,18 +127,32 @@
                                         <span ng-if="lane.wipLimit > 0">&nbsp;•&nbsp;WIP {{lane.wipLimit}}</span>
                                     </div>
                                 </div>
-                                <div class="kfo-laneHeaderRight">
-                                    <span class="kfo-pill" ng-if="lane.wipLimit > 0 && lane.filteredTasks.length > lane.wipLimit">Over limit</span>
-                                    <button class="kfo-iconBtn" type="button" ng-click="addTask(lane)" aria-label="Add task">
-                                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-                                    </button>
-                                </div>
-                            </div>
+                                 <div class="kfo-laneHeaderRight">
+                                     <span class="kfo-pill" ng-if="lane.wipLimit > 0 && lane.filteredTasks.length > lane.wipLimit">Over limit</span>
+                                     <button class="kfo-iconBtn" type="button" ng-if="config.BOARD.quickAddEnabled !== false" ng-click="toggleQuickAdd(lane)" aria-label="Quick add" title="Quick add">
+                                         <span class="glyphicon glyphicon-flash" aria-hidden="true"></span>
+                                     </button>
+                                     <button class="kfo-iconBtn" type="button" ng-click="addTask(lane)" aria-label="Add task">
+                                         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                                     </button>
+                                 </div>
+                             </div>
 
-                            <ul class="kfo-tasklist kfo-tasklist" ui-sortable="sortableOptions" ng-model="lane.filteredTasks" data-lane-id="{{lane.id}}">
-                                <li class="kfo-task" ng-repeat="task in lane.filteredTasks track by task.entryID" ng-dblclick="editTask(task)" ng-class="taskCardClasses(task)" ng-style="taskItemStyle($parent.$index, $index)">
-                                    <div class="kfo-taskHeader">
-                                        {{task.subject}}
+                             <div class="kfo-quickAdd" ng-if="config.BOARD.quickAddEnabled !== false && ui.quickAddLaneId == lane.id">
+                                 <input id="kfo-quickadd-{{lane.id}}" class="kfo-input kfo-quickAddInput" type="text" ng-model="ui.quickAddText" placeholder="Quick add..." ng-keydown="quickAddKeyDown($event, lane)" />
+                                 <button class="kfo-iconBtn" type="button" ng-click="submitQuickAdd(lane)" ng-disabled="ui.quickAddSaving" aria-label="Add">
+                                     <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+                                 </button>
+                                 <button class="kfo-iconBtn" type="button" ng-click="closeQuickAdd()" ng-disabled="ui.quickAddSaving" aria-label="Cancel">
+                                     <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                                 </button>
+                             </div>
+                             <div class="kfo-small kfo-quickAddHint" ng-if="config.BOARD.quickAddEnabled !== false && ui.quickAddLaneId == lane.id">Enter to add • Esc to close</div>
+
+                             <ul class="kfo-tasklist kfo-tasklist" ui-sortable="sortableOptions" ng-model="lane.filteredTasks" data-lane-id="{{lane.id}}">
+                                 <li class="kfo-task" ng-repeat="task in lane.filteredTasks track by task.entryID" ng-dblclick="editTask(task)" ng-class="taskCardClasses(task)" ng-style="taskItemStyle($parent.$index, $index)">
+                                     <div class="kfo-taskHeader">
+                                         {{task.subject}}
                                     </div>
 
                                     <div class="kfo-taskMeta">
@@ -396,17 +410,29 @@
                                     </div>
                                 </div>
 
-                                <div class="kfo-row">
-                                    <div class="kfo-rowLabel">Diagnostics</div>
-                                    <div class="kfo-rowControl">
-                                        <label class="kfo-pill" style="margin:0;">
-                                            <input type="checkbox" ng-model="config.LOG_ERRORS" />
-                                            Debug logging
-                                        </label>
-                                        <div class="kfo-small">Keeps a local error log in Outlook.</div>
-                                    </div>
-                                </div>
-                            </div>
+                                 <div class="kfo-row">
+                                     <div class="kfo-rowLabel">Diagnostics</div>
+                                     <div class="kfo-rowControl">
+                                         <label class="kfo-pill" style="margin:0;">
+                                             <input type="checkbox" ng-model="config.LOG_ERRORS" />
+                                             Debug logging
+                                         </label>
+                                         <div class="kfo-small">Keeps a local error log in Outlook.</div>
+                                     </div>
+                                 </div>
+
+                                 <div class="kfo-row">
+                                     <div class="kfo-rowLabel">Shortcuts</div>
+                                     <div class="kfo-rowControl">
+                                         <label class="kfo-pill" style="margin:0;">
+                                             <input type="checkbox" ng-model="config.UI.keyboardShortcuts" />
+                                             Enable keyboard shortcuts
+                                         </label>
+                                         <button class="kfo-btn" type="button" ng-click="openShortcuts()">View</button>
+                                         <div class="kfo-small">Opt-in. Tries to avoid Outlook key conflicts.</div>
+                                     </div>
+                                 </div>
+                             </div>
                         </div>
 
                         <div class="kfo-gridCol">
@@ -455,8 +481,8 @@
                                 </div>
                             </div>
 
-                            <div class="kfo-card">
-                                <div class="kfo-cardTitle">Tools</div>
+                             <div class="kfo-card">
+                                 <div class="kfo-cardTitle">Tools</div>
                                 <div class="kfo-row">
                                     <div class="kfo-rowLabel">Automation</div>
                                     <div class="kfo-rowControl">
@@ -474,14 +500,21 @@
                                         <div class="kfo-small">Bulk-assign lanes for tasks in the current project (local-only).</div>
                                     </div>
                                 </div>
-                                <div class="kfo-row">
-                                    <div class="kfo-rowLabel">Move tasks</div>
-                                    <div class="kfo-rowControl">
-                                        <button class="kfo-btn" type="button" ng-click="openMoveTasks()">Move between projects</button>
-                                        <div class="kfo-small">Moves tasks between Outlook folders while keeping lane metadata.</div>
-                                    </div>
-                                </div>
-                            </div>
+                                 <div class="kfo-row">
+                                     <div class="kfo-rowLabel">Move tasks</div>
+                                     <div class="kfo-rowControl">
+                                         <button class="kfo-btn" type="button" ng-click="openMoveTasks()">Move between projects</button>
+                                         <div class="kfo-small">Moves tasks between Outlook folders while keeping lane metadata.</div>
+                                     </div>
+                                 </div>
+                                 <div class="kfo-row">
+                                     <div class="kfo-rowLabel">Settings</div>
+                                     <div class="kfo-rowControl">
+                                         <button class="kfo-btn" type="button" ng-click="openSettingsTransfer()">Export / import</button>
+                                         <div class="kfo-small">Exports your configuration and current view state as a local JSON file (tasks are not included).</div>
+                                     </div>
+                                 </div>
+                             </div>
 
                             <div class="kfo-card">
                                 <div class="kfo-cardTitle">Privacy & Local-Only</div>
@@ -677,6 +710,93 @@
                     <div class="kfo-modalFooter">
                         <button class="kfo-btn" type="button" ng-click="copyDiagnostics()">Copy</button>
                         <button class="kfo-btn" type="button" ng-click="ui.showDiagnostics = false">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings transfer modal -->
+            <div class="kfo-modalBackdrop" ng-if="ui.showSettingsTransfer">
+                <div class="kfo-modal">
+                    <div class="kfo-modalHeader">
+                        <h3 class="kfo-modalTitle">Export / Import Settings (Local)</h3>
+                        <button class="kfo-iconBtn" type="button" ng-click="closeSettingsTransfer()" aria-label="Close">
+                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="kfo-modalBody">
+                        <p class="kfo-small">This is local-only. Export creates a JSON file with your config + view state. Import overwrites your current settings, stores a local backup in Outlook, then reloads the page.</p>
+
+                        <div class="kfo-row">
+                            <div class="kfo-rowLabel">Export</div>
+                            <div class="kfo-rowControl">
+                                <button class="kfo-btn" type="button" ng-click="downloadSettingsExport()">Download JSON</button>
+                                <button class="kfo-btn" type="button" ng-click="copySettingsExport()">Copy JSON</button>
+                                <label class="kfo-pill" style="margin:0;">
+                                    <input type="checkbox" ng-model="ui.settingsExportIncludeState" ng-change="refreshSettingsExportText()" />
+                                    Include view state
+                                </label>
+                            </div>
+                        </div>
+                        <textarea class="kfo-input" style="height: 210px; width: 100%; border-radius: 14px;" readonly="readonly">{{ui.settingsExportText}}</textarea>
+
+                        <div class="kfo-divider"></div>
+
+                        <div class="kfo-row">
+                            <div class="kfo-rowLabel">Import</div>
+                            <div class="kfo-rowControl">
+                                <input type="file" id="kfoSettingsFile" accept=".json" />
+                                <button class="kfo-btn" type="button" ng-click="importSettingsFromFile()">Import file</button>
+                                <label class="kfo-pill" style="margin:0;">
+                                    <input type="checkbox" ng-model="ui.settingsImportApplyConfig" />
+                                    Apply config
+                                </label>
+                                <label class="kfo-pill" style="margin:0;">
+                                    <input type="checkbox" ng-model="ui.settingsImportApplyState" />
+                                    Apply state
+                                </label>
+                            </div>
+                        </div>
+                        <div class="kfo-small" style="margin-bottom:8px;">If file import is blocked by policy, paste the JSON below instead.</div>
+                        <textarea class="kfo-input" style="height: 150px; width: 100%; border-radius: 14px;" ng-model="ui.settingsImportText" placeholder="Paste settings JSON here"></textarea>
+                    </div>
+                    <div class="kfo-modalFooter">
+                        <button class="kfo-btn" type="button" ng-click="importSettingsFromText()">Import text</button>
+                        <button class="kfo-btn" type="button" ng-click="closeSettingsTransfer()">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Keyboard shortcuts modal -->
+            <div class="kfo-modalBackdrop" ng-if="ui.showShortcuts">
+                <div class="kfo-modal">
+                    <div class="kfo-modalHeader">
+                        <h3 class="kfo-modalTitle">Keyboard Shortcuts</h3>
+                        <button class="kfo-iconBtn" type="button" ng-click="closeShortcuts()" aria-label="Close">
+                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="kfo-modalBody">
+                        <p class="kfo-small">Shortcuts are opt-in and ignored while you are typing in an input field.</p>
+                        <div class="kfo-row">
+                            <div class="kfo-rowLabel"><code>/</code></div>
+                            <div class="kfo-rowControl">Focus search</div>
+                        </div>
+                        <div class="kfo-row">
+                            <div class="kfo-rowLabel"><code>r</code></div>
+                            <div class="kfo-rowControl">Refresh tasks</div>
+                        </div>
+                        <div class="kfo-row">
+                            <div class="kfo-rowLabel"><code>?</code></div>
+                            <div class="kfo-rowControl">Show this list</div>
+                        </div>
+                        <div class="kfo-row">
+                            <div class="kfo-rowLabel"><code>Esc</code></div>
+                            <div class="kfo-rowControl">Close open dialogs (or return to board)</div>
+                        </div>
+                        <div class="kfo-small">Enable shortcuts in Settings -> Board -> Shortcuts.</div>
+                    </div>
+                    <div class="kfo-modalFooter">
+                        <button class="kfo-btn" type="button" ng-click="closeShortcuts()">Close</button>
                     </div>
                 </div>
             </div>
