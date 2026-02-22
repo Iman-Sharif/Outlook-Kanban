@@ -4,6 +4,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 3.5.0
+
+- Add tag-driven GitHub Releases that publish `kanban-for-outlook.zip` + `.sha256`
+- Add a maintainer release checklist (`docs/RELEASING.md`)
+
 ## 3.4.0
 
 - Harden theme safety checks (block protocol-relative URLs and scriptable URL schemes)

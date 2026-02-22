@@ -25,6 +25,7 @@
 ## Maintainers
 
 - [`docs/SIGNING.md`](SIGNING.md): why signing helps SmartScreen (maintainer doc)
+- [`docs/RELEASING.md`](RELEASING.md): release checklist + tag-driven releases
 - [`CONTRIBUTING.md`](../CONTRIBUTING.md): contribution guide + maintainer checks
 
 ## Reference
