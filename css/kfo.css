@@ -1,0 +1,665 @@
+/*
+  Kanban for Outlook (KFO)
+  Base layout + components. Theme-specific colors live in themes/*/theme.css.
+*/
+
+.kfo {
+  height: 100vh;
+  overflow: hidden;
+  font: 400 12px/1.5 "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
+.kfo * {
+  box-sizing: border-box;
+}
+
+.kfo a {
+  color: inherit;
+}
+
+.kfo-app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.kfo-topbar {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kfo-topbar > * + * {
+  margin-left: 10px;
+}
+
+.kfo-brand {
+  display: flex;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.kfo-brand > * + * {
+  margin-left: 8px;
+}
+
+.kfo-brandTitle {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.kfo-brandMeta {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.kfo-topbarSection {
+  display: flex;
+  align-items: center;
+}
+
+.kfo-topbarSection > * + * {
+  margin-left: 8px;
+}
+
+.kfo-topbarGrow {
+  flex: 1 1 auto;
+  min-width: 120px;
+}
+
+.kfo-search {
+  position: relative;
+}
+
+.kfo-searchIcon {
+  position: absolute;
+  left: 10px;
+  top: 8px;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.kfo-searchInput {
+  padding-left: 30px;
+  padding-right: 34px;
+}
+
+.kfo-searchClear {
+  position: absolute;
+  right: 4px;
+  top: 2px;
+}
+
+.kfo-input {
+  height: 30px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  outline: none;
+  width: 220px;
+  max-width: 100%;
+  min-width: 140px;
+}
+
+.kfo-topbarGrow .kfo-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.kfo-select {
+  height: 30px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  outline: none;
+}
+
+.kfo-btn {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.kfo-btn > * + * {
+  margin-left: 6px;
+}
+
+.kfo-btn:focus {
+  outline: none;
+}
+
+.kfo-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.kfo-pill > * + * {
+  margin-left: 6px;
+}
+
+.kfo-main {
+  flex: 1 1 auto;
+  overflow: hidden;
+  display: flex;
+}
+
+.kfo-board {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 12px;
+}
+
+.kfo-lanes {
+  display: flex;
+  align-items: flex-start;
+}
+
+.kfo-lanes > * + * {
+  margin-left: 12px;
+}
+
+.kfo-lane {
+  flex: 0 0 auto;
+  width: 320px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.kfo-laneHeader {
+  padding: 10px 10px 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 4px solid transparent;
+}
+
+.kfo-laneTitle {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.kfo-laneSub {
+  margin-top: 2px;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.kfo-laneHeaderLeft {
+  min-width: 0;
+}
+
+.kfo-laneHeaderRight {
+  display: inline-flex;
+  align-items: center;
+}
+
+.kfo-laneHeaderRight > * + * {
+  margin-left: 6px;
+}
+
+.kfo-tasklist {
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+  min-height: 50px;
+}
+
+.kfo-task {
+  border-radius: 12px;
+  margin: 0 0 10px 0;
+  overflow: hidden;
+}
+
+.kfo-due {
+  font-weight: 800;
+}
+
+.kfo-due--overdue {
+  color: #ef4444;
+}
+
+.kfo-due--today {
+  color: #60a5fa;
+}
+
+.kfo-due--soon {
+  color: #f59e0b;
+}
+
+/* Density */
+.kfo.density-compact .kfo-laneHeader {
+  padding: 8px 10px 6px 10px;
+}
+
+.kfo.density-compact .kfo-taskHeader {
+  padding: 8px 10px 6px 10px;
+}
+
+.kfo.density-compact .kfo-taskMeta {
+  padding: 0 10px 6px 10px;
+}
+
+.kfo.density-compact .kfo-taskBody {
+  padding: 0 10px 8px 10px;
+}
+
+.kfo.density-compact .kfo-taskFooter {
+  padding: 6px 10px;
+}
+
+/* Motion */
+@keyframes kfoLaneIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes kfoCardIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes kfoModalIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes kfoBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes kfoSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes kfoToastIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.kfo.motion-full .kfo-lane {
+  animation: kfoLaneIn 420ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+.kfo.motion-full .kfo-task {
+  animation: kfoCardIn 280ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+.kfo.motion-subtle .kfo-lane {
+  animation: kfoLaneIn 220ms ease-out both;
+}
+
+.kfo.motion-subtle .kfo-task {
+  animation: kfoCardIn 160ms ease-out both;
+}
+
+.kfo.motion-off * {
+  transition: none !important;
+  animation: none !important;
+}
+
+.kfo-modalBackdrop {
+  animation: kfoBackdropIn 160ms ease-out both;
+}
+
+.kfo-modal {
+  animation: kfoModalIn 220ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+/* Hover affordances */
+.kfo-btn, .kfo-iconBtn {
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.kfo-btn:active, .kfo-iconBtn:active {
+  transform: translateY(1px);
+}
+
+.kfo-task {
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.kfo-task:hover {
+  transform: translateY(-1px);
+}
+
+.ui-sortable-helper {
+  animation: none !important;
+}
+
+.kfo-sort-placeholder {
+  visibility: visible !important;
+  border-radius: 12px;
+  border: 2px dashed rgba(127,127,127,0.32);
+  background: rgba(127,127,127,0.08);
+  margin: 0 0 10px 0;
+}
+
+.kfo-refreshing .glyphicon-refresh {
+  animation: kfoSpin 900ms linear infinite;
+}
+
+.kfo-toastWrap {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10050;
+  width: 360px;
+  max-width: calc(100% - 32px);
+}
+
+.kfo-toast {
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(127,127,127,0.22);
+  animation: kfoToastIn 220ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+.kfo-toast--success { border-left: 4px solid #34d399; }
+.kfo-toast--info { border-left: 4px solid #60a5fa; }
+.kfo-toast--error { border-left: 4px solid #ef4444; }
+
+.kfo-toastHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kfo-toastTitle {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.kfo-toastMsg {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+.kfo-taskHeader {
+  padding: 10px 10px 8px 10px;
+  cursor: move;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.kfo-taskMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px 8px 10px;
+  font-size: 11px;
+  opacity: 0.92;
+}
+
+.kfo-taskBody {
+  padding: 0 10px 10px 10px;
+  font-size: 11px;
+  line-height: 1.45;
+  word-wrap: break-word;
+}
+
+.kfo-taskFooter {
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kfo-taskTags {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.kfo-taskTags .kfo-tag {
+  margin-right: 6px;
+  margin-bottom: 6px;
+}
+
+.kfo-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.kfo-taskActions {
+  display: inline-flex;
+}
+
+.kfo-taskActions > * + * {
+  margin-left: 6px;
+}
+
+.kfo-iconBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kfo-view {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 12px;
+}
+
+.kfo-card {
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.kfo-cardTitle {
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0 0 10px 0;
+}
+
+.kfo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -6px;
+}
+
+.kfo-gridCol {
+  flex: 1 1 340px;
+  min-width: 300px;
+  padding: 6px;
+}
+
+.kfo-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.kfo-row > * + * {
+  margin-left: 10px;
+}
+
+.kfo-row .kfo-input {
+  flex: 1 1 auto;
+  min-width: 160px;
+}
+
+.kfo-rowLabel {
+  width: 140px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.kfo-rowControl {
+  flex: 1 1 auto;
+}
+
+.kfo-small {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.kfo-divider {
+  height: 1px;
+  opacity: 0.2;
+  margin: 10px 0;
+}
+
+.kfo-modalBackdrop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 9999;
+}
+
+.kfo-modal {
+  width: 760px;
+  max-width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.kfo-modalHeader {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kfo-modalTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.kfo-modalBody {
+  padding: 14px;
+}
+
+.kfo-modalFooter {
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.kfo-modalFooter > * + * {
+  margin-left: 10px;
+}
+
+.kfo-stepper {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.kfo-stepper > * + * {
+  margin-left: 8px;
+}
+
+.kfo-list {
+  margin: 0;
+  padding: 0;
+}
+
+.kfo-listItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(127,127,127,0.18);
+  margin-bottom: 8px;
+}
+
+.kfo-listItemMain {
+  min-width: 0;
+}
+
+.kfo-listItemTitle {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kfo-listItemMeta {
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.kfo-listItemActions {
+  display: inline-flex;
+  align-items: center;
+}
+
+.kfo-listItemActions > * + * {
+  margin-left: 8px;
+}
+
+.kfo-progress {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(127,127,127,0.20);
+}
+
+.kfo-progressBar {
+  height: 10px;
+  width: 0;
+  background: rgba(96,165,250,0.90);
+}
+
+.kfo-mono {
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.kfo-step {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.65;
+}
+
+.kfo-stepActive {
+  opacity: 1;
+}
+
+@media (max-width: 900px) {
+  .kfo-lane {
+    flex-basis: 300px;
+  }
+  .kfo-rowLabel {
+    width: 120px;
+  }
+}

@@ -3,768 +3,803 @@
 <html ng-app="taskboardApp">
 
     <head>
-        <title>Outlook Task Board</title>
+        <title>Kanban for Outlook</title>
+
         <meta http-equiv="X-UA-Compatible" content="IE=11">
         <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
         <meta http-equiv="Pragma" content="no-cache">
         <meta http-equiv="Expires" content="-1">
 
         <link rel="stylesheet" href="css/bootstrap.min.css">
-        <link rel="stylesheet" href="css/taskboard.css">
+        <link rel="stylesheet" href="css/kfo.css">
+        <link id="kfo-theme-link" rel="stylesheet" href="themes/kfo-light/theme.css">
 
-        <!-- scripts -->
-        <script src="lip/jquery.min.js"></script>
-        <script src="lip/jquery-ui.min.js"></script>
-        <script src="lip/bootstrap.min.js"></script>
-        <script src="lip/angular.js"></script>
-        <script src="lip/sortable.min.js"></script>
-        <script src="lip/checklist-model.js"></script>
-        <script src="lip/moment.min.js"></script>
-        <script src="lip/minify.json.js"></script>
-        <script src="lip/deep-diff-0.3.8.min.js"></script>
+        <!-- scripts (all local) -->
+        <script src="vendor/jquery.min.js"></script>
+        <script src="vendor/jquery-ui.min.js"></script>
+        <script src="vendor/angular.min.js"></script>
+        <script src="vendor/sortable.min.js"></script>
+        <script src="vendor/moment.min.js"></script>
+        <script src="vendor/minify.json.js"></script>
+
         <script src="js/version.js"></script>
         <script src="js/exchange.js"></script>
         <script src="js/app.js"></script>
-
     </head>
 
-    <body ng-controller="taskboardController" ng-init="init()">
+    <body ng-controller="taskboardController" ng-init="init()" class="kfo" ng-class="rootClasses">
 
-        <div ng-if="!isBrowserSupported">
-            <h1>Sorry, this app can only be run as a Home Page of an Outlook mail folder</h1>
-            <h2>Set up</h2>
-            <ul>
-                <li>Download <a href="https://janware.nl/gitlab/install.zip">this zip file</a></li>
-                <li>Extract the install.cmd file, and run it</li>
-            </ul>
-            <h2>That's it!! Have fun!</h2>
+        <div ng-if="!isBrowserSupported" class="container" style="padding: 18px;">
+            <h3>Kanban for Outlook</h3>
+            <p>This app is designed to run as a Folder Home Page inside classic Outlook for Windows.</p>
+            <p><strong>Local setup</strong></p>
+            <ol>
+                <li>Extract this folder to a location you control (for example under your user profile).</li>
+                <li>Run <code>install-local.cmd</code> to register the home page for Outlook.</li>
+                <li>Restart Outlook.</li>
+            </ol>
+            <p class="text-muted">No network access is required or used by this application.</p>
         </div>
 
-        <div ng-if="isBrowserSupported" class="taskboard container-fluid" ng-style="getTaskboardBackgroundColor()">
-
-            <!-- header bar -->
-            <section id="headerbar" class="row">
-                <div ng-if="display_message" class="col-md-12 bg-warning">
-                    <div ng-show="config.NEW_VERSION_NOTIFICATION" ng-if="( where=='(offline)' )">
-                        <p><strong>A newer version is available: {{version_number}} (your version is {{version}})</strong>
-                        <a href="{{DOWNLOAD_URL}}" download id="download" class="button">download</a>
-                        <a href="#" ng-click="$event.preventDefault();displayLink('https://janware.nl/gitlab/whatsnew.html')" class="button">What's new?</a>
-                    </div>
-                    <div ng-if="( where=='(online)' )">
-                        <p><strong>Upgraded to a newer version: {{version_number}}</strong>
-                        <a class="button" href="#" ng-click="$event.preventDefault();displayLink('https://janware.nl/gitlab/whatsnew.html')">What's new?</a>
-                    </div>
+        <div ng-if="isBrowserSupported" class="kfo-app">
+            <header class="kfo-topbar">
+                <div class="kfo-brand" ng-click="switchMode('board')" style="cursor:pointer;">
+                    <div class="kfo-brandTitle">Kanban for Outlook</div>
+                    <div class="kfo-brandMeta">v{{version}}</div>
                 </div>
 
-                <div class="col-md-12">
-                    <div class="input-group">
-                        <div class="input-group-addon" ng-click="switchToAppMode();">
-                            <strong>Outlook Taskboard</strong>
-                        </div>
-                        <div ng-show="config.MULTI_MAILBOX" class="input-group-addon">
-                            <select class="selectpicker" ng-model="filter.mailbox">
-                                <option ng-selected="{{mailbox == filter.mailbox}}" ng-repeat="mailbox in config.ACTIVE_MAILBOXES"
-                                                                                    value="{{mailbox}}">
-                                {{mailbox}}
-                                </option>
-                            </select>
-                        </div>
-                        <div class="input-group-addon">
-                            <button id="refreshbutton" class="btn btn-default btn-xs" aria-label="Refresh" type="button"
-                                                                                                           ng-click="refreshTasks();"><span class="glyphicon glyphicon-refresh"
-                                                                                                                                         aria-hidden="true"></span></button>
-                        </div>
-                        <div ng-show="(filter.search != '')" class="input-group-addon">
-                            <button class="btn btn-default btn-xs" aria-label="Clear" type="button"
-                                                                                      ng-click="filter.search = ''"><span class="glyphicon glyphicon-remove"
-                                                                                                                          aria-hidden="true"></span></button>
-                        </div>
-                        <input type="text" name="search" ng-model="filter.search" class="form-control"
-                                                                                  placeholder="Filter" />
-                        <div class="input-group-addon">
-                            <select class="btn btn-default btn-xs" ng-model="filter.category">
-                                <option ng-selected="{{category == filter.category}}" ng-repeat="category in activeCategories"
-                                                                                      value="{{category}}">
-                                {{category}}
-                                </option>
-                            </select>
-                        </div>
-                        <div class="input-group-addon">
-                            <button class="btn btn-default btn-xs" aria-label="Report" type="button"
-                                                                                       ng-click="createReport();"><span class="glyphicon glyphicon-list-alt"
-                                                                                                                        aria-hidden="true"></span></button>
-                        </div>
-                        <div class="input-group-addon">
-                            <span class="glyphicon"
-                                  ng-class="{ 'glyphicon-globe' : filter.private == privacyFilter.all.value, 'glyphicon-lock' : filter.private == privacyFilter.private.value, 'glyphicon-briefcase' : filter.private == privacyFilter.public.value }"
-                                  aria-hidden="true"></span>
-                            <select class="btn btn-default btn-xs" ng-model="filter.private">
-                                <option value={{privacyFilter.all.value}}>{{privacyFilter.all.text}}</option>
-                                <option value={{privacyFilter.private.value}}>{{privacyFilter.private.text}}</option>
-                                <option value={{privacyFilter.public.value}}>{{privacyFilter.public.text}}</option>
-                            </select>
-                        </div>
-                        <div class="input-group-addon">
-                            <button class="btn btn-default btn-xs" aria-label="Config" type="button"
-                                                                                       ng-click="switchToConfigMode();"><span class="glyphicon glyphicon-wrench"
-                                                                                                                              aria-hidden="true"></span></button>
-                        </div>
-                        <div class="input-group-addon">
-                            <button class="btn btn-default btn-xs" aria-label="Help"
-                                                                   ng-click="switchToHelpMode();"><strong>?</strong></button>
-                        </div>
-                    </div>
+                <div class="kfo-topbarSection">
+                    <select class="kfo-select" ng-model="filter.mailbox" ng-options="m for m in mailboxes" ng-change="onMailboxChanged()" ng-if="config.MULTI_MAILBOX"></select>
+                    <select class="kfo-select" ng-model="ui.projectEntryID" ng-options="p.entryID as p.name for p in projects" ng-change="onProjectChanged()"></select>
+                    <button class="kfo-btn" type="button" ng-click="openCreateProject()">
+                        <span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span>
+                        <span>Project</span>
+                    </button>
                 </div>
-            </section>
 
-            <!-- tasklanes section -->
-            <section ng-if="inAppMode()" class="row">
-                <div ng-repeat="folder in taskFolders" ng-if="( folder.display )"
-                                                       class="tasklane col-md-3 col-sm-4 col-xs-6"
-                                                       ng-class=" { 'col-lg-100' : displayFolderCount === 1, 'col-lg-50' : displayFolderCount === 2, 'col-lg-33' : displayFolderCount === 3, 'col-lg-25': displayFolderCount === 4, 'col-lg-20': displayFolderCount === 5, 'col-lg-16': displayFolderCount === 6 }">
-                    <div class="panel panel-default">
-                        <header
-                         ng-class="{ 'panel-heading-todo' : folder.type == 1, 'panel-heading-next' : folder.type == 2, 'panel-heading-progress' : folder.type == 3, 'panel-heading-waiting' : folder.type == 4,'panel-heading-completed' : folder.type == 5,'panel-heading-someday' : folder.type == 0 }">
-                            <h5>{{ folder.title }}
-                                <span class="pull-right">
-                                    <button
-                                      ng-if="( folder.allowAdd && (folder.limit == 0 || folder.tasks.length < folder.limit ))"
-                                      class="btn btn-default btn-xs" aria-label="Add" type="button"
-                                                                                      ng-click="addTask(folder.type);">
+                <div class="kfo-topbarGrow kfo-search">
+                    <span class="glyphicon glyphicon-search kfo-searchIcon" aria-hidden="true"></span>
+                    <input class="kfo-input kfo-searchInput" type="text" ng-model="filter.search" placeholder="Search tasks" ng-change="applyFilters()" />
+                    <button class="kfo-iconBtn kfo-searchClear" type="button" ng-if="filter.search" ng-click="filter.search=''; applyFilters();" aria-label="Clear search">
+                        <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                    </button>
+                </div>
+
+                <div class="kfo-topbarSection">
+                    <select class="kfo-select" ng-model="filter.category" ng-options="c for c in categories" ng-change="applyFilters()"></select>
+                    <select class="kfo-select" ng-model="filter.private">
+                        <option value="{{privacyFilter.all.value}}">{{privacyFilter.all.text}}</option>
+                        <option value="{{privacyFilter.private.value}}">{{privacyFilter.private.text}}</option>
+                        <option value="{{privacyFilter.public.value}}">{{privacyFilter.public.text}}</option>
+                    </select>
+
+                    <button class="kfo-iconBtn" type="button" ng-click="refreshTasks()" aria-label="Refresh" ng-class="{'kfo-refreshing': ui.isRefreshing}">
+                        <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
+                    </button>
+                    <button class="kfo-iconBtn" type="button" ng-click="switchMode('settings')" aria-label="Settings">
+                        <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+                    </button>
+                    <button class="kfo-iconBtn" type="button" ng-click="switchMode('help')" aria-label="Help">
+                        <span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </header>
+
+            <main class="kfo-main">
+                <section class="kfo-board" ng-if="ui.mode == 'board'">
+                    <div class="kfo-lanes">
+                        <div class="kfo-lane" ng-repeat="lane in lanes track by lane.id" ng-if="lane.enabled" ng-style="laneContainerStyle(lane, $index)">
+                            <div class="kfo-laneHeader" ng-style="laneHeaderStyle(lane)">
+                                <div class="kfo-laneHeaderLeft">
+                                    <div class="kfo-laneTitle">{{lane.title}}</div>
+                                    <div class="kfo-laneSub" ng-if="config.UI.showLaneCounts">
+                                        {{lane.filteredTasks.length}} tasks
+                                        <span ng-if="lane.wipLimit > 0">&nbsp;•&nbsp;WIP {{lane.wipLimit}}</span>
+                                    </div>
+                                </div>
+                                <div class="kfo-laneHeaderRight">
+                                    <span class="kfo-pill" ng-if="lane.wipLimit > 0 && lane.filteredTasks.length > lane.wipLimit">Over limit</span>
+                                    <button class="kfo-iconBtn" type="button" ng-click="addTask(lane)" aria-label="Add task">
                                         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
                                     </button>
-                                    <span class="label label-info">{{ folder.tasks.length }}</span>
-                                    <span ng-if="( folder.limit > 0 )" class="label label-primary">{{ folder.limit }}</span>
-                                </span>
-                            </h5>
-                        </header>
-                        <ul id="folder-{{folder.type}}" ui-sortable="sortableOptions" ng-model="folder.filteredTasks"
-                                                                                      ng-class="{ 'tasklist-default' : !display_message, 'tasklist-message' : display_message }"
-                                                                                      class="panel-body list-unstyled tasklist"
-                                                                                      ng-style="getTasklistBackgroundColor()">
-                            <li ng-repeat="task in folder.filteredTasks" class="task panel"
-                                                                         ng-class="{ 'task-completed': folder.type == 5,  'task-low' : task.priority === 0, 'task-medium' : task.priority === 1, 'task-high' : task.priority === 2, 'task-private': task.sensitivity === 2 }"
-                                                                         ng-dblclick="editTask(task)">
-                                <header class="panel-heading">
-                                    {{ task.subject }} 
-                                    <br>
-                                    <span
-                                            ng-if="(folder.displayDueDate && (task.duedate | date:'yyyy' ) != '4501')"
-                                            ng-class="isOverdue(task.duedate)" class="pull-right">(Due:
-                                        {{ task.duedate | date:config.DATE_FORMAT }}) </span>
-                                    <span
-                                            ng-if="(folder.displayStartDate && (task.startdate | date:'yyyy' ) != '4501')"
-                                            class="pull-right">(Start:
-                                        {{ task.startdate | date:config.DATE_FORMAT }}) </span>
-                                    <span ng-if="folder.type == 5" class="pull-right">(Completed:
-                                        {{ task.completeddate | date:config.DATE_FORMAT }}) </span>
-                                </header>
-                                <div class="panel-body"> {{ task.notes }} </div>
-                                <footer class="text-right" ng-style="getFooterStyle(task.categories)">
-                                    <div ng-if="( folder.displayOwner )"><span class="glyphicon glyphicon-user"></span>
-                                        {{ task.owner }} </div>
-                                    <div ng-if="( folder.displayPercent )" class="pull-right"> {{ task.percent }}%</div>
-                                    <div ng-show="( filter.private == privacyFilter.all.value && task.sensitivity == 2 )"
-                                         class="glyphicon glyphicon-lock"></div>
-                                    <div ng-if="(task.categories != '')" class="pull-left"><span
-                                                                         class="glyphicon glyphicon-tag"></span>
-                                        <span ng-repeat="cat in task.categories"><strong
-                                              ng-style="cat.style">{{ cat.label }}</strong>&nbsp;</span>
+                                </div>
+                            </div>
+
+                            <ul class="kfo-tasklist kfo-tasklist" ui-sortable="sortableOptions" ng-model="lane.filteredTasks" data-lane-id="{{lane.id}}">
+                                <li class="kfo-task" ng-repeat="task in lane.filteredTasks track by task.entryID" ng-dblclick="editTask(task)" ng-class="taskCardClasses(task)" ng-style="taskItemStyle($parent.$index, $index)">
+                                    <div class="kfo-taskHeader">
+                                        {{task.subject}}
                                     </div>
-                                    <div ng-if="( folder.displayTotalWork )"><span class="glyphicon glyphicon-time"></span>
-                                        {{ task.totalwork }} </div>
-                                    <span class="btn-group btn-group-xs">
-                                        <button ng-show="(task.oneNoteURL != '')" class="btn btn-default btn-xs"
-                                                                                  aria-label="OneNote" type="button"
-                                                                                                       ng-click="openOneNoteURL(task.oneNoteURL)"><span
-                                                                                                       class="glyphicon glyphicon-book" aria-hidden="true"></span></button>
-                                        <button ng-if="folder.allowEdit" class="btn btn-default btn-xs" aria-label="Edit"
-                                                                                                        type="button" ng-click="editTask(task)"><span class="glyphicon glyphicon-edit"
-                                                                                                                                                      aria-hidden="true"></span></button>
-                                        <button class="btn btn-default btn-xs" aria-label="Delete" type="button"
-                                                                                                   ng-click="deleteTask(task,folder.tasks,folder.filteredTasks, true)"><span
-                                                                                                   class="glyphicon glyphicon-trash" aria-hidden="true"></span></button>
-                                    </span>
-                                </footer>
-                            </li>
-                        </ul>
+
+                                    <div class="kfo-taskMeta">
+                                        <div>
+                                            <span ng-if="config.UI.showDueDate && task.dueText" class="kfo-due" ng-class="task.dueClass">Due: {{task.dueText}}</span>
+                                            <span ng-if="!task.dueText">&nbsp;</span>
+                                        </div>
+                                        <div>
+                                            <span class="glyphicon glyphicon-lock" aria-hidden="true" ng-if="config.UI.showPrivacyIcon && task.sensitivity === 2"></span>
+                                            <span ng-if="config.UI.showPriorityPill && task.priority === 2" class="kfo-pill">High</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="kfo-taskBody" ng-if="config.UI.showNotes && task.notes">{{task.notes}}</div>
+
+                                    <div class="kfo-taskFooter" ng-style="getFooterStyle(task.categories)">
+                                        <div class="kfo-taskTags" ng-if="config.UI.showCategories">
+                                            <span class="kfo-tag" ng-repeat="cat in visibleCategories(task.categories)" ng-style="cat.style">{{cat.label}}</span>
+                                        </div>
+                                        <div class="kfo-taskActions">
+                                            <button class="kfo-iconBtn" type="button" aria-label="OneNote" ng-if="task.oneNoteURL" ng-click="openOneNoteURL(task.oneNoteURL)">
+                                                <span class="glyphicon glyphicon-book" aria-hidden="true"></span>
+                                            </button>
+                                            <button class="kfo-iconBtn" type="button" aria-label="Edit" ng-click="editTask(task)">
+                                                <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+                                            </button>
+                                            <button class="kfo-iconBtn" type="button" aria-label="Delete" ng-click="deleteTask(task, true)">
+                                                <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="kfo-view" ng-if="ui.mode == 'settings'">
+                    <div class="kfo-grid">
+                        <div class="kfo-gridCol">
+                            <div class="kfo-card">
+                                <div class="kfo-cardTitle">Projects</div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Projects root</div>
+                                    <div class="kfo-rowControl">
+                                        <input class="kfo-input" type="text" ng-model="config.PROJECTS.rootFolderName" />
+                                        <div class="kfo-small">Projects are Outlook task folders under this root.</div>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Default project</div>
+                                    <div class="kfo-rowControl">
+                                        <select class="kfo-select" ng-model="config.PROJECTS.defaultProjectEntryID" ng-options="p.entryID as p.name for p in projects"></select>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-divider"></div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">New project</div>
+                                    <div class="kfo-rowControl">
+                                        <div class="kfo-row">
+                                            <input class="kfo-input" type="text" ng-model="ui.newProjectName" placeholder="Project name" />
+                                            <button class="kfo-btn" type="button" ng-click="createProject(ui.newProjectName)">Create</button>
+                                            <button class="kfo-btn" type="button" ng-click="openLinkProject()">Link existing</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-divider"></div>
+
+                                <div class="kfo-small" style="margin-bottom:8px;">Visible projects appear in the header. Hidden projects remain in Outlook.</div>
+
+                                <div class="kfo-list">
+                                    <div class="kfo-listItem" ng-repeat="p in projectsAll">
+                                        <div class="kfo-listItemMain">
+                                            <div class="kfo-listItemTitle">{{p.name}}</div>
+                                            <div class="kfo-listItemMeta">
+                                                <span class="kfo-pill" ng-if="p.entryID == ui.projectEntryID">Selected</span>
+                                                <span class="kfo-pill" ng-if="p.isHidden">Hidden</span>
+                                                <span class="kfo-pill" ng-if="p.isLinked">Linked</span>
+                                            </div>
+                                        </div>
+                                        <div class="kfo-listItemActions">
+                                            <button class="kfo-btn" type="button" ng-click="selectProject(p.entryID)" ng-disabled="p.entryID == ui.projectEntryID">Select</button>
+                                            <button class="kfo-btn" type="button" ng-click="openRenameProject(p)" ng-disabled="p.isDefaultTasks">Rename</button>
+                                            <button class="kfo-btn" type="button" ng-click="toggleProjectHidden(p)">{{p.isHidden ? 'Show' : 'Hide'}}</button>
+                                            <button class="kfo-btn" type="button" ng-if="p.isLinked" ng-click="unlinkProject(p.entryID)">Unlink</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="kfo-card">
+                                <div class="kfo-cardTitle">Appearance</div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Theme</div>
+                                    <div class="kfo-rowControl">
+                                        <select class="kfo-select" ng-model="config.THEME.activeThemeId" ng-options="t.id as t.name for t in allThemes" ng-change="applyTheme()"></select>
+                                        <div class="kfo-small">Themes are local CSS only.</div>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Density</div>
+                                    <div class="kfo-rowControl">
+                                        <select class="kfo-select" ng-model="config.UI.density" ng-change="applyRootClasses()">
+                                            <option value="compact">Compact</option>
+                                            <option value="comfortable">Comfortable</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Motion</div>
+                                    <div class="kfo-rowControl">
+                                        <select class="kfo-select" ng-model="config.UI.motion" ng-change="applyRootClasses()">
+                                            <option value="full">Full</option>
+                                            <option value="subtle">Subtle</option>
+                                            <option value="off">Off</option>
+                                        </select>
+                                        <div class="kfo-small">Turn motion off if Outlook performance is impacted.</div>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Lane width</div>
+                                    <div class="kfo-rowControl">
+                                        <input class="kfo-input" type="number" ng-model="config.UI.laneWidthPx" style="max-width:120px;" />
+                                        <span class="kfo-small">px (240-520)</span>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Cards</div>
+                                    <div class="kfo-rowControl">
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="checkbox" ng-model="config.UI.showDueDate" />
+                                            Due date
+                                        </label>
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="checkbox" ng-model="config.UI.showNotes" />
+                                            Notes
+                                        </label>
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="checkbox" ng-model="config.UI.showCategories" />
+                                            Categories
+                                        </label>
+                                        <label class="kfo-pill" style="margin:0;" ng-if="config.UI.showCategories">
+                                            <input type="checkbox" ng-model="config.UI.showOnlyFirstCategory" />
+                                            First only
+                                        </label>
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="checkbox" ng-model="config.UI.showPriorityPill" />
+                                            Priority pill
+                                        </label>
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="checkbox" ng-model="config.UI.showPrivacyIcon" />
+                                            Privacy icon
+                                        </label>
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="checkbox" ng-model="config.UI.showLaneCounts" />
+                                            Lane counts
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Import theme</div>
+                                    <div class="kfo-rowControl">
+                                        <input type="file" id="themeCssFile" accept=".css" />
+                                        <div class="kfo-row" style="margin-top:8px;">
+                                            <input class="kfo-input" type="text" ng-model="ui.importThemeName" placeholder="Theme name" />
+                                            <input class="kfo-input" type="text" ng-model="ui.importThemeId" placeholder="Theme id (letters, numbers, -)" />
+                                            <button class="kfo-btn" type="button" ng-click="importThemeFromFile()">Import</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Folder theme</div>
+                                    <div class="kfo-rowControl">
+                                        <div class="kfo-row">
+                                            <input class="kfo-input" type="text" ng-model="ui.folderThemeName" placeholder="Theme name" />
+                                            <input class="kfo-input" type="text" ng-model="ui.folderThemeId" placeholder="Theme id" />
+                                        </div>
+                                        <div class="kfo-row">
+                                            <input class="kfo-input" type="text" ng-model="ui.folderThemeHref" placeholder="CSS path (e.g. themes/my-theme/theme.css)" />
+                                            <button class="kfo-btn" type="button" ng-click="addFolderTheme()">Add</button>
+                                        </div>
+                                        <div class="kfo-small">Use the skeleton in <code>themes/skeleton/</code> to create your own.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="kfo-card">
+                                <div class="kfo-cardTitle">Board</div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Ordering</div>
+                                    <div class="kfo-rowControl">
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="checkbox" ng-model="config.BOARD.saveOrder" />
+                                            Manual order (drag)
+                                        </label>
+                                        <div class="kfo-small">Stores order per lane on each task.</div>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Remember</div>
+                                    <div class="kfo-rowControl">
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="checkbox" ng-model="config.BOARD.saveState" />
+                                            Filters and project
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Notes length</div>
+                                    <div class="kfo-rowControl">
+                                        <input class="kfo-input" type="number" ng-model="config.BOARD.taskNoteMaxLen" style="max-width:120px;" />
+                                        <span class="kfo-small">characters</span>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Date format</div>
+                                    <div class="kfo-rowControl">
+                                        <select class="kfo-select" ng-model="config.DATE_FORMAT">
+                                            <option value="DD-MMM">DD-MMM</option>
+                                            <option value="D MMM">D MMM</option>
+                                            <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                                            <option value="DD/MM">DD/MM</option>
+                                            <option value="MM/DD">MM/DD</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Categories</div>
+                                    <div class="kfo-rowControl">
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="checkbox" ng-model="config.USE_CATEGORY_COLORS" />
+                                            Color tags
+                                        </label>
+                                        <label class="kfo-pill" style="margin:0;" ng-if="config.USE_CATEGORY_COLORS">
+                                            <input type="checkbox" ng-model="config.USE_CATEGORY_COLOR_FOOTERS" />
+                                            Color footer
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Diagnostics</div>
+                                    <div class="kfo-rowControl">
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="checkbox" ng-model="config.LOG_ERRORS" />
+                                            Debug logging
+                                        </label>
+                                        <div class="kfo-small">Keeps a local error log in Outlook.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="kfo-gridCol">
+                            <div class="kfo-card">
+                                <div class="kfo-cardTitle">Lanes</div>
+
+                                <div class="kfo-row" ng-repeat="lane in config.LANES">
+                                    <div class="kfo-rowLabel">Lane</div>
+                                    <div class="kfo-rowControl">
+                                        <div class="kfo-row">
+                                            <input class="kfo-input" type="text" ng-model="lane.title" placeholder="Title" />
+                                            <input class="kfo-input" type="text" ng-model="lane.id" placeholder="Id" />
+                                            <input class="kfo-input" type="text" ng-model="lane.color" placeholder="#RRGGBB" />
+                                            <input class="kfo-input" type="number" ng-model="lane.wipLimit" placeholder="WIP" style="max-width:90px;" />
+                                            <select class="kfo-select" ng-model="lane.outlookStatus" title="Optional: sync Outlook Status">
+                                                <option ng-value="null">No status sync</option>
+                                                <option ng-value="0">Not Started</option>
+                                                <option ng-value="1">In Progress</option>
+                                                <option ng-value="3">Waiting</option>
+                                                <option ng-value="4">Deferred</option>
+                                                <option ng-value="2">Completed</option>
+                                            </select>
+                                            <label class="kfo-pill" style="margin:0;">
+                                                <input type="checkbox" ng-model="lane.enabled" />
+                                                Enabled
+                                            </label>
+                                            <button class="kfo-btn" type="button" ng-click="moveLaneUp($index)">Up</button>
+                                            <button class="kfo-btn" type="button" ng-click="moveLaneDown($index)">Down</button>
+                                            <button class="kfo-btn" type="button" ng-click="removeLane($index)">Remove</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="kfo-divider"></div>
+
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">New lane</div>
+                                    <div class="kfo-rowControl">
+                                        <div class="kfo-row">
+                                            <input class="kfo-input" type="text" ng-model="ui.newLaneTitle" placeholder="Title" />
+                                            <input class="kfo-input" type="text" ng-model="ui.newLaneId" placeholder="Id" />
+                                            <input class="kfo-input" type="text" ng-model="ui.newLaneColor" placeholder="#RRGGBB" />
+                                            <button class="kfo-btn" type="button" ng-click="addLane()">Add</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="kfo-card">
+                                <div class="kfo-cardTitle">Tools</div>
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Automation</div>
+                                    <div class="kfo-rowControl">
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="checkbox" ng-model="config.AUTOMATION.setOutlookStatusOnLaneMove" />
+                                            Sync Outlook status on move
+                                        </label>
+                                        <div class="kfo-small">If enabled, lanes with a status mapping will update the Outlook task Status on drag/drop.</div>
+                                    </div>
+                                </div>
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Migration</div>
+                                    <div class="kfo-rowControl">
+                                        <button class="kfo-btn" type="button" ng-click="openMigration()">Migrate lanes</button>
+                                        <div class="kfo-small">Bulk-assign lanes for tasks in the current project (local-only).</div>
+                                    </div>
+                                </div>
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Move tasks</div>
+                                    <div class="kfo-rowControl">
+                                        <button class="kfo-btn" type="button" ng-click="openMoveTasks()">Move between projects</button>
+                                        <div class="kfo-small">Moves tasks between Outlook folders while keeping lane metadata.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="kfo-card">
+                                <div class="kfo-cardTitle">Privacy & Local-Only</div>
+                                <p class="kfo-small">This fork is local-only by design: no external downloads, update checks, telemetry, or support email targets.</p>
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Diagnostics</div>
+                                    <div class="kfo-rowControl">
+                                        <button class="kfo-btn" type="button" ng-click="openDiagnostics()">View / Export</button>
+                                        <div class="kfo-small">Review what would be shared before you share anything.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="kfo-card">
+                                <div class="kfo-cardTitle">Save</div>
+                                <div class="kfo-row">
+                                    <div class="kfo-rowLabel">Actions</div>
+                                    <div class="kfo-rowControl">
+                                        <button class="kfo-btn" type="button" ng-click="saveAndReturn()">Save settings</button>
+                                        <button class="kfo-btn" type="button" ng-click="switchMode('board')">Back to board</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="kfo-view" ng-if="ui.mode == 'help'">
+                    <div class="kfo-card">
+                        <div class="kfo-cardTitle">Help</div>
+                        <p><strong>Local-only</strong>: this app does not require or use network access.</p>
+                        <p><strong>Projects</strong> are Outlook task folders. <strong>Lanes</strong> are stored on each task using a custom property.</p>
+                        <p class="kfo-small">Maintainer: Iman Sharif. Credits: see ACKNOWLEDGEMENTS in the repository.</p>
+                        <p class="kfo-small">Disclaimer: this software is provided "AS IS" with no warranty.</p>
+                        <div class="kfo-divider"></div>
+                        <button class="kfo-btn" type="button" ng-click="switchMode('board')">Back to board</button>
+                    </div>
+                </section>
+            </main>
+
+            <!-- Setup wizard (first run / migration) -->
+            <div class="kfo-modalBackdrop" ng-if="ui.showSetupWizard">
+                <div class="kfo-modal">
+                    <div class="kfo-modalHeader">
+                        <h3 class="kfo-modalTitle">Welcome to Kanban for Outlook</h3>
+                        <button class="kfo-iconBtn" type="button" ng-click="closeSetupWizard()" aria-label="Close">
+                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="kfo-modalBody">
+                        <div class="kfo-stepper">
+                            <span class="kfo-step" ng-class="{'kfo-stepActive': ui.setupStep == 1}">Theme</span>
+                            <span class="kfo-step" ng-class="{'kfo-stepActive': ui.setupStep == 2}">Projects</span>
+                            <span class="kfo-step" ng-class="{'kfo-stepActive': ui.setupStep == 3}">Lanes</span>
+                            <span class="kfo-step" ng-class="{'kfo-stepActive': ui.setupStep == 4}">Finish</span>
+                        </div>
+
+                        <div ng-if="ui.setupStep == 1">
+                            <p>Pick a theme (you can change this later).</p>
+                            <div class="kfo-row">
+                                <div class="kfo-rowLabel">Theme</div>
+                                <div class="kfo-rowControl">
+                                    <select class="kfo-select" ng-model="config.THEME.activeThemeId" ng-options="t.id as t.name for t in allThemes" ng-change="applyTheme()"></select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div ng-if="ui.setupStep == 2">
+                            <p>Projects are Outlook task folders. We recommend using a dedicated root folder.</p>
+                            <div class="kfo-row">
+                                <div class="kfo-rowLabel">Root folder</div>
+                                <div class="kfo-rowControl">
+                                    <input class="kfo-input" type="text" ng-model="config.PROJECTS.rootFolderName" />
+                                    <div class="kfo-small">We will create it if it does not exist.</div>
+                                </div>
+                            </div>
+                            <div class="kfo-row">
+                                <div class="kfo-rowLabel">Default project</div>
+                                <div class="kfo-rowControl">
+                                    <div class="kfo-row" style="margin-bottom:8px;">
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="radio" ng-model="ui.setupProjectMode" value="create" />
+                                            Create a new folder
+                                        </label>
+                                        <label class="kfo-pill" style="margin:0;">
+                                            <input type="radio" ng-model="ui.setupProjectMode" value="link" />
+                                            Use an existing folder
+                                        </label>
+                                    </div>
+
+                                    <div ng-if="ui.setupProjectMode == 'create'">
+                                        <input class="kfo-input" type="text" ng-model="ui.setupDefaultProjectName" placeholder="General" />
+                                        <div class="kfo-small">We will create this project folder under the root.</div>
+                                    </div>
+
+                                    <div ng-if="ui.setupProjectMode == 'link'">
+                                        <select class="kfo-select" ng-model="ui.setupExistingProjectEntryID" ng-options="f.entryID as f.name for f in availableProjectFolders"></select>
+                                        <div class="kfo-small">We will link it as a project (no tasks are moved).</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div ng-if="ui.setupStep == 3">
+                            <p>Start with a lane template.</p>
+                            <div class="kfo-row">
+                                <div class="kfo-rowLabel">Template</div>
+                                <div class="kfo-rowControl">
+                                    <select class="kfo-select" ng-model="ui.setupLaneTemplate" ng-change="applyLaneTemplate(ui.setupLaneTemplate)">
+                                        <option value="personal">Personal Kanban</option>
+                                        <option value="gtd">GTD</option>
+                                        <option value="scrum">Scrum</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="kfo-small">You can add more lanes at any time in Settings.</div>
+                        </div>
+
+                        <div ng-if="ui.setupStep == 4">
+                            <p>All set. Your data stays in Outlook. No external services are used.</p>
+                            <p class="kfo-small">Next: create a few tasks and drag them between lanes.</p>
+                            <p class="kfo-small">Disclaimer: this software is provided "AS IS" with no warranty.</p>
+                        </div>
+                    </div>
+                    <div class="kfo-modalFooter">
+                        <div>
+                            <button class="kfo-btn" type="button" ng-click="prevSetupStep()" ng-disabled="ui.setupStep == 1">Back</button>
+                        </div>
+                        <div>
+                            <button class="kfo-btn" type="button" ng-click="nextSetupStep()" ng-if="ui.setupStep < 4">Next</button>
+                            <button class="kfo-btn" type="button" ng-click="finishSetup()" ng-if="ui.setupStep == 4">Finish</button>
+                        </div>
                     </div>
                 </div>
-            </section>
+            </div>
 
-            <!-- config section -->
-            <section ng-if="(inConfigMode())" class="row">
-
-                <form ng-submit="submitConfig()" class="container-fluid">
-                    <div class="panel-group" id="accordion">
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
-                                <h4 class="panel-title">
-                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapse1">
-                                        <b>Task Columns Configuration</b></a>
-                                </h4>
-                            </div>
-                            <div id="collapse1" class="panel-collapse collapse in">
-                                <div class="panel-body">
-                                    <ul class="nav nav-tabs">
-                                        <li class="active"><a data-toggle="tab" href="#someday">{{config.SOMEDAY_FOLDER.TITLE}}</a></li>
-                                        <li><a data-toggle="tab" href="#backlog">{{config.BACKLOG_FOLDER.TITLE}}</a></li>
-                                        <li><a data-toggle="tab" href="#next">{{config.NEXT_FOLDER.TITLE}}</a></li>
-                                        <li><a data-toggle="tab" href="#progress">{{config.INPROGRESS_FOLDER.TITLE}}</a></li>
-                                        <li><a data-toggle="tab" href="#waiting">{{config.WAITING_FOLDER.TITLE}}</a></li>
-                                        <li><a data-toggle="tab" href="#done">{{config.COMPLETED_FOLDER.TITLE}}</a></li>
-                                    </ul>
-
-                                    <div class="tab-content" style="height:140px">
-                                        <div id="someday" class="tab-pane fade in active">
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Show this column:</label>
-                                                <div class="col-sm-1">
-                                                    <input type="checkbox" ng-model="config.SOMEDAY_FOLDER.ACTIVE">
-                                                </div>
-                                            </div>
-                                            <div class="form-group row col-sm-12">
-                                                <label class="control-label col-sm-1">Title:</label>
-                                                <div class="col-sm-2">
-                                                    <input type="text" class="form-control input-sm" placeholder="Enter Title"
-                                                                                                     ng-model="config.SOMEDAY_FOLDER.TITLE">
-                                                </div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Display:</label>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"><input type="checkbox"
-                                                                                        ng-model="config.SOMEDAY_FOLDER.DISPLAY_PROPERTIES.OWNER"> Owner</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"><input type="checkbox"
-                                                                                        ng-model="config.SOMEDAY_FOLDER.DISPLAY_PROPERTIES.PERCENT"> Percentage
-                                                                                        done</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.SOMEDAY_FOLDER.DISPLAY_PROPERTIES.TOTALWORK"> Total
-                                                        work</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.SOMEDAY_FOLDER.DISPLAY_PROPERTIES.STARTDATE"> Start Date</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.SOMEDAY_FOLDER.DISPLAY_PROPERTIES.DUEDATE"> Due Date</label>
-                                                </div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Include in report:</label>
-                                                <div class="col-sm-1">
-                                                    <input type="checkbox" ng-model="config.SOMEDAY_FOLDER.REPORT.DISPLAY">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div id="backlog" class="tab-pane fade">
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Show this column:</label>
-                                                <div class="col-sm-1">
-                                                    <input type="checkbox" ng-model="config.BACKLOG_FOLDER.ACTIVE">
-                                                </div>
-                                            </div>
-                                            <div class="form-group row col-sm-12">
-                                                <label class="control-label col-sm-1">Title:</label>
-                                                <div class="col-sm-2">
-                                                    <input type="text" class="form-control input-sm" placeholder="Enter Title"
-                                                                                                     ng-model="config.BACKLOG_FOLDER.TITLE">
-                                                </div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Filter on Start Date:</label>
-                                                <div class="col-sm-1">
-                                                    <input type="checkbox" ng-model="config.BACKLOG_FOLDER.FILTER_ON_START_DATE">
-                                                </div>
-                                                <div class="col-sm-10"> (means: hide tasks for which the Start Date is in the future)
-                                                </div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Display:</label>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"><input type="checkbox"
-                                                                                        ng-model="config.BACKLOG_FOLDER.DISPLAY_PROPERTIES.OWNER"> Owner</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"><input type="checkbox"
-                                                                                        ng-model="config.BACKLOG_FOLDER.DISPLAY_PROPERTIES.PERCENT"> Percentage
-                                                                                        done</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.BACKLOG_FOLDER.DISPLAY_PROPERTIES.TOTALWORK"> Total
-                                                                                         work</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.BACKLOG_FOLDER.DISPLAY_PROPERTIES.STARTDATE"> Start Date</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.BACKLOG_FOLDER.DISPLAY_PROPERTIES.DUEDATE"> Due Date</label>
-                                                </div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Include in report:</label>
-                                                <div class="col-sm-1">
-                                                    <input type="checkbox" ng-model="config.BACKLOG_FOLDER.REPORT.DISPLAY">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div id="next" class="tab-pane fade">
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Show this column:</label>
-                                                <div class="col-sm-1">
-                                                    <input type="checkbox" ng-model="config.NEXT_FOLDER.ACTIVE">
-                                                </div>
-                                            </div>
-                                            <div class="form-group row col-sm-12">
-                                                <label class="control-label col-sm-1">Title:</label>
-                                                <div class="col-sm-2">
-                                                    <input type="text" class="form-control" placeholder="Enter Title"
-                                                                                            ng-model="config.NEXT_FOLDER.TITLE">
-                                                </div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Max number of tasks:</label>
-                                                <div class="col-sm-2">
-                                                    <input type="number" class="form-control input-sm"
-                                                                         ng-model="config.NEXT_FOLDER.LIMIT">
-                                                </div>
-                                                <div class="col-sm-5"> (zero for no limit)</div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Display:</label>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"><input type="checkbox"
-                                                                                        ng-model="config.NEXT_FOLDER.DISPLAY_PROPERTIES.OWNER">
-                                                        Owner</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"><input type="checkbox"
-                                                                                        ng-model="config.NEXT_FOLDER.DISPLAY_PROPERTIES.PERCENT"> Percentage
-                                                                                        done</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.NEXT_FOLDER.DISPLAY_PROPERTIES.TOTALWORK"> Total
-                                                                                         work</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.NEXT_FOLDER.DISPLAY_PROPERTIES.STARTDATE"> Start Date</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.NEXT_FOLDER.DISPLAY_PROPERTIES.DUEDATE"> Due Date</label>
-                                                </div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Include in report:</label>
-                                                <div class="col-sm-1">
-                                                    <input type="checkbox" ng-model="config.NEXT_FOLDER.REPORT.DISPLAY">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div id="progress" class="tab-pane fade">
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Show this column:</label>
-                                                <div class="col-sm-1">
-                                                    <input type="checkbox" ng-model="config.INPROGRESS_FOLDER.ACTIVE">
-                                                </div>
-                                            </div>
-                                            <div class="form-group row col-sm-12">
-                                                <label class="control-label col-sm-1">Title:</label>
-                                                <div class="col-sm-2">
-                                                    <input type="text" class="form-control input-sm" placeholder="Enter Title"
-                                                                                                     ng-model="config.INPROGRESS_FOLDER.TITLE">
-                                                </div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Max number of tasks:</label>
-                                                <div class="col-sm-2">
-                                                    <input type="number" class="form-control input-sm"
-                                                                         ng-model="config.INPROGRESS_FOLDER.LIMIT">
-                                                </div>
-                                                <div class="col-sm-5"> (zero for no limit)</div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Display:</label>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"><input type="checkbox"
-                                                                                        ng-model="config.INPROGRESS_FOLDER.DISPLAY_PROPERTIES.OWNER"> Owner</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"><input type="checkbox"
-                                                                                        ng-model="config.INPROGRESS_FOLDER.DISPLAY_PROPERTIES.PERCENT"> Percentage
-                                                                                        done</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.INPROGRESS_FOLDER.DISPLAY_PROPERTIES.TOTALWORK"> Total
-                                                                                         work</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.INPROGRESS_FOLDER.DISPLAY_PROPERTIES.STARTDATE"> Start Date</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.INPROGRESS_FOLDER.DISPLAY_PROPERTIES.DUEDATE"> Due Date</label>
-                                                </div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Include in report:</label>
-                                                <div class="col-sm-1">
-                                                    <input type="checkbox" ng-model="config.INPROGRESS_FOLDER.REPORT.DISPLAY">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div id="waiting" class="tab-pane fade">
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Show this column:</label>
-                                                <div class="col-sm-1">
-                                                    <input type="checkbox" ng-model="config.WAITING_FOLDER.ACTIVE">
-                                                </div>
-                                            </div>
-                                            <div class="form-group row col-sm-12">
-                                                <label class="control-label col-sm-1">Title:</label>
-                                                <div class="col-sm-2">
-                                                    <input type="text" class="form-control input-sm" placeholder="Enter Title"
-                                                                                                     ng-model="config.WAITING_FOLDER.TITLE">
-                                                </div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Display:</label>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"><input type="checkbox"
-                                                                                        ng-model="config.WAITING_FOLDER.DISPLAY_PROPERTIES.OWNER"> Owner</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"><input type="checkbox"
-                                                                                        ng-model="config.WAITING_FOLDER.DISPLAY_PROPERTIES.PERCENT"> Percentage
-                                                                                        done</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.WAITING_FOLDER.DISPLAY_PROPERTIES.TOTALWORK"> Total
-                                                                                         work</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.WAITING_FOLDER.DISPLAY_PROPERTIES.STARTDATE"> Start Date</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.WAITING_FOLDER.DISPLAY_PROPERTIES.DUEDATE"> Due Date</label>
-                                                </div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Include in report:</label>
-                                                <div class="col-sm-1">
-                                                    <input type="checkbox" ng-model="config.WAITING_FOLDER.REPORT.DISPLAY">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div id="done" class="tab-pane fade">
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Show this column:</label>
-                                                <div class="col-sm-1">
-                                                    <input type="checkbox" ng-model="config.COMPLETED_FOLDER.ACTIVE">
-                                                </div>
-                                            </div>
-                                            <div class="form-group row col-sm-12">
-                                                <label class="control-label col-sm-1">Title:</label>
-                                                <div class="col-sm-2">
-                                                    <input type="text" class="form-control input-sm" placeholder="Enter Title"
-                                                                                                     ng-model="config.COMPLETED_FOLDER.TITLE">
-                                                </div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Display:</label>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"><input type="checkbox"
-                                                                                        ng-model="config.COMPLETED_FOLDER.DISPLAY_PROPERTIES.OWNER"> Owner</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"><input type="checkbox"
-                                                                                        ng-model="config.COMPLETED_FOLDER.DISPLAY_PROPERTIES.PERCENT"> Percentage
-                                                                                        done</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.COMPLETED_FOLDER.DISPLAY_PROPERTIES.TOTALWORK"> Total
-                                                                                         work</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.COMPLETED_FOLDER.DISPLAY_PROPERTIES.STARTDATE"> Start Date</label>
-                                                </div>
-                                                <div class="col-sm-1">
-                                                    <label class="control-label"> <input type="checkbox"
-                                                                                         ng-model="config.COMPLETED_FOLDER.DISPLAY_PROPERTIES.DUEDATE"> Due Date</label>
-                                                </div>
-                                            </div>
-                                            <div class="form-check row col-sm-12">
-                                                <label class="control-label col-sm-1">Include in report:</label>
-                                                <div class="col-sm-1">
-                                                    <input type="checkbox" ng-model="config.COMPLETED_FOLDER.REPORT.DISPLAY">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
-                                <h4 class="panel-title">
-                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapse2">
-                                        <b>Layout Configuration</b></a>
-                                </h4>
-                            </div>
-                            <div id="collapse2" class="panel-collapse collapse">
-                                <div class="panel-body">
-                                    <div style="height:60px">
-                                        <div class="form-check row col-sm-12">
-                                            <label class="control-label col-sm-1">Category Colors:</label>
-                                            <div class="col-sm-1">
-                                                <label class="control-label"><input type="checkbox"
-                                                                                    ng-model="config.USE_CATEGORY_COLORS">
-                                                    Category</label>
-                                            </div>
-                                            <div class="col-sm-1" ng-show="config.USE_CATEGORY_COLORS">
-                                                <label class="control-label"><input type="checkbox"
-                                                                                    ng-model="config.USE_CATEGORY_COLOR_FOOTERS"> Entire
-                                                                                    footer</label>
-                                            </div>
-                                        </div>
-                                        <div class="form-check row col-sm-12">
-                                            <label class="control-label col-sm-1">Dark Mode:</label>
-                                            <div class="col-sm-1">
-                                                <input type="checkbox" ng-model="config.DARK_MODE">
-                                            </div>
-                                        </div>
-                                        <div class="form-group row col-sm-12">
-                                            <label class="control-label col-sm-1">Task details:</label>
-                                            <div class="col-sm-2">
-                                                <input type="text" class="form-control input-sm" ng-model="config.TASKNOTE_MAXLEN">
-                                            </div>
-                                            <div class="col-sm-5"> (max number of character displayed)</div>
-                                        </div>
-                                        <div class="form-group row col-sm-12">
-                                            <label class="control-label col-sm-1">Task body in report:</label>
-                                            <div class="col-sm-1">
-                                                <input type="checkbox" ng-model="config.TASKBODY_IN_REPORT">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
-                                <h4 class="panel-title">
-                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapse3">
-                                        <b>Behavior Configuration</b></a>
-                                </h4>
-                            </div>
-                            <div id="collapse3" class="panel-collapse collapse">
-                                <div class="panel-body">
-                                    <div style="height:130px">
-                                        <div class="form-check row col-sm-12">
-                                            <label class="control-label col-sm-1">Auto-start tasks:</label>
-                                            <div class="col-sm-1">
-                                                <input type="checkbox" ng-model="config.AUTO_START_TASKS">
-                                            </div>
-                                            <div class="col-sm-10"> (Automatically move tasks to {{config.NEXT_FOLDER.TITLE}} column
-                                                when
-                                                its Start Date has arrived)</div>
-                                        </div>
-                                        <div class="form-check row col-sm-12">
-                                            <label class="control-label col-sm-1">Auto-start due tasks:</label>
-                                            <div class="col-sm-1">
-                                                <input type="checkbox" ng-model="config.AUTO_START_DUE_TASKS">
-                                            </div>
-                                            <div class="col-sm-10"> (Automatically move tasks to {{config.NEXT_FOLDER.TITLE}} column
-                                                when
-                                                its Due Date has arrived)</div>
-                                        </div>
-                                        <div class="form-check row col-sm-12">
-                                            <label class="control-label col-sm-1">Save drag-and-drop order:</label>
-                                            <div class="col-sm-1">
-                                                <input type="checkbox" ng-model="config.SAVE_ORDER">
-                                            </div>
-                                            <div class="col-sm-10"> (Remember the drag-and-drop sort order)</div>
-                                        </div>
-                                        <div class="form-check row col-sm-12">
-                                            <label class="control-label col-sm-1">Remember state:</label>
-                                            <div class="col-sm-1">
-                                                <input type="checkbox" ng-model="config.SAVE_STATE">
-                                            </div>
-                                            <div class="col-sm-10"> (Remember the filters after you close the application)</div>
-                                        </div>
-                                        <div class="form-group row col-sm-12">
-                                            <label class="control-label col-sm-1">Done tasks action:</label>
-                                            <div class="col-sm-11">
-                                                <select class="col-sm-1" ng-model="config.COMPLETED.ACTION">
-                                                    <option>DELETE</option>
-                                                    <option>ARCHIVE</option>
-                                                    <option>NOTHING</option>
-                                                </select>
-                                                <div ng-show="config.COMPLETED.ACTION != 'NOTHING'">
-                                                    <div class="col-sm-1">
-                                                        <input type="text" class="form-control input-sm"
-                                                                           ng-model="config.COMPLETED.AFTER_X_DAYS">
-                                                    </div>
-                                                    <div class="col-sm-5"> days after completion</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="form-group row col-sm-12">
-                                            <label class="control-label col-sm-1">Automatic refresh:</label>
-                                            <div class="col-sm-1">
-                                                <input type="checkbox" ng-model="config.AUTO_REFRESH">
-                                            </div>
-                                            <div class="col-sm-1">every </div>
-                                            <div class="col-sm-1">
-                                                <input type="text" class="form-control input-sm"
-                                                                   ng-model="config.AUTO_REFRESH_MINUTES">
-                                            </div>
-                                            <div class="col-sm-5"> minutes</div>
-                                </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
-                                <h4 class="panel-title">
-                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapse4">
-                                        <b>App Configuration</b></a>
-                                </h4>
-                            </div>
-                            <div id="collapse4" class="panel-collapse collapse">
-                                <div class="panel-body">
-                                    <div style="height:50px">
-                                        <div class="form-check row col-sm-12">
-                                            <label class="control-label col-sm-2">JanBan Home Page:</label>
-                                            <div class="col-sm-8"> {{installFolder}}</div>
-                                        </div>
-                                        <div class="form-check row col-sm-12">
-                                            <label class="control-label col-sm-1">Debug logging:</label>
-                                            <div class="col-sm-1">
-                                                <input type="checkbox" ng-model="config.LOG_ERRORS">
-                                            </div>
-                                            <div class="col-sm-10"> (Switch debug logging on for support purposes)</div>
-                                        </div>
-                                        <div class="form-check row col-sm-12">
-                                            <label class="control-label col-sm-1">New version notification:</label>
-                                            <div class="col-sm-1">
-                                                <input type="checkbox" ng-model="config.NEW_VERSION_NOTIFICATION">
-                                            </div>
-                                            <div class="col-sm-10"> (Display a message when a newer version is available for download)</div>
-                                        </div>
-                                        <div class="form-check row col-sm-12">
-                                            <label class="control-label col-sm-1">Multiple mailboxes:</label>
-                                            <div class="col-sm-1">
-                                                <input type="checkbox" ng-model="config.MULTI_MAILBOX">
-                                            </div>
-                                            <div class="col-sm-10">(Kanban boards for multiple mailboxes)</div>
-                                        </div>
-                                        <div ng-show="config.MULTI_MAILBOX" class="form-check row col-sm-12">
-                                            <label class="control-label col-sm-3">Use Kanban boards for these mailboxes:</label>
-                                        </div>
-                                        <div ng-show="config.MULTI_MAILBOX" class="col-sm-12" ng-repeat="mailbox in mailboxes" ng-if="$index == 0">
-                                            <input type="checkbox" class="col-sm-1" disabled="disabled" checklist-model="config.ACTIVE_MAILBOXES" checklist-value="mailbox">
-                                            <label class="control-label ">{{mailbox}}</label>
-                                             (default, cannot be switched off)
-                                        </div>
-                                        <div ng-show="config.MULTI_MAILBOX" class="col-sm-12" ng-repeat="mailbox in mailboxes" ng-if="$index > 0">
-                                            <input type="checkbox" class="col-sm-1" checklist-model="config.ACTIVE_MAILBOXES" checklist-value="mailbox">
-                                            <label class="control-label ">{{mailbox}}</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
+            <!-- Create project modal -->
+            <div class="kfo-modalBackdrop" ng-if="ui.showCreateProject">
+                <div class="kfo-modal">
+                    <div class="kfo-modalHeader">
+                        <h3 class="kfo-modalTitle">Create Project</h3>
+                        <button class="kfo-iconBtn" type="button" ng-click="ui.showCreateProject = false" aria-label="Close">
+                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                        </button>
                     </div>
-                    <button id="submitconfig" class="btn btn-primary">Save</button>
-                    <button id="cancelconfig" class="btn btn-default" type="reset"
-                                                                      ng-click="switchToAppMode();">Cancel</button>
+                    <div class="kfo-modalBody">
+                        <div class="kfo-row">
+                            <div class="kfo-rowLabel">Project name</div>
+                            <div class="kfo-rowControl">
+                                <div class="kfo-row" style="margin-bottom:8px;">
+                                    <label class="kfo-pill" style="margin:0;">
+                                        <input type="radio" ng-model="ui.createProjectMode" value="create" />
+                                        Create a new folder
+                                    </label>
+                                    <label class="kfo-pill" style="margin:0;">
+                                        <input type="radio" ng-model="ui.createProjectMode" value="link" />
+                                        Use an existing folder
+                                    </label>
+                                </div>
 
-                </form>
-            </section>
+                                <div ng-if="ui.createProjectMode == 'create'">
+                                    <input class="kfo-input" type="text" ng-model="ui.newProjectName" placeholder="Project name" />
+                                    <div class="kfo-small">This creates a Tasks folder under the projects root.</div>
+                                </div>
 
-            <!-- help section -->
-            <section ng-if="(inHelpMode())" class="row">
-                <div class="col-sm-6 col-sm-offset-3">
-                    <div class="panel panel-default">
-                        <header class="panel-heading-waiting  text-center"><strong>About...</strong></header>
-                        <form ng-submit="switchToAppMode()">
-                            <div class="panel-about">
-                                <img src="janban-icon-512.jpg" class="left" style="width:120px">
-                                JanBan Task Board version {{version}}
-                                <a href="#" ng-click="$event.preventDefault();displayLink('https://janware.nl/gitlab/whatsnew.html')"> (Release History) </a>
-                                <br />
-                                <br />
-                                A Kanban style taskboard for managing your Outlook tasks.<br />
-                                Refactored and taken to the next level by <a href="#" ng-click="$event.preventDefault();displayLink('https://papasmurf.nl/jan/')">
-                                <strong><i>Jan van Veldhuizen</i></strong></a>.<br />
-                            <br />
-                               Credits:<br />
-                               * <a href="#" ng-click="$event.preventDefault();displayLink('https://github.com/evrenvarol/outlook-taskboard')"><strong><i>Evren
-                                           Varol</i></strong></a>, for developing the very first version of the Kanban
-                               board
-                               <br />
-                               * All users giving feedback and doing suggestions
-                               <br />
-                               * Everyone who helps improving the app by reporting issues or by asking questions
-                             <br />
-                             <br />
-                             <strong>Buy me a coffee</strong>
-                             <br />
-                             You're free to use this software. If you are happy with it I highly appreciate you <a href="#" ng-click="$event.preventDefault();displayLink('https://www.buymeacoffee.com/papasmurf')">buying me a coffee</a>
-                             <br />
-                             <br />
-                             <strong>Meet me and other users</strong>
-                             <br />
-                             JanBan has now its own <a href="#" ng-click="$event.preventDefault();displayLink('https://discord.gg/2ZFTckV')">Discord</a> Server
-                             <br />
-                             You are encouraged to post your feedback and questions there. 
-                             The idea is that users are going to help each other by answering questions and giving tips. 
-                             But you can also send an email directly to me
-                             <br />
-                             <br />
-                             <button id="sendFeedback" class="btn btn-primary" type="button"
-                                     ng-click="sendFeedback(includeConfig, includeState, includeLog);"><strong>send e-mail</strong></button>
-                             <span>&nbsp; &nbsp; &nbsp;&nbsp;  </span> <input type="checkbox" ng-model="includeConfig"> Attach configuration&nbsp;&nbsp;
-                             <input type="checkbox" ng-model="includeState"> Attach filter&nbsp;&nbsp;
-                             <input type="checkbox" ng-model="includeLog"> Attach debug log
-                             <br />
-                             <br />
-                            <span style="color:red">Internet Explorer Disclaimer:
-                            <br />
-                            Outlook uses a limited version of the Internet Explorer browser. Hence links to other web sites can be problematic.
-                            <br />
-                            That is why all links on this page are copied into a Note item, where it uses your default browser.
-                            <br />
-                            The note item will be closed automatically after a few seconds.
-                            <br /></span>
+                                <div ng-if="ui.createProjectMode == 'link'">
+                                    <select class="kfo-select" ng-model="ui.linkProjectEntryID" ng-options="f.entryID as f.name for f in availableProjectFolders"></select>
+                                    <div class="kfo-small">This links an existing folder as a project (no tasks are moved).</div>
+                                </div>
                             </div>
-                            <div class="text-center">
-                                <button id="back" class="btn btn-default">Ok</button>
-                            </div>
-                        </form>
+                        </div>
+                    </div>
+                    <div class="kfo-modalFooter">
+                        <button class="kfo-btn" type="button" ng-click="ui.showCreateProject = false">Cancel</button>
+                        <button class="kfo-btn" type="button" ng-click="submitCreateProject()">Save</button>
                     </div>
                 </div>
-            </section>
+            </div>
+
+            <!-- Diagnostics modal -->
+            <div class="kfo-modalBackdrop" ng-if="ui.showDiagnostics">
+                <div class="kfo-modal">
+                    <div class="kfo-modalHeader">
+                        <h3 class="kfo-modalTitle">Diagnostics (Local)</h3>
+                        <button class="kfo-iconBtn" type="button" ng-click="ui.showDiagnostics = false" aria-label="Close">
+                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="kfo-modalBody">
+                        <p class="kfo-small">This is stored locally in Outlook. Copy/paste only if you choose to share it.</p>
+                        <textarea class="kfo-input" style="height: 260px; width: 100%; border-radius: 14px;" readonly="readonly">{{diagnosticsText}}</textarea>
+                    </div>
+                    <div class="kfo-modalFooter">
+                        <button class="kfo-btn" type="button" ng-click="copyDiagnostics()">Copy</button>
+                        <button class="kfo-btn" type="button" ng-click="ui.showDiagnostics = false">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rename project modal -->
+            <div class="kfo-modalBackdrop" ng-if="ui.showRenameProject">
+                <div class="kfo-modal">
+                    <div class="kfo-modalHeader">
+                        <h3 class="kfo-modalTitle">Rename Project</h3>
+                        <button class="kfo-iconBtn" type="button" ng-click="ui.showRenameProject = false" aria-label="Close">
+                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="kfo-modalBody">
+                        <div class="kfo-row">
+                            <div class="kfo-rowLabel">New name</div>
+                            <div class="kfo-rowControl">
+                                <input class="kfo-input" style="width:100%;" type="text" ng-model="ui.renameProjectName" placeholder="Project name" />
+                                <div class="kfo-small">This renames the Outlook Tasks folder.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kfo-modalFooter">
+                        <button class="kfo-btn" type="button" ng-click="ui.showRenameProject = false">Cancel</button>
+                        <button class="kfo-btn" type="button" ng-click="submitRenameProject()">Rename</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Move tasks modal -->
+            <div class="kfo-modalBackdrop" ng-if="ui.showMoveTasks">
+                <div class="kfo-modal">
+                    <div class="kfo-modalHeader">
+                        <h3 class="kfo-modalTitle">Move Tasks Between Projects</h3>
+                        <button class="kfo-iconBtn" type="button" ng-click="closeMoveTasks()" aria-label="Close">
+                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="kfo-modalBody">
+                        <div class="kfo-row">
+                            <div class="kfo-rowLabel">From</div>
+                            <div class="kfo-rowControl">
+                                <select class="kfo-select" ng-model="ui.move.fromProjectEntryID" ng-options="p.entryID as p.name for p in projectsAll"></select>
+                            </div>
+                        </div>
+                        <div class="kfo-row">
+                            <div class="kfo-rowLabel">To</div>
+                            <div class="kfo-rowControl">
+                                <select class="kfo-select" ng-model="ui.move.toProjectEntryID" ng-options="p.entryID as p.name for p in projectsAll"></select>
+                            </div>
+                        </div>
+
+                        <div class="kfo-row">
+                            <div class="kfo-rowLabel">Selection</div>
+                            <div class="kfo-rowControl">
+                                <select class="kfo-select" ng-model="ui.move.mode">
+                                    <option value="all">All tasks</option>
+                                    <option value="lane">Tasks in a lane</option>
+                                    <option value="unassigned">Tasks without a lane</option>
+                                </select>
+                                <select class="kfo-select" ng-model="ui.move.laneId" ng-if="ui.move.mode == 'lane'" ng-options="l.id as l.title for l in laneOptions"></select>
+                            </div>
+                        </div>
+
+                        <div class="kfo-divider"></div>
+
+                        <div ng-if="ui.move.running">
+                            <div class="kfo-small">Moving {{ui.move.progress.done}} / {{ui.move.progress.total}} tasks</div>
+                            <div class="kfo-progress" style="margin-top:8px;">
+                                <div class="kfo-progressBar" ng-style="{'width': ui.move.progress.percent + '%'}"></div>
+                            </div>
+                        </div>
+
+                        <div ng-if="!ui.move.running" class="kfo-small">
+                            This moves tasks between Outlook folders. Lane metadata is kept on the task.
+                        </div>
+                    </div>
+                    <div class="kfo-modalFooter">
+                        <button class="kfo-btn" type="button" ng-click="closeMoveTasks()" ng-disabled="ui.move.running">Cancel</button>
+                        <button class="kfo-btn" type="button" ng-click="runMoveTasks()" ng-disabled="ui.move.running">Move</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Migration modal -->
+            <div class="kfo-modalBackdrop" ng-if="ui.showMigration">
+                <div class="kfo-modal">
+                    <div class="kfo-modalHeader">
+                        <h3 class="kfo-modalTitle">Migrate Lanes (Local)</h3>
+                        <button class="kfo-iconBtn" type="button" ng-click="closeMigration()" aria-label="Close">
+                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="kfo-modalBody">
+                        <p class="kfo-small">Assign lanes based on the existing Outlook Task Status for tasks in the current project.</p>
+
+                        <div class="kfo-row">
+                            <div class="kfo-rowLabel">Scope</div>
+                            <div class="kfo-rowControl">
+                                <label class="kfo-pill" style="margin:0;">
+                                    <input type="checkbox" ng-model="ui.migration.onlyUnassigned" />
+                                    Only tasks without a lane
+                                </label>
+                                <label class="kfo-pill" style="margin:0;">
+                                    <input type="checkbox" ng-model="ui.migration.treatUnknownAsUnassigned" />
+                                    Treat unknown lanes as unassigned
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="kfo-divider"></div>
+
+                        <div class="kfo-row" ng-repeat="m in ui.migration.mappingRows">
+                            <div class="kfo-rowLabel">{{m.statusText}}</div>
+                            <div class="kfo-rowControl">
+                                <select class="kfo-select" ng-model="m.laneId" ng-options="l.id as l.title for l in migrationLaneOptions">
+                                    <option value="">(Skip)</option>
+                                </select>
+                                <span class="kfo-small">{{m.count}} tasks</span>
+                            </div>
+                        </div>
+
+                        <div class="kfo-divider"></div>
+
+                        <div ng-if="ui.migration.running">
+                            <div class="kfo-small">Migrating {{ui.migration.progress.done}} / {{ui.migration.progress.total}} tasks</div>
+                            <div class="kfo-progress" style="margin-top:8px;">
+                                <div class="kfo-progressBar" ng-style="{'width': ui.migration.progress.percent + '%'}"></div>
+                            </div>
+                            <div class="kfo-small" style="margin-top:8px;">Updated: {{ui.migration.progress.updated}} &nbsp;•&nbsp; Skipped: {{ui.migration.progress.skipped}} &nbsp;•&nbsp; Errors: {{ui.migration.progress.errors}}</div>
+                        </div>
+
+                        <div ng-if="!ui.migration.running" class="kfo-small">This is local-only and does not move tasks between folders.</div>
+                    </div>
+                    <div class="kfo-modalFooter">
+                        <button class="kfo-btn" type="button" ng-click="closeMigration()" ng-disabled="ui.migration.running">Cancel</button>
+                        <button class="kfo-btn" type="button" ng-click="runMigration()" ng-disabled="ui.migration.running">Run</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toasts -->
+            <div class="kfo-toastWrap" ng-if="ui.toast.show">
+                <div class="kfo-toast" ng-class="'kfo-toast--' + ui.toast.type">
+                    <div class="kfo-toastHeader">
+                        <div class="kfo-toastTitle">{{ui.toast.title}}</div>
+                        <button class="kfo-iconBtn" type="button" ng-click="dismissToast()" aria-label="Dismiss">
+                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="kfo-toastMsg" ng-if="ui.toast.message">{{ui.toast.message}}</div>
+                </div>
+            </div>
         </div>
     </body>
 

@@ -1,1 +1,1 @@
-const VERSION = "2.1.11";
+var VERSION = "3.0.0";

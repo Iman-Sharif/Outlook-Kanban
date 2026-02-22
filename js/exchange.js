@@ -3,9 +3,14 @@
 var outlookApp;
 var outlookNS;
 
-const SENSITIVITY = { olNormal: 0, olPrivate: 2 };
-const OlDefaultFolders = { olFolderTasks: 13 };
-const OlItemType = { olTaskItem: 3 };
+var SENSITIVITY = { olNormal: 0, olPrivate: 2 };
+var OlDefaultFolders = { olFolderTasks: 13 };
+var OlItemType = { olTaskItem: 3 };
+var OlUserPropertyType = {
+    olText: 1,
+    olNumber: 3,
+    olYesNo: 6
+};
 
 function checkBrowser() {
     var isBrowserSupported
@@ -144,6 +149,77 @@ function getTaskFolder(mailbox, folderName) {
     }
 }
 
+function getTaskFolderExisting(mailbox, folderName) {
+    try {
+        var folder = findTasksFolder(mailbox);
+        if (folderName === '') {
+            return folder;
+        }
+        var i = getFolderIndex(folder.Folders, folderName);
+        if (i === -1) {
+            return null;
+        }
+        return folder.Folders(folderName);
+    } catch (error) {
+        alert('getTaskFolderExisting error:' + error);
+        return null;
+    }
+}
+
+function listTaskSubFolders(mailbox, parentFolderName) {
+    // Returns plain JS objects (safe for Angular bindings)
+    try {
+        var parent = getTaskFolderExisting(mailbox, parentFolderName);
+        if (!parent) {
+            return [];
+        }
+        var result = [];
+        var folders = parent.Folders;
+        var count = folders.Count;
+        for (var i = 1; i <= count; i++) {
+            try {
+                var f = folders(i);
+                if (f.DefaultItemType == OlItemType.olTaskItem) {
+                    result.push({
+                        name: f.Name,
+                        entryID: f.EntryID,
+                        storeID: f.StoreID
+                    });
+                }
+            } catch (e) {
+                // ignore unreadable folders
+            }
+        }
+        // Sort by name for stable UI
+        result.sort(function (a, b) {
+            var an = (a.name || '').toLowerCase();
+            var bn = (b.name || '').toLowerCase();
+            if (an < bn) return -1;
+            if (an > bn) return 1;
+            return 0;
+        });
+        return result;
+    } catch (error) {
+        alert('listTaskSubFolders error:' + error);
+        return [];
+    }
+}
+
+function getFolderFromIDs(entryID, storeID) {
+    try {
+        // Namespace.GetFolderFromID
+        if (outlookNS && outlookNS.GetFolderFromID) {
+            if (storeID) {
+                return outlookNS.GetFolderFromID(entryID, storeID);
+            }
+            return outlookNS.GetFolderFromID(entryID);
+        }
+    } catch (e) {
+        // fall through
+    }
+    return null;
+}
+
 function getOrCreateFolder(mailbox, folderName, inFolders, folderType) {
     try {
         var i = getFolderIndex(inFolders, folderName);
@@ -174,6 +250,17 @@ function getTaskItems(mailbox, folderName) {
 
 function getTaskItem(id) {
     return outlookNS.GetItemFromID(id);
+}
+
+function getTaskItemFromIDs(entryID, storeID) {
+    try {
+        if (storeID) {
+            return outlookNS.GetItemFromID(entryID, storeID);
+        }
+    } catch (e) {
+        // fall back
+    }
+    return outlookNS.GetItemFromID(entryID);
 }
 
 function newMailItem() {
@@ -249,3 +336,24 @@ function getUserProperty(item, prop) {
     return value;
 };
 
+function setUserProperty(item, prop, value, type) {
+    try {
+        var userprop = null;
+        try {
+            userprop = item.UserProperties(prop);
+        } catch (e1) {
+            userprop = null;
+        }
+
+        if (userprop == null) {
+            var t = type;
+            if (t === undefined || t === null) {
+                t = OlUserPropertyType.olText;
+            }
+            userprop = item.UserProperties.Add(prop, t);
+        }
+        userprop.Value = value;
+    } catch (error) {
+        alert('setUserProperty error: ' + error);
+    }
+}

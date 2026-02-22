@@ -1,123 +1,91 @@
-# ⚠️ PROJECT STATUS: UNMAINTAINED ⚠️
+![Kanban for Outlook](docs/assets/hero.svg)
 
-After many years of development and maintenance, I have decided to retire from active development of JanBan. As I no longer use Windows or Office personally, I've been unable to maintain the project for the past few years. 
+# Kanban for Outlook
 
-I initially thought I might pick up development again after my retirement, but after consideration, I've decided not to purchase Windows and Office licenses or set up a new development environment specifically for this purpose.
+Local-only Kanban board for classic Microsoft Outlook Tasks (Windows desktop).
 
-**What this means:**
-- The repository has been migrated from GitLab to GitHub to increase visibility
-- No new features will be implemented by me
-- I will not be able to respond to support requests
-- The application is stable in its current state with no major known issues
+[Setup](docs/SETUP.md) | [Usage](docs/USAGE.md) | [Projects](docs/PROJECTS.md) | [Themes](docs/THEMES.md) | [Theme Authoring](docs/THEME_AUTHORING.md) | [Troubleshooting](docs/TROUBLESHOOTING.md)
 
-**For users:** Thank you for your interest and support over the years. The current version should continue to work as is.
+This repository continues **JanBan**, which is based on the original **Outlook Taskboard** by Evren Varol.
+Credits: [`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md).
 
-**For developers:** This project is now open for adoption! Feel free to fork the repository, make improvements, or use it as a foundation for a new version. If you're interested in becoming a maintainer or creating your own fork, please feel free to do so.
+Maintainer: Iman Sharif.
 
-I'm grateful to everyone who used JanBan and found it helpful for their workflow. While it's difficult to step away, I hope this project can continue to evolve through the open source community.
+> [!IMPORTANT]
+> Non-negotiable: local-only. No external downloads, update checks, telemetry, or prefilled support email targets.
 
-# Outlook Kanban Taskboard aka **JanBan**
+## What it is
 
-⚠️ NOTA BENE: I changed below instructions a bit, because the online version of the app is no longer available. Most of you installed it locally, so that should still work. ⚠️
+- A board UI hosted as an Outlook Folder Home Page (classic Outlook on Windows)
+- Projects = Outlook Task folders
+- Lanes stored on each task via Outlook user properties (`KFO_LaneId`, optional ordering via `KFO_LaneOrder`)
 
-⚠️ Also note that I have no possibility to test it anymore, so I haven't verified proper working ⚠️
+```mermaid
+flowchart LR
+  A[Classic Outlook for Windows\nFolder Home Page (IE engine)] --> B[kanban.html]
+  B --> C[AngularJS UI]
+  C <--> D[Outlook Tasks + Folders\n(local profile)]
+  C --> E[Outlook Journal Items\nKanbanConfig / KanbanState]
+```
 
-![logo](/images/janban-icon-512-300x300.jpg)
+## Features
 
-JanBan is an Outlook Taskboard that employs a kanban board style view for Outlook Tasks.
+- Modern light/dark UI with density + motion controls
+- Fully configurable lanes (title, color, WIP limit, optional Outlook Status sync)
+- Projects as folders: create, link existing folders, hide/show, rename
+- Tools: migrate lanes from Outlook Status, move tasks between projects
+- Theme system: built-in themes + local theme import + folder themes ([`themes/`](themes/))
 
-This project builds upon the [Outlook Taskboard by Evren Varol](https://github.com/evrenvarol/outlook-taskboard). I've enhanced it with numerous features, customization options, and settings adjustments.
+## Setup (local)
 
-![](/images/scr1.png)
+1) Download and extract the release zip to a folder you control.
+2) Run `install.cmd` (or `install-local.cmd`).
+3) Restart Outlook.
 
-The core features of JanBan include:
+The installer copies files to `%USERPROFILE%\kanban-for-outlook` and registers `kanban.html` as the Folder Home Page.
 
-##### Moving Tasks between task lanes
-![](/images/scr2.gif)
+See [`docs/SETUP.md`](docs/SETUP.md) for detailed steps and manual install.
 
-##### Filtering Tasks 
-![](/images/scr3.gif)
+## Documentation
 
-##### Configuration
-![](/images/scr4.gif) 
+- Start here: [`docs/README.md`](docs/README.md)
+- Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- Setup: [`docs/SETUP.md`](docs/SETUP.md) (includes manual install)
+- Usage: [`docs/USAGE.md`](docs/USAGE.md)
+- Projects: [`docs/PROJECTS.md`](docs/PROJECTS.md)
+- Migration: [`docs/MIGRATION.md`](docs/MIGRATION.md)
+- Themes (end-user): [`docs/THEMES.md`](docs/THEMES.md)
+- Theme authoring (creators): [`docs/THEME_AUTHORING.md`](docs/THEME_AUTHORING.md)
+- SmartScreen: [`docs/SMARTSCREEN.md`](docs/SMARTSCREEN.md)
+- Troubleshooting: [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
+- Privacy: [`PRIVACY.md`](PRIVACY.md)
+- Security: [`SECURITY.md`](SECURITY.md)
+- Third-party notices: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
+- Disclaimer: [`DISCLAIMER.md`](DISCLAIMER.md)
 
-##### Support Mailbox
-![](/images/scr5.gif)
+## Security + privacy
 
-### Supported Platforms
+Everything stays in your local Outlook profile.
 
-I've tested it with all versions of Outlook from 2013 to the present, and on Windows from version 8 to 11. It may also work with older versions of Outlook and is likely compatible with Windows 7.
+- No network access required
+- Config + state stored in Outlook Journal items
+- Tasks are read/written via Outlook COM/MAPI
 
-You can also open the taskboard in a browser. However, due to some limitations with ActiveX controls, it only operates on Internet Explorer.
+See [`PRIVACY.md`](PRIVACY.md) and [`SECURITY.md`](SECURITY.md).
 
+## Compatibility
 
-### Setup Options
+- Supported: classic Outlook for Windows (Folder Home Page / IE engine)
+- Not supported: new Outlook, Outlook on the web, macOS
 
-You can use JanBan ~~online~~ __(no longer available)__ or set it up on your local computer. 
+## Roadmap
 
-Regardless of how you use it, it will run in your Outlook application, and none of your Outlook data will be visible to anyone else.
+See [`ROADMAP.md`](ROADMAP.md).
 
-Here's a breakdown of the pros and cons of each option to help you decide which is the best fit for you:
+## Disclaimer
 
-~~- Default Option:~~
-  - ~~Setup: Very straightforward~~
-  - ~~Updates: They occur automatically; you don't have to lift a finger.~~
-  - ~~Offline: The app won't function if you're not connected to the internet.~~
+This project is provided "AS IS" with no warranty. See [`DISCLAIMER.md`](DISCLAIMER.md) and [`LICENSE`](LICENSE).
 
-- Local Option:
-  - Setup: It requires some effort. 
-  - Updates: You have to manually install them.
-  - Offline: You can use the app even when offline.
+## License
 
-~~### Default Setup~~
-
-~~If you prefer an effortless setup, visit https://janware.nl/janban and follow the instructions there.~~
-
-~~However, if you want to set it up yourself:~~
-
-~~1. Right-click your Outlook Home Folder and then click Properties.~~
-~~2. Select the _Home Page_ tab in the box that pops up.~~
-~~3. In the box labeled _Address_, enter: https://janware.nl/janban.~~
-~~4. Check the box that reads _Show home page by default for this folder_, then click OK.~~
-
-### Local Setup
-
-1. Download the janban.zip file from this repository and place it in a folder on your computer.  
-2. Right-click your Outlook Home Folder and then click Properties.
-3. Choose the _Home Page_ tab in the box that appears.
-4. In the _Address_ box, locate the folder where you saved the Taskboard files and select the __kanban.html__ file.  
-5. Check the box that reads _Show home page by default for this folder_, then click OK.
-
-![](/images/scr6.png)
-
-If you encounter this warning, merely click the X icon to close the warning and the Properties window. 
-
-### Using the install-local command file
-
-Click the download link and save the file to your Downloads folder.  
-
-![](/images/setup1.png)
-
-Go to your Downloads folder, right-click the janban.zip file and select Extract All  
-
-![](/images/setup2.png)
-
-Check the box to display the extracted files and click the Extract button  
-
-![](/images/setup3.png)
-
-Double-click the install.cmd file. You might briefly see a black command screen.  
-
-![](/images/setup4.png)
-
-If Windows presents a protection message, then click on 'More info'  
-
-![](/images/setup5.png)
-
-Click on 'Run anyway'  
-
-![](/images/setup6.png) 
-
-The installation is now complete. Open Outlook and go to your top-level mail folder. The Janban board will appear. Enjoy!
-
-![](/images/setup7.png)
+MIT, see [`LICENSE`](LICENSE).

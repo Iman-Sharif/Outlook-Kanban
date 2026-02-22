@@ -1,0 +1,9 @@
+{
+  "id": "my-theme",
+  "name": "My Theme",
+  "description": "Describe your theme here.",
+  "author": "Your Name",
+  "version": "1.0.0",
+  "cssHref": "themes/skeleton/theme.css",
+  "kind": "custom"
+}

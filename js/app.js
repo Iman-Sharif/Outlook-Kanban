@@ -1,1688 +1,2418 @@
 'use strict';
 
-var tbApp = angular.module('taskboardApp', ['ui.sortable','checklist-model']);
+(function () {
+    var CONFIG_ID = 'KanbanConfig';
+    var STATE_ID = 'KanbanState';
+    var LOG_ID = 'KanbanErrorLog';
 
-tbApp.controller('taskboardController', function ($scope, $filter, $http, $interval) {
+    var SCHEMA_VERSION = 3;
 
-    var applMode;
-    var outlookCategories;
-    var outlookMailboxes;
-    var noteItem;
-    var timeout;
-    var refresh;
+    // Outlook task user properties (stored locally in Outlook)
+    var PROP_LANE_ID = 'KFO_LaneId';
+    var PROP_LANE_ORDER = 'KFO_LaneOrder';
 
-    var hasReadState; hasReadState = false;
-    var hasReadConfig; hasReadConfig = false;
-    var hasReadVersion; hasReadVersion = false;
+    var DEFAULT_ROOT_FOLDER_NAME = 'Kanban Projects';
 
-    const debug_mode = false;
-
-    const APP_MODE = 0;
-    const CONFIG_MODE = 1;
-    const HELP_MODE = 2;
-
-    const STATE_ID = "KanbanState";
-    const CONFIG_ID = "KanbanConfig";
-    const LOG_ID = "KanbanErrorLog";
-
-    const SOMEDAY = 0;
-    const BACKLOG = 1;
-    const SPRINT = 2;
-    const DOING = 3;
-    const WAITING = 4;
-    const DONE = 5;
-
-    const MAX_LOG_ENTRIES = 1500;
-
-    $scope.includeConfig = true;
-    $scope.includeState = true;
-    $scope.includeLog = false;
-
-    $scope.privacyFilter =
-        {
-            all: { text: "Both", value: "0" },
-            private: { text: "Private", value: "1" },
-            public: { text: "Work", value: "2" }
-        };
-    $scope.display_message = false;
-
-    $scope.taskFolders = [
-        { type: 0 },
-        { type: 1 },
-        { type: 2 },
-        { type: 3 },
-        { type: 4 },
-        { type: 5 }
+    var BUILTIN_THEMES = [
+        { id: 'kfo-light', name: 'Professional Light', cssHref: 'themes/kfo-light/theme.css', kind: 'builtin' },
+        { id: 'kfo-dark', name: 'Professional Dark', cssHref: 'themes/kfo-dark/theme.css', kind: 'builtin' }
     ];
 
-    $scope.switchToAppMode = function () {
-        applMode = APP_MODE;
+    function nowStamp() {
+        var d = new Date();
+        function pad(n) { return (n < 10 ? '0' : '') + n; }
+        return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
     }
 
-    $scope.switchToConfigMode = function () {
-        applMode = CONFIG_MODE;
+    function sanitizeId(raw) {
+        if (!raw) return '';
+        return String(raw)
+            .toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9\-]/g, '')
+            .replace(/\-\-+/g, '-')
+            .replace(/^\-+|\-+$/g, '');
     }
 
-    $scope.switchToHelpMode = function () {
-        applMode = HELP_MODE;
-    }   
-
-    $scope.inAppMode = function () {
-        return applMode === APP_MODE;
+    function isValidHexColor(s) {
+        return /^#[0-9a-fA-F]{6}$/.test(s || '');
     }
 
-    $scope.inConfigMode = function () {
-        return applMode === CONFIG_MODE;
-    }
-
-    $scope.inHelpMode = function () {
-        return applMode === HELP_MODE;
-    }
-
-    $scope.init = function () {
-        setUrls();
-
-        $scope.isBrowserSupported = checkBrowser();
-        if (!$scope.isBrowserSupported) {
-            return;
+    function isCssLocalOnly(cssText) {
+        // Best-effort guardrail: prevent accidental external loads in custom themes.
+        // Users can still theme fully locally.
+        try {
+            var s = String(cssText || '').toLowerCase();
+            if (s.indexOf('http://') !== -1) return false;
+            if (s.indexOf('https://') !== -1) return false;
+            if (s.indexOf('@import') !== -1) return false;
+            // IE-specific scriptable CSS features
+            if (s.indexOf('expression(') !== -1) return false;
+            if (s.indexOf('behavior:') !== -1) return false;
+            return true;
+        } catch (e) {
+            return false;
         }
+    }
 
-        noteItem = newNoteItem();
-
-        $scope.installFolder = getOutlookTodayHomePageFolder();
-        $scope.where = '';
-        if ($scope.installFolder.indexOf('janware.nl') > -1) {
-            $scope.where = '(online)'
+    function isSafeLocalCssPath(href) {
+        // Restrict to relative paths within the install folder.
+        // Example: themes/my-theme/theme.css
+        try {
+            var s = String(href || '').trim();
+            if (!s) return false;
+            if (s.indexOf('..') !== -1) return false;
+            if (s.indexOf('\\') !== -1) return false;
+            if (s.indexOf(':') !== -1) return false;
+            if (s[0] === '/' || s[0] === '.') return false;
+            if (!/\.css$/i.test(s)) return false;
+            if (!/^[a-zA-Z0-9_\-\/\.]+$/.test(s)) return false;
+            return true;
+        } catch (e) {
+            return false;
         }
-        else {
-            $scope.where = '(offline)'
+    }
+
+    function isRealDate(d) {
+        try {
+            if (!d) return false;
+            if (isNaN(d.getTime())) return false;
+            if (d.getFullYear && d.getFullYear() === 4501) return false;
+            return true;
+        } catch (e) {
+            return false;
         }
+    }
 
-        $scope.switchToAppMode();
-
-        // watch search filter and apply it
-        $scope.$watchGroup(['filter.search', 'filter.private', 'filter.category'], function (newValues, oldValues) {
-            var isSearchChanged = (newValues[0] != oldValues[0]);
-            var isPrivateChanged = (newValues[1] != oldValues[1]); 
-            var isCategoryChanged = (newValues[2] != oldValues[2]); 
-            if (isSearchChanged || isPrivateChanged || isCategoryChanged) {
-                $scope.applyFilters();
-                saveState();
+            function DEFAULT_CONFIG_V3() {
+                return {
+            SCHEMA_VERSION: SCHEMA_VERSION,
+            SETUP: {
+                completed: false
+            },
+            PROJECTS: {
+                rootFolderName: DEFAULT_ROOT_FOLDER_NAME,
+                defaultProjectEntryID: '',
+                linkedProjects: [],
+                hiddenProjectEntryIDs: []
+            },
+            UI: {
+                density: 'comfortable',
+                motion: 'full',
+                laneWidthPx: 320,
+                showDueDate: true,
+                showNotes: true,
+                showCategories: true,
+                showOnlyFirstCategory: false,
+                showPriorityPill: true,
+                showPrivacyIcon: true,
+                showLaneCounts: true
+            },
+            AUTOMATION: {
+                setOutlookStatusOnLaneMove: true
+            },
+            LANES: [
+                { id: 'backlog', title: 'Backlog', color: '#94a3b8', wipLimit: 0, enabled: true, outlookStatus: 0 },
+                { id: 'doing', title: 'In Progress', color: '#60a5fa', wipLimit: 5, enabled: true, outlookStatus: 1 },
+                { id: 'waiting', title: 'Waiting', color: '#fbbf24', wipLimit: 0, enabled: true, outlookStatus: 3 },
+                { id: 'done', title: 'Done', color: '#34d399', wipLimit: 0, enabled: true, outlookStatus: 2 }
+            ],
+            THEME: {
+                activeThemeId: 'kfo-light',
+                folderThemes: [],
+                customThemes: []
+            },
+            BOARD: {
+                taskNoteMaxLen: 140,
+                saveState: true,
+                saveOrder: true
+            },
+            USE_CATEGORY_COLORS: true,
+            USE_CATEGORY_COLOR_FOOTERS: false,
+            DATE_FORMAT: 'DD-MMM',
+            MULTI_MAILBOX: false,
+            ACTIVE_MAILBOXES: [],
+                    LOG_ERRORS: false
+                };
             }
-        });
 
-        $scope.$watch('filter.mailbox', function (newValue, oldValue) {
-            if (newValue != oldValue) {
-                $scope.wipeTasks();
-                $scope.initTasks();
-                saveState();
-            }
-        });
+    function laneTemplate(templateId) {
+        if (templateId === 'gtd') {
+            return [
+                { id: 'inbox', title: 'Inbox', color: '#93c5fd', wipLimit: 0, enabled: true, outlookStatus: 0 },
+                { id: 'next', title: 'Next', color: '#60a5fa', wipLimit: 20, enabled: true, outlookStatus: 1 },
+                { id: 'waiting', title: 'Waiting', color: '#fbbf24', wipLimit: 0, enabled: true, outlookStatus: 3 },
+                { id: 'someday', title: 'Someday', color: '#a78bfa', wipLimit: 0, enabled: true, outlookStatus: 0 },
+                { id: 'done', title: 'Done', color: '#34d399', wipLimit: 0, enabled: true, outlookStatus: 2 }
+            ];
+        }
+        if (templateId === 'scrum') {
+            return [
+                { id: 'backlog', title: 'Backlog', color: '#94a3b8', wipLimit: 0, enabled: true, outlookStatus: 0 },
+                { id: 'sprint', title: 'Sprint', color: '#60a5fa', wipLimit: 0, enabled: true, outlookStatus: 0 },
+                { id: 'doing', title: 'Doing', color: '#38bdf8', wipLimit: 5, enabled: true, outlookStatus: 1 },
+                { id: 'review', title: 'Review', color: '#f59e0b', wipLimit: 0, enabled: true, outlookStatus: 1 },
+                { id: 'done', title: 'Done', color: '#34d399', wipLimit: 0, enabled: true, outlookStatus: 2 }
+            ];
+        }
+        // personal (default)
+        return [
+            { id: 'backlog', title: 'Backlog', color: '#94a3b8', wipLimit: 0, enabled: true, outlookStatus: 0 },
+            { id: 'next', title: 'Next', color: '#60a5fa', wipLimit: 20, enabled: true, outlookStatus: 0 },
+            { id: 'doing', title: 'In Progress', color: '#38bdf8', wipLimit: 5, enabled: true, outlookStatus: 1 },
+            { id: 'waiting', title: 'Waiting', color: '#fbbf24', wipLimit: 0, enabled: true, outlookStatus: 3 },
+            { id: 'done', title: 'Done', color: '#34d399', wipLimit: 0, enabled: true, outlookStatus: 2 }
+        ];
+    }
 
-        $scope.$watchGroup(['config.AUTO_REFRESH','config.AUTO_REFRESH_MINUTES'], function (newValues, oldvLaues) {
-            if ($scope.config.AUTO_REFRESH_MINUTES < 1) {
-                $scope.config.AUTO_REFRESH_MINUTES = 1;
-            }
-            if (refresh != undefined) {
-                $interval.cancel(refresh);
-            }
-            refresh = $interval( function () {
-                if ($scope.config.AUTO_REFRESH) {
-                    $scope.refreshTasks();
-                }
-            }, $scope.config.AUTO_REFRESH_MINUTES * 60000);
-        });
+    angular
+        .module('taskboardApp', ['ui.sortable'])
+        .controller('taskboardController', ['$scope', '$filter', '$interval', '$timeout', function ($scope, $filter, $interval, $timeout) {
+            var hasReadConfig = false;
+            var hasReadState = false;
+            var refreshTimer;
 
-        $scope.categories = ["<All Categories>", "<No Category>"];
-        outlookCategories = getOutlookCategories();
-        outlookCategories.names.forEach(function (name) {
-            $scope.categories.push(name);
-        });
-        $scope.categories = $scope.categories.sort();
+            $scope.isBrowserSupported = false;
 
-        $scope.mailboxes = [];
-        outlookMailboxes = getOutlookMailboxes(true);
-        outlookMailboxes.forEach(function (box) {
-            $scope.mailboxes.push(box);
-        });
+            $scope.version = (typeof VERSION !== 'undefined') ? VERSION : '0.0.0';
 
-        readConfig();
-        applyConfig();
-        readState();
-        readVersion();
+            $scope.rootClasses = {};
 
-        $scope.displayFolderCount = 0;
-        $scope.taskFolders.forEach(function (folder) {
-            if (folder.display) $scope.displayFolderCount++;
-        });
+            $scope.ui = {
+                mode: 'board',
+                projectEntryID: '',
+                isRefreshing: false,
+                toast: { show: false, type: 'info', title: '', message: '' },
+                showSetupWizard: false,
+                setupStep: 1,
+                setupDefaultProjectName: 'General',
+                setupProjectMode: 'create',
+                setupExistingProjectEntryID: '',
+                setupLaneTemplate: 'personal',
+                showCreateProject: false,
+                showRenameProject: false,
+                renameProjectEntryID: '',
+                renameProjectStoreID: '',
+                renameProjectName: '',
+                showMoveTasks: false,
+                move: {
+                    fromProjectEntryID: '',
+                    toProjectEntryID: '',
+                    mode: 'all',
+                    laneId: '',
+                    running: false,
+                    progress: { total: 0, done: 0, percent: 0 }
+                },
+                showMigration: false,
+                migration: {
+                    onlyUnassigned: true,
+                    treatUnknownAsUnassigned: true,
+                    mappingRows: [],
+                    running: false,
+                    progress: { total: 0, done: 0, percent: 0, updated: 0, skipped: 0, errors: 0 }
+                },
+                showDiagnostics: false,
+                createProjectMode: 'create',
+                linkProjectEntryID: '',
+                newProjectName: '',
+                newLaneTitle: '',
+                newLaneId: '',
+                newLaneColor: '#60a5fa',
+                importThemeName: '',
+                importThemeId: '',
+                folderThemeName: '',
+                folderThemeId: '',
+                folderThemeHref: ''
+            };
 
-         // ui-sortable options and events
-        $scope.sortableOptions = {
-            connectWith: '.tasklist',
-            items: 'li',
-            opacity: 0.5,
-            cursor: 'move',
-            containment: 'document',
+            $scope.privacyFilter = {
+                all: { value: '0', text: 'All' },
+                private: { value: '2', text: 'Private' },
+                public: { value: '1', text: 'Not Private' }
+            };
 
-            stop: function (e, ui) {
+            $scope.filter = {
+                private: $scope.privacyFilter.all.value,
+                search: '',
+                category: '<All Categories>',
+                mailbox: ''
+            };
+
+            $scope.categories = ['<All Categories>', '<No Category>'];
+            $scope.mailboxes = [];
+            $scope.projects = [];
+            $scope.projectsAll = [];
+            $scope.availableProjectFolders = [];
+            $scope.lanes = [];
+            $scope.laneOptions = [];
+            $scope.migrationLaneOptions = [];
+            $scope.allThemes = [];
+            $scope.diagnosticsText = '';
+
+            var outlookCategories;
+
+            var toastTimer;
+
+            function showToast(type, title, message, ms) {
                 try {
-                    if (ui.item.sortable.droptarget) { // check if it is dropped on a valid target
-                        var folderFrom;
-                        var folderTo;
-                        for (var i = SOMEDAY; i <= DONE ; i++) {
-                           if (ui.item.sortable.source.attr('id') === ('folder-' + i)) folderFrom = i;
-                           if (ui.item.sortable.droptarget.attr('id') === ('folder-' + i)) folderTo = i;
+                    if (!$scope.ui) return;
+                    $scope.ui.toast = {
+                        show: true,
+                        type: type || 'info',
+                        title: title || '',
+                        message: message || ''
+                    };
+                    if (toastTimer) {
+                        $timeout.cancel(toastTimer);
+                        toastTimer = null;
+                    }
+                    toastTimer = $timeout(function () {
+                        if ($scope.ui && $scope.ui.toast) {
+                            $scope.ui.toast.show = false;
                         }
-                        if (folderFrom !== folderTo) {
-                            if ($scope.taskFolders[folderTo].limit !== 0
-                                && $scope.taskFolders[folderTo].tasks.length > $scope.taskFolders[folderTo].limit) {
-                                alert('Sorry, you reached the defined limit of this folder')
-                                ui.item.sortable.cancel();
-                            } else {
-                                var newfolder = getTaskFolder($scope.filter.mailbox, $scope.taskFolders[folderTo].name);
-                                var newstatus = $scope.taskFolders[folderTo].initialStatus;
+                    }, ms || 3200);
+                } catch (e) {
+                    // ignore
+                }
+            }
 
-                                // locate the task in outlook namespace by using unique entry id
-                                var taskitem = getTaskItem(ui.item.sortable.model.entryID);
+            function writeLog(message) {
+                try {
+                    if (!$scope.config || !$scope.config.LOG_ERRORS) {
+                        return;
+                    }
+                    var now = new Date();
+                    var datetimeString = now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate() + ' ' + now.getHours() + ':' + now.getMinutes();
+                    var line = datetimeString + '  ' + message;
+                    var logRaw = getJournalItem(LOG_ID);
+                    var log = [];
+                    if (logRaw !== null) {
+                        try { log = JSON.parse(logRaw); } catch (e) { log = []; }
+                    }
+                    log.unshift(line);
+                    if (log.length > 800) {
+                        log.pop();
+                    }
+                    saveJournalItem(LOG_ID, JSON.stringify(log, null, 2));
+                } catch (e) {
+                    // keep silent
+                }
+            }
 
-                                // set new status, if different
-                                if (taskitem.Status != newstatus) {
-                                    taskitem.Status = newstatus;
-                                    taskitem.Save();
-                                    ui.item.sortable.model.status = taskStatusText(newstatus);
-                                    ui.item.sortable.model.completeddate = new Date(taskitem.DateCompleted)
-                                }
+            function backupLegacyConfig(raw) {
+                try {
+                    var subject = CONFIG_ID + '.legacy.' + nowStamp();
+                    saveJournalItem(subject, String(raw || ''));
+                } catch (e) {
+                    // ignore
+                }
+            }
 
-                                // move the task item if it has to go another Outlook tasks folder
-                                if (newfolder != $scope.taskFolders[folderFrom].name) {
-                                    taskitem = taskitem.Move(newfolder);
-                                }
+            function rebuildThemeList() {
+                var list = [];
+                BUILTIN_THEMES.forEach(function (t) {
+                    list.push({ id: t.id, name: t.name, cssHref: t.cssHref, kind: t.kind });
+                });
 
-                                // update entryID with new one (entryIDs get changed after move)
-                                // https://msdn.microsoft.com/en-us/library/office/ff868618.aspx
-                                ui.item.sortable.model.entryID = taskitem.EntryID;
-                            }
+                if ($scope.config && $scope.config.THEME) {
+                    ($scope.config.THEME.folderThemes || []).forEach(function (t) {
+                        list.push({ id: t.id, name: t.name, cssHref: t.cssHref, kind: 'folder' });
+                    });
+                    ($scope.config.THEME.customThemes || []).forEach(function (t) {
+                        list.push({ id: t.id, name: t.name, cssText: t.cssText, kind: 'imported' });
+                    });
+                }
 
-                            $scope.getTasks(folderFrom, true);
-                            $scope.getTasks(folderTo, true);
-                            $scope.applyFilters();
+                // unique by id
+                var seen = {};
+                var uniq = [];
+                list.forEach(function (t) {
+                    if (!t.id) return;
+                    if (seen[t.id]) return;
+                    seen[t.id] = true;
+                    uniq.push(t);
+                });
+                $scope.allThemes = uniq;
+            }
+
+            function findThemeById(id) {
+                for (var i = 0; i < $scope.allThemes.length; i++) {
+                    if ($scope.allThemes[i].id === id) {
+                        return $scope.allThemes[i];
+                    }
+                }
+                return null;
+            }
+
+            function ensureThemeStyleElement() {
+                var el = document.getElementById('kfo-theme-style');
+                if (!el) {
+                    el = document.createElement('style');
+                    el.type = 'text/css';
+                    el.id = 'kfo-theme-style';
+                    document.getElementsByTagName('head')[0].appendChild(el);
+                }
+                return el;
+            }
+
+            $scope.applyRootClasses = function () {
+                try {
+                    var themeId = ($scope.config && $scope.config.THEME) ? $scope.config.THEME.activeThemeId : 'kfo-light';
+                    var density = ($scope.config && $scope.config.UI) ? ($scope.config.UI.density || 'comfortable') : 'comfortable';
+                    var motion = ($scope.config && $scope.config.UI) ? ($scope.config.UI.motion || 'full') : 'full';
+
+                    var classes = {};
+                    classes['theme-' + themeId] = true;
+                    classes['density-' + density] = true;
+                    classes['motion-' + motion] = true;
+                    $scope.rootClasses = classes;
+                } catch (e) {
+                    $scope.rootClasses = {};
+                }
+            };
+
+            $scope.applyTheme = function () {
+                try {
+                    rebuildThemeList();
+
+                    var themeId = ($scope.config && $scope.config.THEME) ? $scope.config.THEME.activeThemeId : 'kfo-light';
+                    var theme = findThemeById(themeId);
+                    if (!theme) {
+                        themeId = 'kfo-light';
+                        if ($scope.config && $scope.config.THEME) {
+                            $scope.config.THEME.activeThemeId = themeId;
                         }
-                        else {
-                            if ($scope.config.SAVE_ORDER) { $scope.fixOrder(ui.item.sortable.droptargetModel); }
+                        theme = findThemeById(themeId);
+                    }
+
+                    // Apply root classes (theme + UI)
+                    $scope.applyRootClasses();
+
+                    // Apply theme CSS link (fallback to builtin light)
+                    var themeLink = document.getElementById('kfo-theme-link');
+                    if (themeLink) {
+                        if (theme && theme.cssHref) {
+                            themeLink.href = theme.cssHref;
+                        } else {
+                            themeLink.href = 'themes/kfo-light/theme.css';
                         }
+                    }
+
+                    // Apply imported theme css (optional)
+                    var styleEl = ensureThemeStyleElement();
+                    if (theme && theme.cssText) {
+                        styleEl.styleSheet ? (styleEl.styleSheet.cssText = theme.cssText) : (styleEl.innerHTML = theme.cssText);
+                    } else {
+                        styleEl.styleSheet ? (styleEl.styleSheet.cssText = '') : (styleEl.innerHTML = '');
+                    }
+
+                    // Persist theme selection
+                    if ($scope.config && $scope.config.THEME) {
+                        saveConfig();
                     }
                 } catch (error) {
-                    writeLog('drag and drop: ' + error)
-                }
-            }
-        };
-
-       $scope.initTasks();
-    };
-
-    $scope.fixOrder = function (tasks) {
-    try {
-        var count = tasks.length;
-        for (var i = 0; i < count; i++) {
-            // locate the task in outlook namespace by using unique entry id
-            var taskitem = getTaskItem(tasks[i].entryID);
-
-            // save the new order
-            taskitem.Ordinal = i;
-            taskitem.Save();
-            }
-        } catch (error) {
-            writeLog('fixOrder: '+ error)
-        }
-    };
-
-    $scope.submitConfig = function () {
-        try {
-            saveConfig();
-            $scope.init();
-            $scope.switchToAppMode();
-        } catch (error) {
-            writeLog('submitConfig: ' + error)
-        }
-    }
-
-    // borrowed from http://stackoverflow.com/a/30446887/942100
-    var fieldSorter = function (fields) {
-        try {
-            return function (a, b) {
-                return fields
-                    .map(function (o) {
-                        var dir = 1;
-                        if (o[0] === '-') {
-                            dir = -1;
-                            o = o.substring(1);
-                        }
-                        var propOfA = a[o];
-                        var propOfB = b[o];
-
-                        //string comparisons shall be case insensitive
-                        if (typeof propOfA === "string") {
-                            propOfA = propOfA.toUpperCase();
-                            propOfB = propOfB.toUpperCase();
-                        }
-
-                        if (propOfA > propOfB) return dir;
-                        if (propOfA < propOfB) return -(dir);
-                        return 0;
-                    }
-                    ).reduce(function firstNonZeroValue(p, n) {
-                        return p ? p : n;
-                    }, 0
-                    );
-            };
-        } catch (error) {
-            writeLog('fieldSorter: ' + error)
-        }
-    };
-
-    var getTasksFromOutlook = function (path, sort, folderStatus, ignoreStatus) {
-        try {
-            var i, j, cats, array = [];
-            var tasks = getTaskItems($scope.filter.mailbox, path);
-
-            var count = tasks.Count;
-            for (i = 1; i <= count; i++) {
-                var task = tasks(i);
-                if (task.Status == folderStatus || ignoreStatus == true) {
-                    array.push({
-                        entryID: task.EntryID,
-                        subject: task.Subject,
-                        priority: task.Importance,
-                        startdate: new Date(task.StartDate),
-                        duedate: new Date(task.DueDate),
-                        sensitivity: task.Sensitivity,
-                        categories: getCategoryStyles(task.Categories),
-                        notes: taskBodyNotes(task.Body, $scope.config.TASKNOTE_MAXLEN),
-                        status: taskStatusText(task.Status),
-                        oneNoteTaskID: getUserProperty(tasks(i), "OneNoteTaskID"),
-                        oneNoteURL: getUserProperty(tasks(i), "OneNoteURL"),
-                        completeddate: new Date(task.DateCompleted),
-                        percent: task.PercentComplete,
-                        owner: task.Owner,
-                        totalwork: task.TotalWork,
-                        ordinal: task.Ordinal,
-                    });
-                }
-                cats = task.Categories.split(/[;,]+/);
-                for (j=0; j < cats.length; j++) {
-                    cats[j] = cats[j].trim();
-                    if (cats[j].length > 0) {
-                        if ($scope.activeCategories.indexOf(cats[j]) === -1) {
-                            $scope.activeCategories.push(cats[j]);
-                        }
-                    }
+                    writeLog('applyTheme: ' + error);
                 }
             };
 
-            // sort tasks
-            var sortKeys;
-            if (sort === undefined) { sortKeys = ["-priority"]; }
-            else { sortKeys = sort.split(","); }
-            if ($scope.config.SAVE_ORDER) { sortKeys.unshift("ordinal"); }
-
-            var sortedTasks = array.sort(fieldSorter(sortKeys));
-
-            return sortedTasks;
-        } catch (error) {
-            writeLog('getTasksFromOutlook: ' + error)
-        }
-    };
-
-    $scope.openOneNoteURL = function (url) {
-        try {
-            window.event.returnValue = false;
-            if (navigator.msLaunchUri) {
-                navigator.msLaunchUri(url);
-            } else {
-                window.open(url, "_blank").close();
-            }
-            return false;
-        } catch (error) {
-            writeLog('openOneNoteURL: ' + error)
-        }
-    }
-    
-    $scope.readTasks = function () {
-        try {
-            $scope.taskFolders.forEach(function (taskFolder) {
-                if (taskFolder.display === true) {
-                    $scope.getTasks(taskFolder.type, false);
-                }
-            });
-        } catch (error) {
-            writeLog('readTasks: '+ error)
-        }
-    }
-
-    $scope.wipeTasks = function () {
-        try {
-            $scope.taskFolders.forEach(function (taskFolder) {
-                $scope.taskFolders[taskFolder.type].tasks = undefined;
-            })
-        } catch (error) {
-            writeLog('wipeTasks: '+ error)
-        }
-    } 
-    
-    $scope.refreshTasks = function () {
-        $scope.wipeTasks();
-        $scope.initTasks();
-    }
-
-    $scope.getTasks = function (type, reread) {
-        try {
-           if (typeof $scope.taskFolders[type].tasks === 'undefined' || reread == true) {
-               var name = $scope.taskFolders[type].name;
-               var sort = $scope.taskFolders[type].sort;
-               var initialStatus = $scope.taskFolders[type].initialStatus;
-               var ignoreStatus = false;
-               if (type == SOMEDAY || type == BACKLOG) ignoreStatus = true;
-               $scope.taskFolders[type].tasks = getTasksFromOutlook(name, sort, initialStatus, ignoreStatus);
-               $scope.taskFolders[type].filteredTasks = $scope.taskFolders[type].tasks;
-           }
-        } catch (error) {
-            writeLog("getTasks: " + error)
-        }
-    }
-
-    $scope.initTasks = function () {
-        try {
-            if (typeof $scope.activeCategories === 'undefined') {
-                $scope.activeCategories = ["<All Categories>", "<No Category>"];
-            }
-            $scope.readTasks();
-            $scope.activeCategories = $scope.activeCategories.sort();
-            // then apply the current filters for search and sensitivity
-            $scope.applyFilters();
-            // clean up Completed Tasks
-            if ($scope.config.COMPLETED.ACTION == 'ARCHIVE' || $scope.config.COMPLETED.ACTION == 'DELETE') {
-                var i;
-                $scope.getTasks(DONE, false);
-                var tasks = $scope.taskFolders[DONE].tasks;
-                var count = tasks.length;
-                for (i = 0; i < count; i++) {
+            function readConfig() {
+                if (hasReadConfig) return;
+                try {
+                    var raw = getJournalItem(CONFIG_ID);
+                    if (raw === null) {
+                        $scope.config = DEFAULT_CONFIG_V3();
+                        saveConfig();
+                        hasReadConfig = true;
+                        return;
+                    }
                     try {
-                        var days = Date.daysBetween(tasks[i].completeddate, new Date());
-                        if (days > $scope.config.COMPLETED.AFTER_X_DAYS) {
-                            if ($scope.config.COMPLETED.ACTION == 'ARCHIVE') {
-                                $scope.archiveTask(tasks[i], $scope.taskFolders[DONE].tasks, $scope.taskFolders[DONE].filteredTasks);
-                            }
-                            if ($scope.config.COMPLETED.ACTION == 'DELETE') {
-                                $scope.deleteTask(tasks[i], $scope.taskFolders[DONE].tasks, $scope.taskFolders[DONE].filteredTasks, false);
-                            }
-                        };
-                    } catch (error) {
-                        // ignore errors at this point. 
+                        $scope.config = JSON.parse(JSON.minify(raw));
+                    } catch (e) {
+                        alert('Configuration JSON is invalid. A new configuration will be created.');
+                        backupLegacyConfig(raw);
+                        $scope.config = DEFAULT_CONFIG_V3();
+                        saveConfig();
+                        hasReadConfig = true;
+                        return;
                     }
-                };
-            };
-            // move tasks that do not have status New to the Next folder
-            if (true) {
-                var i;
-                var movedTask = false;
-                $scope.getTasks(BACKLOG, false)
-                $scope.getTasks(SPRINT, false)
-                var tasks = $scope.taskFolders[BACKLOG].tasks;
-                var count = tasks.length;
-                var moved = 0;
-                for (i = 0; i < count; i++) {
-                    if (tasks[i].status != $scope.config.STATUS.NOT_STARTED.TEXT) {
-                        var taskitem = getTaskItem(tasks[i].entryID);
-                        taskitem.Move(getTaskFolder($scope.filter.mailbox, $scope.taskFolders[SPRINT].name));
-                        movedTask = true;
-                        moved++;
+
+                    if (!$scope.config.SCHEMA_VERSION || $scope.config.SCHEMA_VERSION < SCHEMA_VERSION) {
+                        backupLegacyConfig(raw);
+                        $scope.config = DEFAULT_CONFIG_V3();
+                        saveConfig();
                     }
-                };
-                if (movedTask) {
-                    $scope.getTasks(BACKLOG, true)
-                    $scope.getTasks(SPRINT, true)
-                    $scope.applyFilters();
+
+                    // Ensure required keys exist
+                    if (!$scope.config.PROJECTS) $scope.config.PROJECTS = DEFAULT_CONFIG_V3().PROJECTS;
+                    if (!$scope.config.PROJECTS.linkedProjects) $scope.config.PROJECTS.linkedProjects = [];
+                    if (!$scope.config.PROJECTS.hiddenProjectEntryIDs) $scope.config.PROJECTS.hiddenProjectEntryIDs = [];
+                    if (!$scope.config.UI) $scope.config.UI = DEFAULT_CONFIG_V3().UI;
+                    if (!$scope.config.AUTOMATION) $scope.config.AUTOMATION = DEFAULT_CONFIG_V3().AUTOMATION;
+                    if ($scope.config.UI.density === undefined) $scope.config.UI.density = DEFAULT_CONFIG_V3().UI.density;
+                    if ($scope.config.UI.motion === undefined) $scope.config.UI.motion = DEFAULT_CONFIG_V3().UI.motion;
+                    if ($scope.config.UI.laneWidthPx === undefined) $scope.config.UI.laneWidthPx = DEFAULT_CONFIG_V3().UI.laneWidthPx;
+                    if ($scope.config.UI.showDueDate === undefined) $scope.config.UI.showDueDate = DEFAULT_CONFIG_V3().UI.showDueDate;
+                    if ($scope.config.UI.showNotes === undefined) $scope.config.UI.showNotes = DEFAULT_CONFIG_V3().UI.showNotes;
+                    if ($scope.config.UI.showCategories === undefined) $scope.config.UI.showCategories = DEFAULT_CONFIG_V3().UI.showCategories;
+                    if ($scope.config.UI.showOnlyFirstCategory === undefined) $scope.config.UI.showOnlyFirstCategory = DEFAULT_CONFIG_V3().UI.showOnlyFirstCategory;
+                    if ($scope.config.UI.showPriorityPill === undefined) $scope.config.UI.showPriorityPill = DEFAULT_CONFIG_V3().UI.showPriorityPill;
+                    if ($scope.config.UI.showPrivacyIcon === undefined) $scope.config.UI.showPrivacyIcon = DEFAULT_CONFIG_V3().UI.showPrivacyIcon;
+                    if ($scope.config.UI.showLaneCounts === undefined) $scope.config.UI.showLaneCounts = DEFAULT_CONFIG_V3().UI.showLaneCounts;
+                    if ($scope.config.AUTOMATION.setOutlookStatusOnLaneMove === undefined) {
+                        $scope.config.AUTOMATION.setOutlookStatusOnLaneMove = DEFAULT_CONFIG_V3().AUTOMATION.setOutlookStatusOnLaneMove;
+                    }
+                    if (!$scope.config.LANES) $scope.config.LANES = DEFAULT_CONFIG_V3().LANES;
+                    if (!$scope.config.THEME) $scope.config.THEME = DEFAULT_CONFIG_V3().THEME;
+                    if (!$scope.config.BOARD) $scope.config.BOARD = DEFAULT_CONFIG_V3().BOARD;
+                    if ($scope.config.USE_CATEGORY_COLORS === undefined) $scope.config.USE_CATEGORY_COLORS = true;
+                    if ($scope.config.USE_CATEGORY_COLOR_FOOTERS === undefined) $scope.config.USE_CATEGORY_COLOR_FOOTERS = false;
+                    if (!$scope.config.DATE_FORMAT) $scope.config.DATE_FORMAT = 'DD-MMM';
+                    if ($scope.config.LOG_ERRORS === undefined) $scope.config.LOG_ERRORS = false;
+
+                    // Clamp lane width
+                    try {
+                        var w = parseInt($scope.config.UI.laneWidthPx, 10);
+                        if (isNaN(w)) w = DEFAULT_CONFIG_V3().UI.laneWidthPx;
+                        if (w < 240) w = 240;
+                        if (w > 520) w = 520;
+                        $scope.config.UI.laneWidthPx = w;
+                    } catch (e) {
+                        $scope.config.UI.laneWidthPx = DEFAULT_CONFIG_V3().UI.laneWidthPx;
+                    }
+
+                } catch (error) {
+                    alert('Failed to read configuration: ' + error);
+                    $scope.config = DEFAULT_CONFIG_V3();
+                    saveConfig();
+                }
+                hasReadConfig = true;
+            }
+
+            function saveConfig() {
+                try {
+                    // Clamp UI settings (defensive)
+                    if ($scope.config && $scope.config.UI) {
+                        var w = parseInt($scope.config.UI.laneWidthPx, 10);
+                        if (isNaN(w)) w = DEFAULT_CONFIG_V3().UI.laneWidthPx;
+                        if (w < 240) w = 240;
+                        if (w > 520) w = 520;
+                        $scope.config.UI.laneWidthPx = w;
+
+                        var density = String($scope.config.UI.density || 'comfortable');
+                        if (density !== 'compact' && density !== 'comfortable') density = 'comfortable';
+                        $scope.config.UI.density = density;
+
+                        var motion = String($scope.config.UI.motion || 'full');
+                        if (motion !== 'full' && motion !== 'subtle' && motion !== 'off') motion = 'full';
+                        $scope.config.UI.motion = motion;
+                    }
+                    saveJournalItem(CONFIG_ID, JSON.stringify($scope.config, null, 2));
+                } catch (e) {
+                    alert('Failed to save configuration: ' + e);
                 }
             }
-            // move tasks with start date today to the Next folder
-            if ($scope.config.AUTO_START_TASKS) {
-                var i;
-                var movedTask = false;
-                $scope.getTasks(BACKLOG, false)
-                $scope.getTasks(SPRINT, false)
-                var tasks = $scope.taskFolders[BACKLOG].tasks;
-                var count = tasks.length;
-                var moved = 0;
-                for (i = 0; i < count; i++) {
-                    if (tasks[i].startdate.getFullYear() != 4501) {
-                        var seconds = Date.secondsBetween(tasks[i].startdate, new Date());
-                        if (seconds >= 0) {
-                            var taskitem = getTaskItem(tasks[i].entryID);
-                            taskitem.Move(getTaskFolder($scope.filter.mailbox, $scope.taskFolders[SPRINT].name));
-                            movedTask = true;
-                            moved++;
-                        }
+
+            function readState() {
+                if (hasReadState) return;
+                try {
+                    if (!$scope.config || !$scope.config.BOARD || !$scope.config.BOARD.saveState) {
+                        hasReadState = true;
+                        return;
+                    }
+                    var state = {
+                        private: $scope.privacyFilter.all.value,
+                        search: '',
+                        category: '<All Categories>',
+                        mailbox: '',
+                        projectEntryID: ''
                     };
-                };
-                if (movedTask) {
-                    $scope.getTasks(BACKLOG, true)
-                    $scope.getTasks(SPRINT, true)
-                    $scope.applyFilters();
-                }
-            }
-            // move tasks with past due date to the Next folder
-            if ($scope.config.AUTO_START_DUE_TASKS) {
-                var i;
-                var movedTask = false;
-                $scope.getTasks(BACKLOG, false)
-                $scope.getTasks(SPRINT, false)
-                var tasks = $scope.taskFolders[BACKLOG].tasks;
-                var count = tasks.length;
-                var moved = 0;
-                for (i = 0; i < count; i++) {
-                    if (tasks[i].duedate.getFullYear() != 4501) {
-                        var seconds = Date.secondsBetween(tasks[i].duedate, new Date());
-                        if (seconds >= 0) {
-                            var taskitem = getTaskItem(tasks[i].entryID);
-                            taskitem.Move(getTaskFolder($scope.filter.mailbox, $scope.taskFolders[SPRINT].name));
-                            movedTask = true;
-                            moved++;
-                        }
-                    };
-                };
-                if (movedTask) {
-                    $scope.getTasks(BACKLOG, true)
-                    $scope.getTasks(SPRINT, true)
-                    $scope.applyFilters();
-                }
-            }
-            // move tasks with start date in future back to the Backlog folder
-            if (true) {
-                var i;
-                var movedTask = false;
-                $scope.getTasks(BACKLOG, false)
-                $scope.getTasks(SPRINT, false)
-                var tasks = $scope.taskFolders[SPRINT].tasks;
-                var count = tasks.length;
-                var moved = 0;
-                for (i = 0; i < count; i++) {
-                    if (tasks[i].startdate.getFullYear() != 4501) {
-                        var seconds = Date.secondsBetween(new Date(), tasks[i].startdate);
-                        if (seconds >= 0) {
-                            var taskitem = getTaskItem(tasks[i].entryID);
-                            taskitem.Move(getTaskFolder($scope.filter.mailbox, $scope.taskFolders[BACKLOG].name));
-                            movedTask = true;
-                            moved++;
-                        }
-                    };
-                };
-                if (movedTask) {
-                    $scope.getTasks(BACKLOG, true)
-                    $scope.getTasks(SPRINT, true)
-                    $scope.applyFilters();
-                }
-            }
-        } catch (error) {
-            writeLog('initTasks: ' + error)
-        }
-    };
-
-    function var_dump(object, returnString) {
-        var returning = '';
-        for (var element in object) {
-            var elem = object[element];
-            if (typeof elem == 'object') {
-                elem = var_dump(object[element], true);
-            }
-            returning += element + ': ' + elem + '\n';
-        }
-        if (returning == '') {
-            returning = 'Empty object';
-        }
-        if (returnString === true) {
-            return returning;
-        }
-        alert(returning);
-    }
-
-    $scope.applyFilters = function () {
-        try {
-            readState();
-
-            if ($scope.filter.search.length > 0) {
-                $scope.taskFolders.forEach(function (taskFolder) {
-                    taskFolder.filteredTasks = $filter('filter')(taskFolder.tasks, $scope.filter.search);
-                });
-            }
-            else {
-                $scope.taskFolders.forEach(function (taskFolder) {
-                    taskFolder.filteredTasks = taskFolder.tasks;
-                });
-            }
-
-            if ($scope.filter.category != "<All Categories>") {
-                if ($scope.filter.category == "<No Category>") {
-                    $scope.taskFolders.forEach(function (taskFolder) {
-                        taskFolder.filteredTasks = $filter('filter')(taskFolder.filteredTasks, function (task) {
-                            return task.categories == '';
-                        });
-                    });
-                }
-                else {
-                    $scope.taskFolders.forEach(function (taskFolder) {
-                        taskFolder.filteredTasks = $filter('filter')(taskFolder.filteredTasks, function (task) {
-                            if (task.categories == '') {
-                                return false;
-                            }
-                            else {
-                                for (var i = 0; i < task.categories.length; i++) {
-                                    var cat = task.categories[i];
-                                    if (cat.label == $scope.filter.category) {
-                                        return true;
-                                    }
-                                }
-                                return false;
-                            }
-                        });
-                    });
-                }
-            }
-
-            // I think this can be written shorter, but for now it works
-            var sensitivityFilter;
-            if ($scope.filter.private != $scope.privacyFilter.all.value) {
-                if ($scope.filter.private == $scope.privacyFilter.private.value) { sensitivityFilter = SENSITIVITY.olPrivate; }
-                if ($scope.filter.private == $scope.privacyFilter.public.value) { sensitivityFilter = SENSITIVITY.olNormal; }
-                $scope.taskFolders.forEach(function (taskFolder) {
-                    taskFolder.filteredTasks = $filter('filter')(taskFolder.filteredTasks, function (task) { return task.sensitivity == sensitivityFilter });
-                });
-            }
-
-            // filter on start date
-            $scope.taskFolders.forEach(function (taskFolder) {
-                if (taskFolder.filterOnStartDate === true) {
-                    taskFolder.filteredTasks = $filter('filter')(taskFolder.filteredTasks, function (task) {
-                        if (task.startdate.getFullYear() != 4501) {
-                            var days = Date.daysBetween(task.startdate, new Date());
-                            return days >= 0;
-                        }
-                        else return true; // always show tasks not having start date
-                    });
-                }
-            });
-
-            // filter completed tasks if the HIDE options is configured
-            if ($scope.config.COMPLETED.ACTION == 'HIDE') {
-                $scope.taskFolders[DONE].filteredTasks = $filter('filter')($scope.taskFolders[DONE].filteredTasks, function (task) {
-                    var days = Date.daysBetween(task.completeddate, new Date());
-                    return days < $scope.config.COMPLETED.AFTER_X_DAYS;
-                });
-            }
-
-            // filter backlog tasks to show only NOT STARTED
-            if ('folder-' + BACKLOG){
-                $scope.taskFolders[BACKLOG].filteredTasks = $filter('filter')($scope.taskFolders[BACKLOG].filteredTasks, function (task) {
-                    return task.status == "Not Started";
-                });
-            }
-
-        } catch (error) {
-            writeLog('applyFilters: ' + error)
-        }
-    }
-
-    function closeDisplayLink () {
-        noteItem.GetInspector().Close(1);
-    }
-
-    $scope.displayLink = function (link) {
-    try {
-        noteItem.Body = "Click here to open the link in your default browser: " + link;
-        noteItem.GetInspector().Activate();
-        if (timeout != undefined) { clearTimeout(timeout); }
-        timeout = setTimeout(closeDisplayLink, 7000);
-        } catch(e) { alert(e)}
-
-    }   
-
-    $scope.sendFeedback = function (includeConfig, includeState, includeLog) {
-        try {
-            var mailItem = newMailItem();
-            mailItem.Subject = "JanBan version " + $scope.version + " Feedback (Outlook version: " + getOutlookVersion() + ")";
-            mailItem.To = "janban@papasmurf.nl";
-            mailItem.BodyFormat = 2;
-            if (includeConfig) {
-                mailItem.Attachments.Add(getPureJournalItem(CONFIG_ID));
-            }
-            if (includeState) {
-                mailItem.Attachments.Add(getPureJournalItem(STATE_ID));
-            }
-            if (includeLog) {
-                mailItem.Attachments.Add(getPureJournalItem(LOG_ID));
-            }
-            mailItem.Display();
-        } catch (error) {
-            writeLog('sendFeedback: ' + error)
-        }
-    }
-
-    // this is only a proof-of-concept single page report in a draft email for weekly report
-    // it will be improved later on
-    $scope.createReport = function () {
-        try {
-            var i;
-            var mailItem, mailBody;
-            mailItem = newMailItem();
-            mailItem.Subject = "Status Report";
-            mailItem.BodyFormat = 2;
-
-            mailBody = "<style>";
-            mailBody += "body { font-family: Calibri; font-size:11.0pt; } ";
-            //mailBody += " h3 { font-size: 11pt; text-decoration: underline; } ";
-            mailBody += " </style>";
-            mailBody += "<body>";
-
-            // COMPLETED ITEMS
-            if ($scope.config.COMPLETED_FOLDER.REPORT.DISPLAY) {
-                var tasks = getTaskFolder($scope.filter.mailbox, $scope.config.COMPLETED_FOLDER.NAME).Items.Restrict("[Complete] = true And Not ([Sensitivity] = 2)");
-                tasks.Sort("[Importance][Status]", true);
-                mailBody += "<h3>" + $scope.config.COMPLETED_FOLDER.TITLE + "</h3>";
-                mailBody += "<ul>";
-                var count = tasks.Count;
-                for (i = 1; i <= count; i++) {
-                    mailBody += "<li>"
-                    if (tasks(i).Categories !== "") { mailBody += "[" + tasks(i).Categories + "] "; }
-                    mailBody += "<strong>" + tasks(i).Subject + "</strong>" + " - <i>" + taskStatusText(tasks(i).Status) + "</i>";
-                    if ($scope.config.COMPLETED_FOLDER.DISPLAY_PROPERTIES.TOTALWORK) { mailBody += " - " + tasks(i).TotalWork + " mn "; }
-                    if (tasks(i).Importance == 2) { mailBody += "<font color=red> [H]</font>"; }
-                    if (tasks(i).Importance == 0) { mailBody += "<font color=gray> [L]</font>"; }
-                    var dueDate = new Date(tasks(i).DueDate);
-                    if (moment(dueDate).isValid && moment(dueDate).year() != 4501) { mailBody += " [Due: " + moment(dueDate).format("DD-MMM") + "]"; }
-                    if (taskBodyNotes(tasks(i).Body, 10000) && $scope.config.TASKBODY_IN_REPORT)
-                        { mailBody += "<br>" + "<font color=gray>" + taskBodyNotes(tasks(i).Body, 10000) + "</font>"; }
-                    mailBody += "</li>";
-                }
-                mailBody += "</ul>";
-            }
-
-            // INPROGRESS ITEMS
-            if ($scope.config.INPROGRESS_FOLDER.REPORT.DISPLAY) {
-                var tasks = getTaskFolder($scope.filter.mailbox, $scope.config.INPROGRESS_FOLDER.NAME).Items.Restrict("[Status] = 1 And Not ([Sensitivity] = 2)");
-                tasks.Sort("[Importance][Status]", true);
-                mailBody += "<h3>" + $scope.config.INPROGRESS_FOLDER.TITLE + "</h3>";
-                mailBody += "<ul>";
-                var count = tasks.Count;
-                for (i = 1; i <= count; i++) {
-                    mailBody += "<li>"
-                    if (tasks(i).Categories !== "") { mailBody += "[" + tasks(i).Categories + "] "; }
-                    mailBody += "<strong>" + tasks(i).Subject + "</strong>" + " - <i>" + taskStatusText(tasks(i).Status) + "</i>";
-                    if ($scope.config.INPROGRESS_FOLDER.DISPLAY_PROPERTIES.TOTALWORK) { mailBody += " - " + tasks(i).TotalWork + " mn "; }
-                    if (tasks(i).Importance == 2) { mailBody += "<font color=red> [H]</font>"; }
-                    if (tasks(i).Importance == 0) { mailBody += "<font color=gray> [L]</font>"; }
-                    var dueDate = new Date(tasks(i).DueDate);
-                    if (moment(dueDate).isValid && moment(dueDate).year() != 4501) { mailBody += " [Due: " + moment(dueDate).format("DD-MMM") + "]"; }
-                    if (taskBodyNotes(tasks(i).Body, 10000) && $scope.config.TASKBODY_IN_REPORT)
-                        { mailBody += "<br>" + "<font color=gray>" + taskBodyNotes(tasks(i).Body, 10000) + "</font>"; }
-                    mailBody += "</li>";
-                }
-                mailBody += "</ul>";
-            }
-
-            // NEXT ITEMS
-            if ($scope.config.NEXT_FOLDER.REPORT.DISPLAY) {
-                var tasks = getTaskFolder($scope.filter.mailbox, $scope.config.NEXT_FOLDER.NAME).Items.Restrict("[Status] = 0 And Not ([Sensitivity] = 2)");
-                tasks.Sort("[Importance][Status]", true);
-                mailBody += "<h3>" + $scope.config.NEXT_FOLDER.TITLE + "</h3>";
-                mailBody += "<ul>";
-                var count = tasks.Count;
-                for (i = 1; i <= count; i++) {
-                    mailBody += "<li>"
-                    if (tasks(i).Categories !== "") { mailBody += "[" + tasks(i).Categories + "] "; }
-                    mailBody += "<strong>" + tasks(i).Subject + "</strong>" + " - <i>" + taskStatusText(tasks(i).Status) + "</i>";
-                    if ($scope.config.NEXT_FOLDER.DISPLAY_PROPERTIES.TOTALWORK) { mailBody += " - " + tasks(i).TotalWork + " mn "; }
-                    if (tasks(i).Importance == 2) { mailBody += "<font color=red> [H]</font>"; }
-                    if (tasks(i).Importance == 0) { mailBody += "<font color=gray> [L]</font>"; }
-                    var dueDate = new Date(tasks(i).DueDate);
-                    if (moment(dueDate).isValid && moment(dueDate).year() != 4501) { mailBody += " [Due: " + moment(dueDate).format("DD-MMM") + "]"; }
-                    if (taskBodyNotes(tasks(i).Body, 10000) && $scope.config.TASKBODY_IN_REPORT)
-                        { mailBody += "<br>" + "<font color=gray>" + taskBodyNotes(tasks(i).Body, 10000) + "</font>"; }
-                    mailBody += "</li>";
-                }
-                mailBody += "</ul>";
-            }
-
-            // WAITING ITEMS
-            if ($scope.config.WAITING_FOLDER.REPORT.DISPLAY) {
-                var tasks = getTaskFolder($scope.filter.mailbox, $scope.config.WAITING_FOLDER.NAME).Items.Restrict("[Status] = 3 And Not ([Sensitivity] = 2)");
-                tasks.Sort("[Importance][Status]", true);
-                mailBody += "<h3>" + $scope.config.WAITING_FOLDER.TITLE + "</h3>";
-                mailBody += "<ul>";
-                var count = tasks.Count;
-                for (i = 1; i <= count; i++) {
-                    mailBody += "<li>"
-                    if (tasks(i).Categories !== "") { mailBody += "[" + tasks(i).Categories + "] "; }
-                    mailBody += "<strong>" + tasks(i).Subject + "</strong>" + " - <i>" + taskStatusText(tasks(i).Status) + "</i>";
-                    if ($scope.config.WAITING_FOLDER.DISPLAY_PROPERTIES.TOTALWORK) { mailBody += " - " + tasks(i).TotalWork + " mn "; }
-                    if (tasks(i).Importance == 2) { mailBody += "<font color=red> [H]</font>"; }
-                    if (tasks(i).Importance == 0) { mailBody += "<font color=gray> [L]</font>"; }
-                    var dueDate = new Date(tasks(i).DueDate);
-                    if (moment(dueDate).isValid && moment(dueDate).year() != 4501) { mailBody += " [Due: " + moment(dueDate).format("DD-MMM") + "]"; }
-                    if (taskBodyNotes(tasks(i).Body, 10000) && $scope.config.TASKBODY_IN_REPORT)
-                        { mailBody += "<br>" + "<font color=gray>" + taskBodyNotes(tasks(i).Body, 10000) + "</font>"; }
-                    mailBody += "</li>";
-                }
-                mailBody += "</ul>";
-            }
-
-            // BACKLOG ITEMS
-            if ($scope.config.BACKLOG_FOLDER.REPORT.DISPLAY) {
-                var tasks = getTaskFolder($scope.filter.mailbox, $scope.config.BACKLOG_FOLDER.NAME).Items.Restrict("[Status] = 0 And Not ([Sensitivity] = 2)");
-                tasks.Sort("[Importance][Status]", true);
-                mailBody += "<h3>" + $scope.config.BACKLOG_FOLDER.TITLE + "</h3>";
-                mailBody += "<ul>";
-                var count = tasks.Count;
-                for (i = 1; i <= count; i++) {
-                    mailBody += "<li>"
-                    if (tasks(i).Categories !== "") { mailBody += "[" + tasks(i).Categories + "] "; }
-                    mailBody += "<strong>" + tasks(i).Subject + "</strong>" + " - <i>" + taskStatusText(tasks(i).Status) + "</i>";
-                    if ($scope.config.BACKLOG_FOLDER.DISPLAY_PROPERTIES.TOTALWORK) { mailBody += " - " + tasks(i).TotalWork + " mn "; }
-                    if (tasks(i).Importance == 2) { mailBody += "<font color=red> [H]</font>"; }
-                    if (tasks(i).Importance == 0) { mailBody += "<font color=gray> [L]</font>"; }
-                    var dueDate = new Date(tasks(i).DueDate);
-                    if (moment(dueDate).isValid && moment(dueDate).year() != 4501) { mailBody += " [Due: " + moment(dueDate).format("DD-MMM") + "]"; }
-                    if (taskBodyNotes(tasks(i).Body, 10000) && $scope.config.TASKBODY_IN_REPORT)
-                        { mailBody += "<br>" + "<font color=gray>" + taskBodyNotes(tasks(i).Body, 10000) + "</font>"; }
-                    mailBody += "</li>";
-                }
-                mailBody += "</ul>";
-            }
-
-            // SOMEDAY ITEMS
-            if ($scope.config.SOMEDAY_FOLDER.REPORT.DISPLAY) {
-                var tasks = getTaskFolder($scope.filter.mailbox, $scope.config.SOMEDAY_FOLDER.NAME).Items;
-                tasks.Sort("[Importance][Status]", true);
-                mailBody += "<h3>" + $scope.config.SOMEDAY_FOLDER.TITLE + "</h3>";
-                mailBody += "<ul>";
-                var count = tasks.Count;
-                for (i = 1; i <= count; i++) {
-                    mailBody += "<li>"
-                    if (tasks(i).Categories !== "") { mailBody += "[" + tasks(i).Categories + "] "; }
-                    mailBody += "<strong>" + tasks(i).Subject + "</strong>" + " - <i>" + taskStatusText(tasks(i).Status) + "</i>";
-                    if ($scope.config.SOMEDAY_FOLDER.DISPLAY_PROPERTIES.TOTALWORK) { mailBody += " - " + tasks(i).TotalWork + " mn "; }
-                    if (tasks(i).Importance == 2) { mailBody += "<font color=red> [H]</font>"; }
-                    if (tasks(i).Importance == 0) { mailBody += "<font color=gray> [L]</font>"; }
-                    var dueDate = new Date(tasks(i).DueDate);
-                    if (moment(dueDate).isValid && moment(dueDate).year() != 4501) { mailBody += " [Due: " + moment(dueDate).format("DD-MMM") + "]"; }
-                    if (taskBodyNotes(tasks(i).Body, 10000) && $scope.config.TASKBODY_IN_REPORT)
-                        { mailBody += "<br>" + "<font color=gray>" + taskBodyNotes(tasks(i).Body, 10000) + "</font>"; }
-                    mailBody += "</li>";
-                }
-                mailBody += "</ul>";
-            }
-
-            mailBody += "</body>"
-
-            // include report content to the mail body
-            mailItem.HTMLBody = mailBody;
-
-            // only display the draft email
-            mailItem.Display();
-        } catch (error) {
-            writeLog('createReport: ' + error)
-        }
-    };
-
-    var taskBodyNotes = function (str, limit) {
-        try {
-            // remove empty lines, cut off text if length > limit
-            str = str.replace(/^(?=\n)$|^\s*|\s*$|\n\n+/gm, '');
-            str = str.replace('\r\n', '<br>');
-            if (str.length > limit) {
-                str = str.substring(0, str.lastIndexOf(' ', limit));
-                if (limit != 0) { str = str + "..." }
-            };
-            return str;
-        } catch (error) {
-            writeLog('taskBodyNotes: ' + error)
-        }
-    };
-
-    var taskStatusText = function (status) {
-        try {
-            if (status == $scope.config.STATUS.NOT_STARTED.VALUE) { return $scope.config.STATUS.NOT_STARTED.TEXT; }
-            if (status == $scope.config.STATUS.IN_PROGRESS.VALUE) { return $scope.config.STATUS.IN_PROGRESS.TEXT; }
-            if (status == $scope.config.STATUS.WAITING.VALUE) { return $scope.config.STATUS.WAITING.TEXT; }
-            if (status == $scope.config.STATUS.COMPLETED.VALUE) { return $scope.config.STATUS.COMPLETED.TEXT; }
-            return '';
-        } catch (error) {
-            writeLog('taskStatusText: ' + error)
-        }
-    };
-
-    // create a new task under target folder
-    $scope.addTask = function (target) {
-        try {
-            // set the parent folder to target defined
-            switch (target) {
-                case SOMEDAY:
-                    var tasksfolder = getTaskFolder($scope.filter.mailbox, $scope.taskFolders[SOMEDAY].name);
-                    break;
-                case BACKLOG:
-                    var tasksfolder = getTaskFolder($scope.filter.mailbox, $scope.taskFolders[BACKLOG].name);
-                    break;
-                case SPRINT:
-                    var tasksfolder = getTaskFolder($scope.filter.mailbox, $scope.taskFolders[SPRINT].name);
-                    break;
-                case DOING:
-                    var tasksfolder = getTaskFolder($scope.filter.mailbox, $scope.taskFolders[DOING].name);
-                    break;
-                case WAITING:
-                    var tasksfolder = getTaskFolder($scope.filter.mailbox, $scope.taskFolders[WAITING].name);
-                    break;
-            };
-            // create a new task item object in outlook
-            var taskitem = tasksfolder.Items.Add();
-
-            // set sensitivity according to the current filter
-            if ($scope.filter.private == $scope.privacyFilter.private.value) {
-                taskitem.Sensitivity = SENSITIVITY.olPrivate;
-            }
-
-            // display outlook task item window
-            taskitem.Display();
-
-            if ($scope.config.AUTO_UPDATE) {
-                saveState();
-
-                // bind to taskitem write event on outlook and reload the page after the task is saved
-                eval("function taskitem::Write (bStat) {window.location.reload();  return true;}");
-            }
-
-            // for anyone wondering about this weird double colon syntax:
-            // Office is using IE11 to launch custom apps.
-            // This syntax is used in IE to bind events. 
-            //(https://msdn.microsoft.com/en-us/library/ms974564.aspx?f=255&MSPPError=-2147217396)
-            //
-            // by using eval we can avoid any error message until it is actually executed by Microsofts scripting engine
-        } catch (error) {
-            writeLog('addTask: ' + error)
-        }
-    }
-
-    // opens up task item in outlook
-    // refreshes the taskboard page when task item window closed
-    $scope.editTask = function (item) {
-        try {
-            if (item.status == $scope.config.STATUS.COMPLETED.TEXT) return;
-            var taskitem = getTaskItem(item.entryID);
-            taskitem.Display();
-            if ($scope.config.AUTO_UPDATE) {
-                saveState();
-                // bind to taskitem write event on outlook and reload the page after the task is saved
-                eval("function taskitem::Write (bStat) {window.location.reload(); return true;}");
-                // bind to taskitem beforedelete event on outlook and reload the page after the task is deleted
-                eval("function taskitem::BeforeDelete (bStat) {window.location.reload(); return true;}");
-            }
-        } catch (error) {
-            writeLog('editTask: ' + error)
-        }
-    };
-
-    // deletes the task item in both outlook and model data
-    $scope.deleteTask = function (item, sourceArray, filteredSourceArray, bAskConfirmation) {
-        try {
-            var doDelete = true;
-            if (bAskConfirmation) {
-                doDelete = window.confirm('Are you absolutely sure you want to delete this item?');
-            }
-            if (doDelete) {
-                // locate and delete the outlook task
-                var taskitem = getTaskItem(item.entryID);
-                taskitem.Delete();
-
-                // locate and remove the item from the models
-                removeItemFromArray(item, sourceArray);
-                removeItemFromArray(item, filteredSourceArray);
-            };
-        } catch (error) {
-            writeLog('deleteTask: ' + error)
-        }
-    };
-
-    // moves the task item to the archive folder and marks it as complete
-    // also removes it from the model data
-    $scope.archiveTask = function (item, sourceArray, filteredSourceArray) {
-        try {
-            // locate the task in outlook namespace by using unique entry id
-            var taskitem = getTaskItem(item.entryID);
-
-            // move the task to the archive folder first (if it is not already in)
-            var archivefolder = getTaskFolder($scope.filter.mailbox, $scope.config.ARCHIVE_FOLDER.NAME);
-            if (taskitem.Parent.Name != archivefolder.Name) {
-                taskitem = taskitem.Move(archivefolder);
-            };
-
-            // locate and remove the item from the models
-            removeItemFromArray(item, sourceArray);
-            removeItemFromArray(item, filteredSourceArray);
-        } catch (error) {
-            writeLog('archiveTask: ' + error)
-        }
-    };
-
-    var removeItemFromArray = function (item, array) {
-        try {
-            var index = array.indexOf(item);
-            if (index != -1) { array.splice(index, 1); }
-        } catch (error) {
-            writeLog('removeItemFromArray: ' + error)
-        }
-    };
-
-    // checks whether the task date is overdue or today
-    // returns class based on the result
-    $scope.isOverdue = function (strdate) {
-        try {
-            var dateobj = new Date(strdate).setHours(0, 0, 0, 0);
-            var today = new Date().setHours(0, 0, 0, 0);
-            return { 'task-overdue': dateobj < today, 'task-today': dateobj == today };
-        } catch (error) {
-            writeLog('isOverdue: ' + error)
-        }
-    };
-
-    $scope.getFooterStyle = function (categories) {
-        try {
-            if ($scope.config.USE_CATEGORY_COLOR_FOOTERS) {
-                if ((categories !== '') && $scope.config.USE_CATEGORY_COLORS) {
-                    // Copy category style
-                    if (categories.length == 1) {
-                        if (categories[0] == undefined) return undefined;
-                        return categories[0].style;
+                    var raw = getJournalItem(STATE_ID);
+                    if (raw !== null) {
+                        try { state = JSON.parse(raw); } catch (e) { /* ignore */ }
+                    } else {
+                        saveJournalItem(STATE_ID, JSON.stringify(state, null, 2));
                     }
-                    // Make multi-category tasks light gray
-                    else {
-                        var lightGray = '#dfdfdf';
-                        return { "background-color": lightGray, color: getContrastYIQ(lightGray) };
-                    }
+
+                    $scope.filter.private = state.private || $scope.privacyFilter.all.value;
+                    $scope.filter.search = state.search || '';
+                    $scope.filter.category = state.category || '<All Categories>';
+                    $scope.filter.mailbox = state.mailbox || '';
+                    $scope.ui.projectEntryID = state.projectEntryID || '';
+                } catch (e) {
+                    writeLog('readState: ' + e);
                 }
+                hasReadState = true;
             }
-            return;
-        } catch (error) {
-            writeLog('getFooterStyle: ' + error)
-        }
-    };
 
-    $scope.getTaskboardBackgroundColor = function () {
-        try {
-            if ($scope.config.DARK_MODE)
-                return { "background-color": '#6a6a6a' }
-        } catch (error) {
-            writeLog('getTaskboardBackgroundColor: ' + error)
-        }
-    };
-
-    $scope.getTasklistBackgroundColor = function () {
-        try {
-            if ($scope.config.DARK_MODE)
-                return { "background-color": '#b2b2b2' }
-            else
-                return { "background-color": '#f5f5f5' }
-        } catch (error) {
-            writeLog('getTasklistBackgroundColor: ' + error)
-        }
-    };
-
-    Date.daysBetween = function (date1, date2) {
-        try {
-            //Get 1 day in milliseconds
-            var one_day = 1000 * 60 * 60 * 24;
-
-            // Convert both dates to milliseconds
-            var date1_ms = date1.getTime();
-            var date2_ms = date2.getTime();
-
-            // Calculate the difference in milliseconds
-            var difference_ms = date2_ms - date1_ms;
-
-            // Convert back to days and return
-            return difference_ms / one_day;
-        } catch (error) {
-            writeLog('Date.daysbetween: ' + error)
-        }
-    }
-
-    Date.secondsBetween = function (date1, date2) {
-        try {
-            //Get 1 second in milliseconds
-            var one_second = 1000;
-
-            // Convert both dates to milliseconds
-            var date1_ms = date1.getTime();
-            var date2_ms = date2.getTime();
-
-            // Calculate the difference in milliseconds
-            var difference_ms = date2_ms - date1_ms;
-
-            // Convert back to seconds and return
-            return difference_ms / one_second;
-        } catch (error) {
-            writeLog('Date.secondsBetween: ' + error)
-        }
-    }
-
-    var applyConfig = function () {
-        try {
-            $scope.taskFolders[SOMEDAY].type = SOMEDAY;
-            $scope.taskFolders[SOMEDAY].initialStatus = $scope.config.STATUS.NOT_STARTED.VALUE;
-            $scope.taskFolders[SOMEDAY].display = $scope.config.SOMEDAY_FOLDER.ACTIVE;
-            $scope.taskFolders[SOMEDAY].name = $scope.config.SOMEDAY_FOLDER.NAME;
-            $scope.taskFolders[SOMEDAY].title = $scope.config.SOMEDAY_FOLDER.TITLE;
-            $scope.taskFolders[SOMEDAY].limit = $scope.config.SOMEDAY_FOLDER.LIMIT;
-            $scope.taskFolders[SOMEDAY].sort = $scope.config.SOMEDAY_FOLDER.SORT;
-            $scope.taskFolders[SOMEDAY].displayOwner = $scope.config.SOMEDAY_FOLDER.DISPLAY_PROPERTIES.OWNER;
-            $scope.taskFolders[SOMEDAY].displayPercent = $scope.config.SOMEDAY_FOLDER.DISPLAY_PROPERTIES.PERCENT;
-            $scope.taskFolders[SOMEDAY].displayTotalWork = $scope.config.SOMEDAY_FOLDER.DISPLAY_PROPERTIES.TOTALWORK;
-            $scope.taskFolders[SOMEDAY].displayStartDate = $scope.config.SOMEDAY_FOLDER.DISPLAY_PROPERTIES.STARTDATE;
-            $scope.taskFolders[SOMEDAY].displayDueDate = $scope.config.SOMEDAY_FOLDER.DISPLAY_PROPERTIES.DUEDATE;
-            $scope.taskFolders[SOMEDAY].filterOnStartDate = $scope.config.SOMEDAY_FOLDER.FILTER_ON_START_DATE;
-            $scope.taskFolders[SOMEDAY].displayInReport = $scope.config.SOMEDAY_FOLDER.REPORT.DISPLAY;
-            $scope.taskFolders[SOMEDAY].allowAdd = true;
-            $scope.taskFolders[SOMEDAY].allowEdit = true;
-
-            $scope.taskFolders[BACKLOG].type = BACKLOG;
-            $scope.taskFolders[BACKLOG].initialStatus = $scope.config.STATUS.NOT_STARTED.VALUE;
-            $scope.taskFolders[BACKLOG].display = $scope.config.BACKLOG_FOLDER.ACTIVE;
-            $scope.taskFolders[BACKLOG].name = $scope.config.BACKLOG_FOLDER.NAME;
-            $scope.taskFolders[BACKLOG].title = $scope.config.BACKLOG_FOLDER.TITLE;
-            $scope.taskFolders[BACKLOG].limit = $scope.config.BACKLOG_FOLDER.LIMIT;
-            $scope.taskFolders[BACKLOG].sort = $scope.config.BACKLOG_FOLDER.SORT;
-            $scope.taskFolders[BACKLOG].displayOwner = $scope.config.BACKLOG_FOLDER.DISPLAY_PROPERTIES.OWNER;
-            $scope.taskFolders[BACKLOG].displayPercent = $scope.config.BACKLOG_FOLDER.DISPLAY_PROPERTIES.PERCENT;
-            $scope.taskFolders[BACKLOG].displayTotalWork = $scope.config.BACKLOG_FOLDER.DISPLAY_PROPERTIES.TOTALWORK;
-            $scope.taskFolders[BACKLOG].displayStartDate = $scope.config.BACKLOG_FOLDER.DISPLAY_PROPERTIES.STARTDATE;
-            $scope.taskFolders[BACKLOG].displayDueDate = $scope.config.BACKLOG_FOLDER.DISPLAY_PROPERTIES.DUEDATE;
-            $scope.taskFolders[BACKLOG].filterOnStartDate = $scope.config.BACKLOG_FOLDER.FILTER_ON_START_DATE;
-            $scope.taskFolders[BACKLOG].displayInReport = $scope.config.BACKLOG_FOLDER.REPORT.DISPLAY;
-            $scope.taskFolders[BACKLOG].allowAdd = true;
-            $scope.taskFolders[BACKLOG].allowEdit = true;
-
-            $scope.taskFolders[SPRINT].type = SPRINT;
-            $scope.taskFolders[SPRINT].initialStatus = $scope.config.STATUS.NOT_STARTED.VALUE;
-            $scope.taskFolders[SPRINT].display = $scope.config.NEXT_FOLDER.ACTIVE;
-            $scope.taskFolders[SPRINT].name = $scope.config.NEXT_FOLDER.NAME;
-            $scope.taskFolders[SPRINT].title = $scope.config.NEXT_FOLDER.TITLE;
-            $scope.taskFolders[SPRINT].limit = $scope.config.NEXT_FOLDER.LIMIT;
-            $scope.taskFolders[SPRINT].sort = $scope.config.NEXT_FOLDER.SORT;
-            $scope.taskFolders[SPRINT].displayOwner = $scope.config.NEXT_FOLDER.DISPLAY_PROPERTIES.OWNER;
-            $scope.taskFolders[SPRINT].displayPercent = $scope.config.NEXT_FOLDER.DISPLAY_PROPERTIES.PERCENT;
-            $scope.taskFolders[SPRINT].displayTotalWork = $scope.config.NEXT_FOLDER.DISPLAY_PROPERTIES.TOTALWORK;
-            $scope.taskFolders[SPRINT].displayStartDate = $scope.config.NEXT_FOLDER.DISPLAY_PROPERTIES.STARTDATE;
-            $scope.taskFolders[SPRINT].displayDueDate = $scope.config.NEXT_FOLDER.DISPLAY_PROPERTIES.DUEDATE;
-            $scope.taskFolders[SPRINT].filterOnStartDate = $scope.config.NEXT_FOLDER.FILTER_ON_START_DATE;
-            $scope.taskFolders[SPRINT].displayInReport = $scope.config.NEXT_FOLDER.REPORT.DISPLAY;
-            $scope.taskFolders[SPRINT].allowAdd = true;
-            $scope.taskFolders[SPRINT].allowEdit = true;
-
-            $scope.taskFolders[DOING].type = DOING;
-            $scope.taskFolders[DOING].initialStatus = $scope.config.STATUS.IN_PROGRESS.VALUE;
-            $scope.taskFolders[DOING].display = $scope.config.INPROGRESS_FOLDER.ACTIVE;
-            $scope.taskFolders[DOING].name = $scope.config.INPROGRESS_FOLDER.NAME;
-            $scope.taskFolders[DOING].title = $scope.config.INPROGRESS_FOLDER.TITLE;
-            $scope.taskFolders[DOING].limit = $scope.config.INPROGRESS_FOLDER.LIMIT;
-            $scope.taskFolders[DOING].sort = $scope.config.INPROGRESS_FOLDER.SORT;
-            $scope.taskFolders[DOING].displayOwner = $scope.config.INPROGRESS_FOLDER.DISPLAY_PROPERTIES.OWNER;
-            $scope.taskFolders[DOING].displayPercent = $scope.config.INPROGRESS_FOLDER.DISPLAY_PROPERTIES.PERCENT;
-            $scope.taskFolders[DOING].displayTotalWork = $scope.config.INPROGRESS_FOLDER.DISPLAY_PROPERTIES.TOTALWORK;
-            $scope.taskFolders[DOING].displayStartDate = $scope.config.INPROGRESS_FOLDER.DISPLAY_PROPERTIES.STARTDATE;
-            $scope.taskFolders[DOING].displayDueDate = $scope.config.INPROGRESS_FOLDER.DISPLAY_PROPERTIES.DUEDATE;
-            $scope.taskFolders[DOING].filterOnStartDate = $scope.config.INPROGRESS_FOLDER.FILTER_ON_START_DATE;
-            $scope.taskFolders[DOING].displayInReport = $scope.config.INPROGRESS_FOLDER.REPORT.DISPLAY;
-            $scope.taskFolders[DOING].allowAdd = false;
-            $scope.taskFolders[DOING].allowEdit = true;
-
-            $scope.taskFolders[WAITING].type = WAITING;
-            $scope.taskFolders[WAITING].initialStatus = $scope.config.STATUS.WAITING.VALUE;
-            $scope.taskFolders[WAITING].display = $scope.config.WAITING_FOLDER.ACTIVE;
-            $scope.taskFolders[WAITING].name = $scope.config.WAITING_FOLDER.NAME;
-            $scope.taskFolders[WAITING].title = $scope.config.WAITING_FOLDER.TITLE;
-            $scope.taskFolders[WAITING].limit = $scope.config.WAITING_FOLDER.LIMIT;
-            $scope.taskFolders[WAITING].sort = $scope.config.WAITING_FOLDER.SORT;
-            $scope.taskFolders[WAITING].displayOwner = $scope.config.WAITING_FOLDER.DISPLAY_PROPERTIES.OWNER;
-            $scope.taskFolders[WAITING].displayPercent = $scope.config.WAITING_FOLDER.DISPLAY_PROPERTIES.PERCENT;
-            $scope.taskFolders[WAITING].displayTotalWork = $scope.config.WAITING_FOLDER.DISPLAY_PROPERTIES.TOTALWORK;
-            $scope.taskFolders[WAITING].displayStartDate = $scope.config.WAITING_FOLDER.DISPLAY_PROPERTIES.STARTDATE;
-            $scope.taskFolders[WAITING].displayDueDate = $scope.config.WAITING_FOLDER.DISPLAY_PROPERTIES.DUEDATE;
-            $scope.taskFolders[WAITING].filterOnStartDate = $scope.config.WAITING_FOLDER.FILTER_ON_START_DATE;
-            $scope.taskFolders[WAITING].displayInReport = $scope.config.WAITING_FOLDER.REPORT.DISPLAY;
-            $scope.taskFolders[WAITING].allowAdd = false;
-            $scope.taskFolders[WAITING].allowEdit = true;
-
-            $scope.taskFolders[DONE].type = DONE;
-            $scope.taskFolders[DONE].initialStatus = $scope.config.STATUS.COMPLETED.VALUE;
-            $scope.taskFolders[DONE].display = $scope.config.COMPLETED_FOLDER.ACTIVE;
-            $scope.taskFolders[DONE].name = $scope.config.COMPLETED_FOLDER.NAME;
-            $scope.taskFolders[DONE].title = $scope.config.COMPLETED_FOLDER.TITLE;
-            $scope.taskFolders[DONE].limit = $scope.config.COMPLETED_FOLDER.LIMIT;
-            $scope.taskFolders[DONE].sort = $scope.config.COMPLETED_FOLDER.SORT;
-            $scope.taskFolders[DONE].displayOwner = $scope.config.COMPLETED_FOLDER.DISPLAY_PROPERTIES.OWNER;
-            $scope.taskFolders[DONE].displayPercent = $scope.config.COMPLETED_FOLDER.DISPLAY_PROPERTIES.PERCENT;
-            $scope.taskFolders[DONE].displayTotalWork = $scope.config.COMPLETED_FOLDER.DISPLAY_PROPERTIES.TOTALWORK;
-            $scope.taskFolders[DONE].displayStartDate = $scope.config.COMPLETED_FOLDER.DISPLAY_PROPERTIES.STARTDATE;
-            $scope.taskFolders[DONE].displayDueDate = $scope.config.COMPLETED_FOLDER.DISPLAY_PROPERTIES.DUEDATE;
-            $scope.taskFolders[DONE].filterOnStartDate = $scope.config.COMPLETED_FOLDER.FILTER_ON_START_DATE;
-            $scope.taskFolders[DONE].displayInReport = $scope.config.COMPLETED_FOLDER.REPORT.DISPLAY;
-            $scope.taskFolders[DONE].allowAdd = false;
-            $scope.taskFolders[DONE].allowEdit = false;
-        } catch (error) {
-            writeLog('applyConfig: ' + error)
-        }
-    };
-
-    var DEFAULT_CONFIG = function() {
-        return {
-            "SOMEDAY_FOLDER": {
-                "TYPE": SOMEDAY,
-                "ACTIVE": false,
-                "NAME": "Someday",
-                "TITLE": "SOMEDAY/MAYBE",
-                "LIMIT": 0,
-                "SORT": "-priority",
-                "DISPLAY_PROPERTIES": {
-                    "OWNER": false,
-                    "PERCENT": false,
-                    "TOTALWORK": false,
-                    "STARTDATE": false,
-                    "DUEDATE": false
-                },
-                "FILTER_ON_START_DATE": undefined,
-                "REPORT": {
-                    "DISPLAY": false
-                }
-            },
-            "BACKLOG_FOLDER": {
-                "TYPE": BACKLOG,
-                "ACTIVE": true,
-                "NAME": "",
-                "TITLE": "BACKLOG",
-                "LIMIT": 0,
-                "SORT": "duedate,-priority",
-                "DISPLAY_PROPERTIES": {
-                    "OWNER": false,
-                    "PERCENT": false,
-                    "TOTALWORK": false,
-                    "STARTDATE": false,
-                    "DUEDATE": true
-                },
-                "FILTER_ON_START_DATE": true,
-                "REPORT": {
-                    "DISPLAY": true
-                }
-            },
-            "NEXT_FOLDER": {
-                "TYPE": "SPRINT",
-                "ACTIVE": true,
-                "NAME": "Kanban",
-                "TITLE": "NEXT",
-                "LIMIT": 20,
-                "SORT": "duedate,-priority",
-                "DISPLAY_PROPERTIES": {
-                    "OWNER": false,
-                    "PERCENT": false,
-                    "TOTALWORK": false,
-                    "STARTDATE": false,
-                    "DUEDATE": true
-                },
-                "FILTER_ON_START_DATE": undefined,
-                "REPORT": {
-                    "DISPLAY": true
-                }
-            },
-            "INPROGRESS_FOLDER": {
-                "TYPE": "DOING",
-                "ACTIVE": true,
-                "NAME": "Kanban",
-                "TITLE": "IN PROGRESS",
-                "LIMIT": 5,
-                "SORT": "-priority",
-                "DISPLAY_PROPERTIES": {
-                    "OWNER": false,
-                    "PERCENT": false,
-                    "TOTALWORK": false,
-                    "STARTDATE": false,
-                    "DUEDATE": true
-                },
-                "FILTER_ON_START_DATE": undefined,
-                "REPORT": {
-                    "DISPLAY": true
-                }
-            },
-            "WAITING_FOLDER": {
-                "TYPE": "WAITING",
-                "ACTIVE": true,
-                "NAME": "Kanban",
-                "TITLE": "WAITING",
-                "LIMIT": 0,
-                "SORT": "-priority",
-                "DISPLAY_PROPERTIES": {
-                    "OWNER": false,
-                    "PERCENT": false,
-                    "TOTALWORK": false,
-                    "STARTDATE": false,
-                    "DUEDATE": true
-                },
-                "FILTER_ON_START_DATE": undefined,
-                "REPORT": {
-                    "DISPLAY": true
-                }
-            },
-            "COMPLETED_FOLDER": {
-                "TYPE": "DONE",
-                "ACTIVE": true,
-                "NAME": "Kanban",
-                "TITLE": "COMPLETED",
-                "LIMIT": 0,
-                "SORT": "-completeddate,-priority,subject",
-                "DISPLAY_PROPERTIES": {
-                    "OWNER": false,
-                    "PERCENT": false,
-                    "TOTALWORK": false,
-                    "STARTDATE": false,
-                    "DUEDATE": false
-                },
-                "FILTER_ON_START_DATE": undefined,
-                "REPORT": {
-                    "DISPLAY": true
-                },
-            },
-            "ARCHIVE_FOLDER": {
-                "NAME": "Completed"
-            },
-            "TASKNOTE_MAXLEN": 100,
-            "TASKBODY_IN_REPORT": true,
-            "DATE_FORMAT": "dd-MMM",
-            "USE_CATEGORY_COLORS": true,
-            "USE_CATEGORY_COLOR_FOOTERS": false,
-            "DARK_MODE": false,
-            "SAVE_STATE": true,
-            "SAVE_ORDER": false,
-            "STATUS": {
-                "NOT_STARTED": {
-                    "VALUE": 0,
-                    "TEXT": "Not Started"
-                },
-                "IN_PROGRESS": {
-                    "VALUE": 1,
-                    "TEXT": "In Progress"
-                },
-                "WAITING": {
-                    "VALUE": 3,
-                    "TEXT": "Waiting For Someone Else"
-                },
-                "COMPLETED": {
-                    "VALUE": 2,
-                    "TEXT": "Completed"
-                }
-            },
-            "COMPLETED": {
-                "AFTER_X_DAYS": 7,
-                "ACTION": "ARCHIVE"
-            },
-            "AUTO_UPDATE": true,
-            "AUTO_START_TASKS": true,
-            "AUTO_START_DUE_TASKS": false,
-            "LOG_ERRORS": false,
-            "MULTI_MAILBOX": false,
-            "ACTIVE_MAILBOXES": [],
-            "NEW_VERSION_NOTIFICATION": true,
-            "AUTO_REFRESH": true,
-            "AUTO_REFRESH_MINUTES": 5
-        }
-    }
-
-    var readState = function () {
-        if (hasReadState){
-            return;
-        }
-        try {
-            var state = { 
-                "private": "0", 
-                "search": "", 
-                "category": "<All Categories>", 
-                "mailbox":""
-            }; // default state
-
-            if ($scope.config.SAVE_STATE) {
-                var stateRaw = getJournalItem(STATE_ID);
-                if (stateRaw !== null) {
-                    state = JSON.parse(stateRaw);
-                }
-                else {
+            function saveState() {
+                try {
+                    if (!$scope.config || !$scope.config.BOARD || !$scope.config.BOARD.saveState) {
+                        return;
+                    }
+                    var state = {
+                        private: $scope.filter.private,
+                        search: $scope.filter.search,
+                        category: $scope.filter.category,
+                        mailbox: $scope.filter.mailbox,
+                        projectEntryID: $scope.ui.projectEntryID
+                    };
                     saveJournalItem(STATE_ID, JSON.stringify(state, null, 2));
+                } catch (e) {
+                    writeLog('saveState: ' + e);
                 }
             }
 
-            $scope.prevState = state;
-
-            // check state.mailbox; if it is not found in the *active* mailboxes array
-            // then take the default mailbox
-            var isChanged = false;
-            if (!$scope.contains($scope.config.ACTIVE_MAILBOXES, state.mailbox)) {
+            function initCategories() {
+                $scope.categories = ['<All Categories>', '<No Category>'];
                 try {
-                    state.mailbox = $scope.mailboxes[0];
-                    isChanged = true;
-                }
-                catch(error) {
-                    debug_alert('set state.mailbox error: '+error)
-                }
-            }
-
-            $scope.filter =
-                {
-                    private: state.private,
-                    search: state.search,
-                    category: state.category,
-                    mailbox: state.mailbox
-                };
-
-            if (isChanged) {
-                state.mailbox = ''; // sneaky, but otherwise nothing will be saved
-                saveState();
-            }
-
-        } catch (error) {
-            writeLog('readState: ' + error)
-        }
-        hasReadState = true;
-    }
-
-    $scope.contains = function (a, obj) {
-        for (var i = 0; i < a.length; i++) {
-            if (a[i] === obj) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    $scope.whatsnew = function () {
-        return "https://janware.nl/gitlab/whatsnew.html"
-    }
-
-    var saveState = function () {
-        try {
-            if ($scope.config.SAVE_STATE) {
-                var currState = { 
-                    "private": $scope.filter.private, 
-                    "search": $scope.filter.search, 
-                    "category": $scope.filter.category, 
-                    "mailbox": $scope.filter.mailbox
-                };
-                if (DeepDiff.diff($scope.prevState, currState)) {
-                    saveJournalItem(STATE_ID, JSON.stringify(currState, null, 2));
-                    $scope.prevState = currState;
+                    outlookCategories = getOutlookCategories();
+                    outlookCategories.names.forEach(function (name) {
+                        $scope.categories.push(name);
+                    });
+                    $scope.categories = $scope.categories.sort();
+                } catch (e) {
+                    writeLog('initCategories: ' + e);
                 }
             }
-        } catch (error) {
-            writeLog('saveState: ' + error)
-        }
-    }
 
-    var readConfig = function () {
-        try {
-            if (hasReadConfig) {
-                return;
-            }
-            $scope.previousConfig = null;
-            $scope.configRaw = getJournalItem(CONFIG_ID);
-            if ($scope.configRaw !== null) {
+            function initMailboxes() {
+                $scope.mailboxes = [];
                 try {
-                    $scope.config = JSON.parse(JSON.minify($scope.configRaw));
+                    var mb = getOutlookMailboxes(!!($scope.config && $scope.config.MULTI_MAILBOX));
+                    mb.forEach(function (m) {
+                        $scope.mailboxes.push(m);
+                    });
+                    if (!$scope.filter.mailbox) {
+                        $scope.filter.mailbox = $scope.mailboxes[0];
+                    }
+                } catch (e) {
+                    writeLog('initMailboxes: ' + e);
                 }
-                catch (e) {
-                    alert("I am afraid there is something wrong with the json structure of your configuration data. Please correct it.");
-                    writeLog('readConfig JSON parse error: ' + e)
-                    $scope.switchToConfigMode();
+            }
+
+            function loadAvailableProjectFolders() {
+                try {
+                    var list = [];
+                    // Include default Tasks folder
+                    try {
+                        var tasksFolder = getTaskFolderExisting($scope.filter.mailbox, '');
+                        if (tasksFolder) {
+                            list.push({
+                                name: tasksFolder.Name + ' (Tasks)',
+                                entryID: tasksFolder.EntryID,
+                                storeID: tasksFolder.StoreID
+                            });
+                        }
+                    } catch (e1) {
+                        // ignore
+                    }
+
+                    // Include subfolders under Tasks
+                    try {
+                        var subs = listTaskSubFolders($scope.filter.mailbox, '');
+                        subs.forEach(function (f) {
+                            list.push(f);
+                        });
+                    } catch (e2) {
+                        // ignore
+                    }
+
+                    // Unique by entryID
+                    var seen = {};
+                    var uniq = [];
+                    list.forEach(function (p) {
+                        if (!p || !p.entryID) return;
+                        if (seen[p.entryID]) return;
+                        seen[p.entryID] = true;
+                        uniq.push(p);
+                    });
+                    uniq.sort(function (a, b) {
+                        var an = (a.name || '').toLowerCase();
+                        var bn = (b.name || '').toLowerCase();
+                        if (an < bn) return -1;
+                        if (an > bn) return 1;
+                        return 0;
+                    });
+                    $scope.availableProjectFolders = uniq;
+                } catch (e) {
+                    writeLog('loadAvailableProjectFolders: ' + e);
+                    $scope.availableProjectFolders = [];
+                }
+            }
+
+            function getProjectsRootFolderExisting() {
+                try {
+                    return getTaskFolderExisting($scope.filter.mailbox, $scope.config.PROJECTS.rootFolderName);
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function loadProjects() {
+                try {
+                    var projects = [];
+                    var hidden = ($scope.config.PROJECTS.hiddenProjectEntryIDs || []);
+
+                    var defaultTasksEntryID = '';
+                    try {
+                        var tf = getTaskFolderExisting($scope.filter.mailbox, '');
+                        if (tf) {
+                            defaultTasksEntryID = tf.EntryID;
+                        }
+                    } catch (e0) {
+                        defaultTasksEntryID = '';
+                    }
+
+                    // Root subfolders
+                    var root = getProjectsRootFolderExisting();
+                    if (root) {
+                        var subs = listTaskSubFolders($scope.filter.mailbox, $scope.config.PROJECTS.rootFolderName);
+                        subs.forEach(function (p) {
+                            projects.push({
+                                name: p.name,
+                                entryID: p.entryID,
+                                storeID: p.storeID,
+                                isLinked: false
+                            });
+                        });
+                    }
+
+                    // Linked projects (resolve current name when possible)
+                    var linked = ($scope.config.PROJECTS.linkedProjects || []);
+                    linked.forEach(function (p) {
+                        if (!p || !p.entryID) return;
+                        var name = p.name || 'Linked project';
+                        var storeID = p.storeID;
+                        try {
+                            var f = getFolderFromIDs(p.entryID, p.storeID);
+                            if (f) {
+                                name = f.Name;
+                                try { storeID = f.StoreID; } catch (e1) { /* ignore */ }
+                            }
+                        } catch (e2) {
+                            // ignore
+                        }
+                        projects.push({
+                            name: name,
+                            entryID: p.entryID,
+                            storeID: storeID,
+                            isLinked: true
+                        });
+                    });
+
+                    // Unique by entryID
+                    var seen = {};
+                    var uniq = [];
+                    projects.forEach(function (p) {
+                        if (!p.entryID) return;
+                        if (seen[p.entryID]) return;
+                        seen[p.entryID] = true;
+                        uniq.push(p);
+                    });
+
+                    // Mark hidden/default
+                    uniq.forEach(function (p) {
+                        p.isHidden = (hidden.indexOf(p.entryID) !== -1);
+                        p.isDefaultTasks = (defaultTasksEntryID && p.entryID === defaultTasksEntryID);
+                    });
+
+                    // Sort by name
+                    uniq.sort(function (a, b) {
+                        var an = (a.name || '').toLowerCase();
+                        var bn = (b.name || '').toLowerCase();
+                        if (an < bn) return -1;
+                        if (an > bn) return 1;
+                        return 0;
+                    });
+
+                    $scope.projectsAll = uniq;
+                    $scope.projects = uniq.filter(function (p) { return !p.isHidden; });
+
+                    // Set default project if missing/invalid/hidden
+                    var defaultId = $scope.config.PROJECTS.defaultProjectEntryID;
+                    var defaultOk = false;
+                    if (defaultId) {
+                        for (var i = 0; i < $scope.projects.length; i++) {
+                            if ($scope.projects[i].entryID === defaultId) defaultOk = true;
+                        }
+                    }
+                    if (!defaultOk) {
+                        if ($scope.projects.length > 0) {
+                            $scope.config.PROJECTS.defaultProjectEntryID = $scope.projects[0].entryID;
+                            saveConfig();
+                        }
+                    }
+                } catch (e) {
+                    writeLog('loadProjects: ' + e);
+                }
+            }
+
+            function ensureSelectedProject() {
+                if ($scope.projects.length === 0) {
+                    $scope.ui.projectEntryID = '';
                     return;
                 }
-                updateConfig();
-                migrateConfig();
-                $scope.includeLog = $scope.config.LOG_ERRORS;
-            }
-            else {
-                $scope.config = DEFAULT_CONFIG();
-                saveConfig();
-            }
-        } catch (error) {
-            writeLog('readConfig: ' + error)
-        }
-        hasReadConfig = true;
-    }
 
-    var saveConfig = function () {
-        try {
-            saveJournalItem(CONFIG_ID, JSON.stringify($scope.config, null, 2));
-            $scope.includeLog = $scope.config.LOG_ERRORS;
-        } catch (error) {
-            writeLog('saveConfig: ' + error)
-        }
-    }
-
-    var updateConfig = function () {
-        try {
-            // Check for added or removed key entries in the config
-            var delta = DeepDiff.diff($scope.config, DEFAULT_CONFIG());
-            if (delta) {
-                var isUpdated = false;
-                $scope.previousConfig = $scope.config;
-                delta.forEach(function (change) {
-                    if (change.kind === 'N' || change.kind === 'D') {
-                        DeepDiff.applyChange($scope.config, DEFAULT_CONFIG(), change);
-                        isUpdated = true;
+                function exists(entryID) {
+                    for (var i = 0; i < $scope.projects.length; i++) {
+                        if ($scope.projects[i].entryID === entryID) return true;
                     }
-                });
-                if (isUpdated) {
-                    saveConfig();
-                    // as long as we need configraw...
-                    $scope.configRaw = getJournalItem(CONFIG_ID);
+                    return false;
+                }
+
+                if ($scope.ui.projectEntryID && exists($scope.ui.projectEntryID)) {
+                    return;
+                }
+
+                if ($scope.config.PROJECTS.defaultProjectEntryID && exists($scope.config.PROJECTS.defaultProjectEntryID)) {
+                    $scope.ui.projectEntryID = $scope.config.PROJECTS.defaultProjectEntryID;
+                    return;
+                }
+
+                $scope.ui.projectEntryID = $scope.projects[0].entryID;
+            }
+
+            function getSelectedProject() {
+                for (var i = 0; i < $scope.projects.length; i++) {
+                    if ($scope.projects[i].entryID === $scope.ui.projectEntryID) {
+                        return $scope.projects[i];
+                    }
+                }
+                return null;
+            }
+
+            function getSelectedProjectFolder() {
+                try {
+                    var p = getSelectedProject();
+                    if (!p) return null;
+                    if (p.entryID) {
+                        var f = getFolderFromIDs(p.entryID, p.storeID);
+                        if (f) return f;
+                    }
+                } catch (e) {
+                    writeLog('getSelectedProjectFolder: ' + e);
+                }
+                return null;
+            }
+
+            function taskBodyNotes(str, limit) {
+                try {
+                    if (!str) return '';
+                    var s = String(str);
+                    s = s.replace(/^(?=\n)$|^\s*|\s*$|\n\n+/gm, '');
+                    s = s.replace(/\r\n/g, '\n');
+                    if (limit && s.length > limit) {
+                        s = s.substring(0, limit);
+                        // trim to last whitespace
+                        var i = s.lastIndexOf(' ');
+                        if (i > 40) s = s.substring(0, i);
+                        s = s + '...';
+                    }
+                    return s;
+                } catch (e) {
+                    return '';
                 }
             }
-        } catch (error) {
-            writeLog("updateConfig: " + error)
-        }
-    }
 
-    var migrateConfig = function () {
-        try {
-            var isChanged = false;
-            
-            if ($scope.config.ACTIVE_MAILBOXES.length == 0) {
-                $scope.config.ACTIVE_MAILBOXES.length = 1;
-                $scope.config.ACTIVE_MAILBOXES[0] = $scope.mailboxes[0];
-                saveConfig();
-                // as long as we need configraw...
-                $scope.configRaw = getJournalItem(CONFIG_ID);
+            function taskStatusText(status) {
+                // Built-in Outlook task statuses
+                if (status === 0) return 'Not Started';
+                if (status === 1) return 'In Progress';
+                if (status === 2) return 'Completed';
+                if (status === 3) return 'Waiting For Someone Else';
+                if (status === 4) return 'Deferred';
+                return '';
             }
 
-            var newArray = [];
-            var i;
-            for (i = 0; i < $scope.config.ACTIVE_MAILBOXES.length; i++) {
-               var mailbox = $scope.config.ACTIVE_MAILBOXES[i];
-               var fixed = fixMailboxName(mailbox);
-               if (fixed !== mailbox) {
-            		mailbox = fixed;
-            		isChanged = true;
-            	};
-            	if (find($scope.mailboxes, mailbox)) {
-            	   newArray.push(mailbox);
-            	}
-            	else {
-            	   isChanged = true;
-            	};
-            };
-            if (!find($scope.config.ACTIVE_MAILBOXES, $scope.mailboxes[0])) {
-                newArray.push($scope.mailboxes[0]);
-                isChanged = true;
-            }
-            if (isChanged) {
-            	 $scope.config.ACTIVE_MAILBOXES = newArray;
-                saveConfig();
-                // as long as we need configraw...
-                $scope.configRaw = getJournalItem(CONFIG_ID);
-            }
-        }
-        catch (error) {
-            writeLog('migrateConfig: ' + error)
-        }
-    }
-    
-    var find = function (arr, value) {
-       var result = false;
-        try {
-       arr.forEach( function(elem) {
-          if (elem === value) result = true;
-       });
-        }
-        catch(error) {
-        }
-       return result;
-    }
-
-    var writeLog = function (message, noAlert) {
-        if (noAlert != true) {
-            alert('writeLog:'+ message)
-        }
-        try {
-            var doLog = false;
-            if ($scope.config == undefined) {
-                doLog = true;
-            }
-            else {
-                doLog = $scope.config.LOG_ERRORS;
-            }
-            if (doLog) {
-                var now = new Date();
-                var datetimeString = now.getFullYear() + '-' + now.getMonth() + '-' + now.getDate() + ' ' + now.getHours() + ':' + now.getMinutes();
-                message = datetimeString + "  " + message;
-                var logRaw = getJournalItem(LOG_ID);
-                var log = [];
-                if (logRaw !== null) {
-                    log = JSON.parse(logRaw);
+            function getContrastYIQ(hexcolor) {
+                try {
+                    if (!hexcolor) return 'black';
+                    var r = parseInt(hexcolor.substr(1, 2), 16);
+                    var g = parseInt(hexcolor.substr(3, 2), 16);
+                    var b = parseInt(hexcolor.substr(5, 2), 16);
+                    var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                    return (yiq >= 128) ? 'black' : 'white';
+                } catch (e) {
+                    return 'black';
                 }
-                log.unshift(message);
-                if (log.length > MAX_LOG_ENTRIES) {
-                    log.pop();
-                }
-                saveJournalItem(LOG_ID, JSON.stringify(log, null, 2));
             }
-        } catch (error) {
-            alert('Unexpected writeLog error. Please make a screenprint and send it to janban@papasmurf.nl.\n\r ' + error)
-        }
-    }
 
-    var setUrls = function () {
-        // These variables are replaced in the build pipeline
-        $scope.VERSION_URL = '#VERSION#';
-        $scope.DOWNLOAD_URL = '#DOWNLOAD#';
-        $scope.WHATSNEW_URL = '#WHATSNEW#';
-        $scope.version = '2.1.11';
-        $scope.version_number = '2.1.11';
-    }
+            function getCategoryStyles(csvCategories) {
+                var colorArray = [
+                    '#E7A1A2', '#F9BA89', '#F7DD8F', '#FCFA90', '#78D168', '#9FDCC9', '#C6D2B0', '#9DB7E8', '#B5A1E2',
+                    '#daaec2', '#dad9dc', '#6b7994', '#bfbfbf', '#6f6f6f', '#4f4f4f', '#c11a25', '#e2620d', '#c79930',
+                    '#b9b300', '#368f2b', '#329b7a', '#778b45', '#2858a5', '#5c3fa3', '#93446b'
+                ];
 
-    var debug_alert = function (msg) {
-        if (debug_mode) {
-            alert(msg)
-        }
-    };    
-
-    var readVersion = function () {
-        if (hasReadVersion) {
-            return $scope.version_number;
-        }
-        try {
-            $http.get($scope.VERSION_URL, { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } })
-                .then(function (response) {
-                    $scope.version_number = response.data;
-                    $scope.version_number = $scope.version_number.replace(/\n|\r/g, "");
-                    checkVersion();
-				});
-            hasReadVersion = true;
-        } catch (error) {
-            writeLog('readVersion: ' + error)
-        }
-    };
-
-    var checkVersion = function () {
-        try {
-            if ($scope.version != $scope.version_number) {
-                $scope.display_message = true;
-            }
-        } catch (error) {
-            writeLog('checkVersion: ' + error)
-        }
-    };
-
-    var getCategoryStyles = function (csvCategories) {
-
-        const colorArray = [
-            '#E7A1A2', '#F9BA89', '#F7DD8F', '#FCFA90', '#78D168', '#9FDCC9', '#C6D2B0', '#9DB7E8', '#B5A1E2',
-            '#daaec2', '#dad9dc', '#6b7994', '#bfbfbf', '#6f6f6f', '#4f4f4f', '#c11a25', '#e2620d', '#c79930',
-            '#b9b300', '#368f2b', '#329b7a', '#778b45', '#2858a5', '#5c3fa3', '#93446b'
-        ];
-
-        var getColor = function (category) {
-            try {
-                var c = outlookCategories.names.indexOf(category);
-                var i = outlookCategories.colors[c];
-                if (i == -1) {
-                    return '#4f4f4f';
+                function getColor(category) {
+                    try {
+                        if (!outlookCategories || !outlookCategories.names) return '#4f4f4f';
+                        var c = outlookCategories.names.indexOf(category);
+                        var i = outlookCategories.colors[c];
+                        if (i === -1 || i === undefined) {
+                            return '#4f4f4f';
+                        }
+                        return colorArray[i - 1];
+                    } catch (e) {
+                        return '#4f4f4f';
+                    }
                 }
-                else {
-                    return colorArray[i - 1];
-                }
-            } catch (error) {
-                writeLog('getColor: ' + error);
-            }
-        }
 
-        try {
-            var i;
-            var catStyles = [];
-            var categories = csvCategories.split(/[;,]+/);
-            catStyles.length = categories.length;
-            for (i = 0; i < categories.length; i++) {
-                categories[i] = categories[i].trim();
-                if (categories[i].length > 0) {
-                    if ($scope.config.USE_CATEGORY_COLORS) {
-                        catStyles[i] = {
-                            label: categories[i], style: { "background-color": getColor(categories[i]), color: getContrastYIQ(getColor(categories[i])) }
+                try {
+                    var catStyles = [];
+                    var categories = String(csvCategories || '').split(/[;,]+/);
+                    for (var i = 0; i < categories.length; i++) {
+                        var c = categories[i].trim();
+                        if (c.length === 0) continue;
+                        if ($scope.config.USE_CATEGORY_COLORS) {
+                            var bg = getColor(c);
+                            catStyles.push({
+                                label: c,
+                                style: {
+                                    'background-color': bg,
+                                    color: getContrastYIQ(bg)
+                                }
+                            });
+                        } else {
+                            catStyles.push({ label: c, style: { color: 'inherit' } });
                         }
                     }
-                    else {
-                        catStyles[i] = {
-                            label: categories[i], style: { color: "black" }
-                        };
-                    }
+                    return catStyles;
+                } catch (e) {
+                    return [];
                 }
             }
-            return catStyles;
-        } catch (error) {
-            writeLog('getCategoryStyles: ' + error);
-        }
-    }
 
-    function getContrastYIQ(hexcolor) {
-        try {
-            if (hexcolor == undefined) {
-                return 'black';
+            $scope.getFooterStyle = function (categories) {
+                try {
+                    if ($scope.config.USE_CATEGORY_COLOR_FOOTERS && $scope.config.USE_CATEGORY_COLORS) {
+                        if (categories && categories.length === 1 && categories[0] && categories[0].style) {
+                            return categories[0].style;
+                        }
+                        if (categories && categories.length > 1) {
+                            var lightGray = '#dfdfdf';
+                            return { 'background-color': lightGray, color: getContrastYIQ(lightGray) };
+                        }
+                    }
+                } catch (e) {
+                    // ignore
+                }
+                return;
+            };
+
+            function buildLanes(tasks) {
+                var lanes = [];
+                var enabledLanes = [];
+                ($scope.config.LANES || []).forEach(function (l) {
+                    var id = sanitizeId(l.id);
+                    if (!id) return;
+                    enabledLanes.push({
+                        id: id,
+                        title: l.title || id,
+                        color: isValidHexColor(l.color) ? l.color : '#94a3b8',
+                        wipLimit: Number(l.wipLimit || 0),
+                        enabled: (l.enabled !== false),
+                        outlookStatus: (l.outlookStatus === undefined ? null : l.outlookStatus),
+                        tasks: [],
+                        filteredTasks: []
+                    });
+                });
+
+                // Default to at least one lane
+                if (enabledLanes.length === 0) {
+                    enabledLanes.push({ id: 'backlog', title: 'Backlog', color: '#94a3b8', wipLimit: 0, enabled: true, outlookStatus: 0, tasks: [], filteredTasks: [] });
+                }
+
+                var defaultLaneId = enabledLanes[0].id;
+
+                tasks.forEach(function (t) {
+                    var laneId = sanitizeId(t.laneId) || defaultLaneId;
+                    var lane = null;
+                    for (var i = 0; i < enabledLanes.length; i++) {
+                        if (enabledLanes[i].id === laneId) {
+                            lane = enabledLanes[i];
+                            break;
+                        }
+                    }
+                    if (!lane) {
+                        lane = enabledLanes[0];
+                    }
+                    lane.tasks.push(t);
+                });
+
+                // Sorting
+                enabledLanes.forEach(function (lane) {
+                    lane.tasks.sort(function (a, b) {
+                        if ($scope.config.BOARD.saveOrder) {
+                            var ao = (a.laneOrder === undefined || a.laneOrder === null) ? 999999 : a.laneOrder;
+                            var bo = (b.laneOrder === undefined || b.laneOrder === null) ? 999999 : b.laneOrder;
+                            if (ao !== bo) return ao - bo;
+                        }
+
+                        // due date asc (missing due dates last)
+                        var ad = a.dueDateMs || 9999999999999;
+                        var bd = b.dueDateMs || 9999999999999;
+                        if (ad !== bd) return ad - bd;
+
+                        // priority desc
+                        if (a.priority !== b.priority) return (b.priority || 0) - (a.priority || 0);
+
+                        // subject asc
+                        var as = (a.subject || '').toLowerCase();
+                        var bs = (b.subject || '').toLowerCase();
+                        if (as < bs) return -1;
+                        if (as > bs) return 1;
+                        return 0;
+                    });
+                    lane.filteredTasks = lane.tasks.slice(0);
+                });
+
+                lanes = enabledLanes;
+                return lanes;
             }
-            var r = parseInt(hexcolor.substr(1, 2), 16);
-            var g = parseInt(hexcolor.substr(3, 2), 16);
-            var b = parseInt(hexcolor.substr(5, 2), 16);
-            var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-            return (yiq >= 128) ? 'black' : 'white';
-        } catch (error) {
-            writeLog('getContrastYIQ: ' + message);
-        }
-    }
-});
+
+            function readTasksFromOutlookFolder(folder) {
+                var tasks = [];
+                try {
+                    var folderStoreID = '';
+                    try { folderStoreID = folder.StoreID; } catch (e0) { folderStoreID = ''; }
+
+                    var today0 = new Date();
+                    today0.setHours(0, 0, 0, 0);
+
+                    var items = folder.Items;
+                    var count = items.Count;
+                    for (var i = 1; i <= count; i++) {
+                        var task = items(i);
+                        try {
+                            var due = new Date(task.DueDate);
+                            var dueText = '';
+                            var dueMs = null;
+                            var dueClass = '';
+                            if (isRealDate(due)) {
+                                var due0 = new Date(due);
+                                due0.setHours(0, 0, 0, 0);
+                                dueText = moment(due).format($scope.config.DATE_FORMAT || 'DD-MMM');
+                                dueMs = due.getTime();
+
+                                // Due-state color (ignore completed tasks)
+                                if (task.Status !== 2) {
+                                    if (due0.getTime() < today0.getTime()) {
+                                        dueClass = 'kfo-due--overdue';
+                                    } else if (due0.getTime() === today0.getTime()) {
+                                        dueClass = 'kfo-due--today';
+                                    } else {
+                                        var days = Math.round((due0.getTime() - today0.getTime()) / (24 * 60 * 60 * 1000));
+                                        if (days <= 2) {
+                                            dueClass = 'kfo-due--soon';
+                                        }
+                                    }
+                                }
+                            }
+
+                            var laneId = '';
+                            try { laneId = getUserProperty(task, PROP_LANE_ID); } catch (e1) { laneId = ''; }
+                            var laneOrderRaw = '';
+                            try { laneOrderRaw = getUserProperty(task, PROP_LANE_ORDER); } catch (e2) { laneOrderRaw = ''; }
+                            var laneOrder = null;
+                            if (laneOrderRaw !== '' && laneOrderRaw !== null && laneOrderRaw !== undefined) {
+                                var n = parseInt(laneOrderRaw, 10);
+                                if (!isNaN(n)) laneOrder = n;
+                            }
+
+                            tasks.push({
+                                entryID: task.EntryID,
+                                storeID: folderStoreID,
+                                subject: task.Subject,
+                                priority: task.Importance,
+                                sensitivity: task.Sensitivity,
+                                statusValue: task.Status,
+                                statusText: taskStatusText(task.Status),
+                                dueText: dueText,
+                                dueDateMs: dueMs,
+                                dueClass: dueClass,
+                                categoriesCsv: task.Categories,
+                                categories: getCategoryStyles(task.Categories),
+                                notes: taskBodyNotes(task.Body, $scope.config.BOARD.taskNoteMaxLen),
+                                oneNoteURL: (function () { try { return getUserProperty(task, 'OneNoteURL'); } catch (e3) { return ''; } })(),
+                                laneId: laneId,
+                                laneOrder: laneOrder
+                            });
+                        } catch (inner) {
+                            writeLog('read task: ' + inner);
+                        }
+                    }
+                } catch (e) {
+                    writeLog('readTasksFromOutlookFolder: ' + e);
+                }
+                return tasks;
+            }
+
+            $scope.laneHeaderStyle = function (lane) {
+                return {
+                    'border-top-color': lane.color || '#94a3b8'
+                };
+            };
+
+            $scope.taskCardClasses = function (task) {
+                return {
+                    'kfo-task--private': task && task.sensitivity === 2,
+                    'kfo-task--high': task && task.priority === 2
+                };
+            };
+
+            $scope.visibleCategories = function (categories) {
+                try {
+                    if (!$scope.config || !$scope.config.UI || !$scope.config.UI.showCategories) return [];
+                    var arr = categories || [];
+                    if (!$scope.config.UI.showOnlyFirstCategory) return arr;
+                    if (arr.length > 0) return [arr[0]];
+                    return [];
+                } catch (e) {
+                    return categories || [];
+                }
+            };
+
+            $scope.laneContainerStyle = function (lane, laneIndex) {
+                var style = {};
+                try {
+                    if ($scope.config && $scope.config.UI) {
+                        style.width = String($scope.config.UI.laneWidthPx || 320) + 'px';
+                    }
+
+                    var motion = ($scope.config && $scope.config.UI) ? ($scope.config.UI.motion || 'full') : 'full';
+                    if (motion !== 'off') {
+                        var base = (motion === 'subtle') ? 40 : 60;
+                        var idx = laneIndex || 0;
+                        if (idx > 8) idx = 8;
+                        style.animationDelay = String(idx * base) + 'ms';
+                    }
+                } catch (e) {
+                    // ignore
+                }
+                return style;
+            };
+
+            $scope.taskItemStyle = function (laneIndex, taskIndex) {
+                var style = {};
+                try {
+                    var motion = ($scope.config && $scope.config.UI) ? ($scope.config.UI.motion || 'full') : 'full';
+                    if (motion === 'off') return style;
+
+                    var laneBase = (motion === 'subtle') ? 30 : 45;
+                    var taskBase = (motion === 'subtle') ? 10 : 16;
+                    var li = laneIndex || 0;
+                    var ti = taskIndex || 0;
+                    if (li > 8) li = 8;
+                    if (ti > 12) ti = 12;
+                    style.animationDelay = String((li * laneBase) + (ti * taskBase)) + 'ms';
+                } catch (e) {
+                    // ignore
+                }
+                return style;
+            };
+
+            $scope.applyFilters = function () {
+                try {
+                    var search = ($scope.filter.search || '').toLowerCase();
+                    var category = $scope.filter.category || '<All Categories>';
+                    var privacy = $scope.filter.private;
+
+                    $scope.lanes.forEach(function (lane) {
+                        lane.filteredTasks = lane.tasks.filter(function (t) {
+                            // privacy
+                            if (privacy === $scope.privacyFilter.private.value) {
+                                if (t.sensitivity !== 2) return false;
+                            }
+                            if (privacy === $scope.privacyFilter.public.value) {
+                                if (t.sensitivity === 2) return false;
+                            }
+
+                            // search
+                            if (search) {
+                                var hay = ((t.subject || '') + ' ' + (t.notes || '')).toLowerCase();
+                                if (hay.indexOf(search) === -1) return false;
+                            }
+
+                            // category
+                            if (category && category !== '<All Categories>') {
+                                if (category === '<No Category>') {
+                                    if ((t.categoriesCsv || '').trim() !== '') return false;
+                                } else {
+                                    var found = false;
+                                    (t.categories || []).forEach(function (c) {
+                                        if (c.label === category) found = true;
+                                    });
+                                    if (!found) return false;
+                                }
+                            }
+
+                            return true;
+                        });
+                    });
+
+                    // To avoid persisting partial ordering, disable drag/drop while filters are active.
+                    if ($scope.sortableOptions) {
+                        var filtersActive = false;
+                        if (($scope.filter.search || '').trim() !== '') filtersActive = true;
+                        if (($scope.filter.category || '<All Categories>') !== '<All Categories>') filtersActive = true;
+                        if (String($scope.filter.private) !== String($scope.privacyFilter.all.value)) filtersActive = true;
+                        $scope.sortableOptions.disabled = filtersActive;
+                    }
+
+                    saveState();
+                } catch (e) {
+                    writeLog('applyFilters: ' + e);
+                }
+            };
+
+            function doRefreshTasks() {
+                try {
+                    if (!$scope.ui.projectEntryID) {
+                        loadProjects();
+                        ensureSelectedProject();
+                    }
+                    var folder = getSelectedProjectFolder();
+                    if (!folder) {
+                        $scope.lanes = buildLanes([]);
+                        $scope.applyFilters();
+                        return;
+                    }
+                    var tasks = readTasksFromOutlookFolder(folder);
+                    $scope.lanes = buildLanes(tasks);
+                    $scope.applyFilters();
+                } catch (e) {
+                    writeLog('refreshTasks: ' + e);
+                }
+            }
+
+            $scope.refreshTasks = function () {
+                try {
+                    if ($scope.ui.isRefreshing) {
+                        return;
+                    }
+                    $scope.ui.isRefreshing = true;
+                    $timeout(function () {
+                        try {
+                            doRefreshTasks();
+                        } finally {
+                            $scope.ui.isRefreshing = false;
+                        }
+                    }, 0);
+                } catch (e) {
+                    $scope.ui.isRefreshing = false;
+                    writeLog('refreshTasks: ' + e);
+                }
+            };
+
+            $scope.onMailboxChanged = function () {
+                try {
+                    loadAvailableProjectFolders();
+                    loadProjects();
+                    ensureSelectedProject();
+                    saveState();
+                    $scope.refreshTasks();
+                } catch (e) {
+                    writeLog('onMailboxChanged: ' + e);
+                }
+            };
+
+            $scope.onProjectChanged = function () {
+                saveState();
+                $scope.refreshTasks();
+            };
+
+            $scope.switchMode = function (mode) {
+                $scope.ui.mode = mode;
+                if (mode === 'board') {
+                    $scope.applyFilters();
+                }
+            };
+
+            function getLaneById(laneId) {
+                for (var i = 0; i < $scope.lanes.length; i++) {
+                    if ($scope.lanes[i].id === laneId) return $scope.lanes[i];
+                }
+                return null;
+            }
+
+            function getTaskItemSafe(entryID, storeID) {
+                try {
+                    if (typeof getTaskItemFromIDs === 'function') {
+                        return getTaskItemFromIDs(entryID, storeID);
+                    }
+                } catch (e) {
+                    // ignore
+                }
+                return getTaskItem(entryID);
+            }
+
+            function setTaskLane(taskEntryID, storeID, laneId) {
+                var taskitem = getTaskItemSafe(taskEntryID, storeID);
+                setUserProperty(taskitem, PROP_LANE_ID, laneId);
+                taskitem.Save();
+            }
+
+            function maybeSetTaskOutlookStatus(taskEntryID, storeID, statusValue) {
+                try {
+                    if (statusValue === null || statusValue === undefined) return;
+                    var taskitem = getTaskItemSafe(taskEntryID, storeID);
+                    if (taskitem.Status != statusValue) {
+                        taskitem.Status = statusValue;
+                        taskitem.Save();
+                    }
+                } catch (e) {
+                    writeLog('maybeSetTaskOutlookStatus: ' + e);
+                }
+            }
+
+            function fixLaneOrder(lane) {
+                try {
+                    if (!$scope.config.BOARD.saveOrder) return;
+                    for (var i = 0; i < lane.filteredTasks.length; i++) {
+                        var t = lane.filteredTasks[i];
+                        var taskitem = getTaskItemSafe(t.entryID, t.storeID);
+                        setUserProperty(taskitem, PROP_LANE_ORDER, i, OlUserPropertyType.olNumber);
+                        taskitem.Save();
+                    }
+                } catch (e) {
+                    writeLog('fixLaneOrder: ' + e);
+                }
+            }
+
+            // Drag-and-drop support
+            $scope.sortableOptions = {
+                connectWith: '.kfo-tasklist',
+                items: 'li',
+                opacity: 0.6,
+                cursor: 'move',
+                containment: 'document',
+                distance: 6,
+                placeholder: 'kfo-sort-placeholder',
+                forcePlaceholderSize: true,
+                stop: function (e, ui) {
+                    try {
+                        if (!ui.item.sortable || !ui.item.sortable.droptarget) {
+                            return;
+                        }
+                        var fromLaneId = ui.item.sortable.source.attr('data-lane-id');
+                        var toLaneId = ui.item.sortable.droptarget.attr('data-lane-id');
+                        if (!fromLaneId || !toLaneId) {
+                            return;
+                        }
+
+                        var toLane = getLaneById(toLaneId);
+                        if (!toLane) {
+                            return;
+                        }
+
+                        // WIP limit guard
+                        if (toLane.wipLimit && toLane.wipLimit > 0 && toLane.filteredTasks.length > toLane.wipLimit) {
+                            alert('WIP limit reached for this lane.');
+                            ui.item.sortable.cancel();
+                            return;
+                        }
+
+                        var model = ui.item.sortable.model;
+                        if (!model || !model.entryID) {
+                            return;
+                        }
+
+                        // Update lane assignment
+                        if (fromLaneId !== toLaneId) {
+                            setTaskLane(model.entryID, model.storeID, toLaneId);
+                            if ($scope.config && $scope.config.AUTOMATION && $scope.config.AUTOMATION.setOutlookStatusOnLaneMove) {
+                                maybeSetTaskOutlookStatus(model.entryID, model.storeID, toLane.outlookStatus);
+                            }
+                        }
+
+                        // Persist order
+                        fixLaneOrder(toLane);
+                        var fromLane = getLaneById(fromLaneId);
+                        if (fromLane && fromLaneId !== toLaneId) {
+                            fixLaneOrder(fromLane);
+                        }
+
+                        // Resync from Outlook for correctness
+                        $scope.refreshTasks();
+                    } catch (error) {
+                        writeLog('drag/drop: ' + error);
+                    }
+                }
+            };
+
+            $scope.addTask = function (lane) {
+                try {
+                    var folder = getSelectedProjectFolder();
+                    if (!folder) {
+                        alert('Please create/select a project first.');
+                        return;
+                    }
+                    var taskitem = folder.Items.Add();
+
+                    // Default sensitivity based on current filter
+                    if ($scope.filter.private == $scope.privacyFilter.private.value) {
+                        taskitem.Sensitivity = SENSITIVITY.olPrivate;
+                    }
+
+                    if (lane && lane.id) {
+                        setUserProperty(taskitem, PROP_LANE_ID, lane.id, OlUserPropertyType.olText);
+                        setUserProperty(taskitem, PROP_LANE_ORDER, 0, OlUserPropertyType.olNumber);
+                        if ($scope.config && $scope.config.AUTOMATION && $scope.config.AUTOMATION.setOutlookStatusOnLaneMove) {
+                            if (lane.outlookStatus !== null && lane.outlookStatus !== undefined) {
+                                taskitem.Status = lane.outlookStatus;
+                            }
+                        }
+                    }
+                    taskitem.Save();
+                    taskitem.Display();
+
+                    // Refresh after save
+                    try {
+                        eval('function taskitem::Write (bStat) {window.location.reload(); return true;}');
+                    } catch (e) {
+                        // ignore
+                    }
+                } catch (e) {
+                    writeLog('addTask: ' + e);
+                }
+            };
+
+            $scope.editTask = function (task) {
+                try {
+                    var taskitem = getTaskItemSafe(task.entryID, task.storeID);
+                    taskitem.Display();
+                    try {
+                        eval('function taskitem::Write (bStat) {window.location.reload(); return true;}');
+                        eval('function taskitem::BeforeDelete (bStat) {window.location.reload(); return true;}');
+                    } catch (e) {
+                        // ignore
+                    }
+                } catch (e) {
+                    writeLog('editTask: ' + e);
+                }
+            };
+
+            $scope.deleteTask = function (task, askConfirmation) {
+                try {
+                    var ok = true;
+                    if (askConfirmation) {
+                        ok = window.confirm('Delete this task?');
+                    }
+                    if (!ok) return;
+                    var taskitem = getTaskItemSafe(task.entryID, task.storeID);
+                    taskitem.Delete();
+                    $scope.refreshTasks();
+                } catch (e) {
+                    writeLog('deleteTask: ' + e);
+                }
+            };
+
+            $scope.openOneNoteURL = function (url) {
+                try {
+                    window.event.returnValue = false;
+                    if (navigator.msLaunchUri) {
+                        navigator.msLaunchUri(url);
+                    } else {
+                        window.open(url, '_blank').close();
+                    }
+                    return false;
+                } catch (e) {
+                    writeLog('openOneNoteURL: ' + e);
+                }
+            };
+
+            function rebuildLaneOptions() {
+                try {
+                    var opts = [];
+                    ($scope.config.LANES || []).forEach(function (l) {
+                        var id = sanitizeId(l.id);
+                        if (!id) return;
+                        opts.push({ id: id, title: (l.title || id) });
+                    });
+                    if (opts.length === 0) {
+                        opts.push({ id: 'backlog', title: 'Backlog' });
+                    }
+                    $scope.laneOptions = opts;
+                    $scope.migrationLaneOptions = opts;
+                } catch (e) {
+                    $scope.laneOptions = [];
+                    $scope.migrationLaneOptions = [];
+                }
+            }
+
+            // Settings: lanes
+            $scope.addLane = function () {
+                var title = ($scope.ui.newLaneTitle || '').trim();
+                var id = sanitizeId($scope.ui.newLaneId || title);
+                var color = ($scope.ui.newLaneColor || '').trim();
+                if (!title || !id) {
+                    alert('Lane title and id are required.');
+                    return;
+                }
+                if (color && !isValidHexColor(color)) {
+                    alert('Lane color must be in #RRGGBB format.');
+                    return;
+                }
+                for (var i = 0; i < $scope.config.LANES.length; i++) {
+                    if (sanitizeId($scope.config.LANES[i].id) === id) {
+                        alert('Lane id already exists.');
+                        return;
+                    }
+                }
+                $scope.config.LANES.push({ id: id, title: title, color: color || '#94a3b8', wipLimit: 0, enabled: true, outlookStatus: null });
+                $scope.ui.newLaneTitle = '';
+                $scope.ui.newLaneId = '';
+                saveConfig();
+                rebuildLaneOptions();
+                $scope.refreshTasks();
+            };
+
+            $scope.removeLane = function (index) {
+                if (index < 0 || index >= $scope.config.LANES.length) return;
+                if (!window.confirm('Remove this lane from the board? (Tasks will not be deleted.)')) return;
+                $scope.config.LANES.splice(index, 1);
+                saveConfig();
+                rebuildLaneOptions();
+                $scope.refreshTasks();
+            };
+
+            $scope.moveLaneUp = function (index) {
+                if (index <= 0 || index >= $scope.config.LANES.length) return;
+                var tmp = $scope.config.LANES[index - 1];
+                $scope.config.LANES[index - 1] = $scope.config.LANES[index];
+                $scope.config.LANES[index] = tmp;
+                saveConfig();
+                rebuildLaneOptions();
+                $scope.refreshTasks();
+            };
+
+            $scope.moveLaneDown = function (index) {
+                if (index < 0 || index >= $scope.config.LANES.length - 1) return;
+                var tmp = $scope.config.LANES[index + 1];
+                $scope.config.LANES[index + 1] = $scope.config.LANES[index];
+                $scope.config.LANES[index] = tmp;
+                saveConfig();
+                rebuildLaneOptions();
+                $scope.refreshTasks();
+            };
+
+            $scope.applyLaneTemplate = function (templateId) {
+                try {
+                    $scope.config.LANES = laneTemplate(templateId);
+                    saveConfig();
+                    rebuildLaneOptions();
+                } catch (e) {
+                    writeLog('applyLaneTemplate: ' + e);
+                }
+            };
+
+            // Settings: themes
+            $scope.importThemeFromFile = function () {
+                try {
+                    var fileInput = document.getElementById('themeCssFile');
+                    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                        alert('Choose a .css file first.');
+                        return;
+                    }
+                    var name = ($scope.ui.importThemeName || '').trim();
+                    var id = sanitizeId($scope.ui.importThemeId || name);
+                    if (!name || !id) {
+                        alert('Theme name and id are required.');
+                        return;
+                    }
+                    var file = fileInput.files[0];
+                    var reader = new FileReader();
+                    reader.onload = function (evt) {
+                        var cssText = String(evt.target.result || '');
+                        if (!isCssLocalOnly(cssText)) {
+                            alert('Theme import rejected. Themes must be local-only (no http/https/@import), and must not use IE-specific scriptable CSS (expression/behavior).');
+                            return;
+                        }
+                        $scope.$apply(function () {
+                            $scope.config.THEME.customThemes.push({ id: id, name: name, cssText: cssText });
+                            $scope.config.THEME.activeThemeId = id;
+                            saveConfig();
+                            rebuildThemeList();
+                            $scope.applyTheme();
+                            showToast('success', 'Theme imported', name);
+                            $scope.ui.importThemeName = '';
+                            $scope.ui.importThemeId = '';
+                            fileInput.value = '';
+                        });
+                    };
+                    reader.onerror = function () {
+                        alert('Failed to read theme file.');
+                    };
+                    reader.readAsText(file);
+                } catch (e) {
+                    writeLog('importThemeFromFile: ' + e);
+                }
+            };
+
+            $scope.addFolderTheme = function () {
+                var name = ($scope.ui.folderThemeName || '').trim();
+                var id = sanitizeId($scope.ui.folderThemeId || name);
+                var href = ($scope.ui.folderThemeHref || '').trim();
+                if (!name || !id || !href) {
+                    alert('Theme name, id and CSS path are required.');
+                    return;
+                }
+                if (!isSafeLocalCssPath(href)) {
+                    alert('Folder theme path must be a relative local path (for example: themes/my-theme/theme.css).');
+                    return;
+                }
+                $scope.config.THEME.folderThemes.push({ id: id, name: name, cssHref: href });
+                $scope.config.THEME.activeThemeId = id;
+                saveConfig();
+                rebuildThemeList();
+                $scope.applyTheme();
+                showToast('success', 'Theme added', name);
+                $scope.ui.folderThemeName = '';
+                $scope.ui.folderThemeId = '';
+                $scope.ui.folderThemeHref = '';
+            };
+
+            // Projects
+            $scope.openCreateProject = function () {
+                $scope.ui.createProjectMode = 'create';
+                $scope.ui.linkProjectEntryID = '';
+                $scope.ui.newProjectName = '';
+                $scope.ui.showCreateProject = true;
+            };
+
+            $scope.openLinkProject = function () {
+                $scope.ui.createProjectMode = 'link';
+                $scope.ui.linkProjectEntryID = '';
+                $scope.ui.newProjectName = '';
+                $scope.ui.showCreateProject = true;
+            };
+
+            function getProjectAll(entryID) {
+                for (var i = 0; i < $scope.projectsAll.length; i++) {
+                    if ($scope.projectsAll[i].entryID === entryID) {
+                        return $scope.projectsAll[i];
+                    }
+                }
+                return null;
+            }
+
+            function isProjectHidden(entryID) {
+                return ($scope.config.PROJECTS.hiddenProjectEntryIDs || []).indexOf(entryID) !== -1;
+            }
+
+            function setProjectHidden(entryID, hidden) {
+                if (!$scope.config.PROJECTS.hiddenProjectEntryIDs) {
+                    $scope.config.PROJECTS.hiddenProjectEntryIDs = [];
+                }
+                var arr = $scope.config.PROJECTS.hiddenProjectEntryIDs;
+                var idx = arr.indexOf(entryID);
+                if (hidden) {
+                    if (idx === -1) arr.push(entryID);
+                } else {
+                    if (idx !== -1) arr.splice(idx, 1);
+                }
+            }
+
+            $scope.selectProject = function (entryID) {
+                try {
+                    if (!entryID) return;
+                    // Selecting a hidden project makes it visible.
+                    if (isProjectHidden(entryID)) {
+                        setProjectHidden(entryID, false);
+                        saveConfig();
+                    }
+                    loadProjects();
+                    $scope.ui.projectEntryID = entryID;
+                    ensureSelectedProject();
+                    saveState();
+                    $scope.refreshTasks();
+                } catch (e) {
+                    writeLog('selectProject: ' + e);
+                }
+            };
+
+            $scope.toggleProjectHidden = function (p) {
+                try {
+                    if (!p || !p.entryID) return;
+                    var hiding = !p.isHidden;
+
+                    // Prevent hiding the last visible project
+                    if (hiding && $scope.projects.length <= 1) {
+                        alert('At least one project must remain visible.');
+                        return;
+                    }
+
+                    setProjectHidden(p.entryID, hiding);
+
+                    // If the default project is hidden, pick a new default
+                    if (hiding && $scope.config.PROJECTS.defaultProjectEntryID === p.entryID) {
+                        // choose first visible after reload
+                        saveConfig();
+                        loadProjects();
+                        if ($scope.projects.length > 0) {
+                            $scope.config.PROJECTS.defaultProjectEntryID = $scope.projects[0].entryID;
+                        }
+                    }
+
+                    saveConfig();
+                    loadProjects();
+                    ensureSelectedProject();
+                    saveState();
+                    showToast('info', hiding ? 'Project hidden' : 'Project shown', p.name);
+                    $scope.refreshTasks();
+                } catch (e) {
+                    writeLog('toggleProjectHidden: ' + e);
+                }
+            };
+
+            $scope.unlinkProject = function (entryID) {
+                try {
+                    if (!entryID) return;
+                    var p = getProjectAll(entryID);
+                    if (!p || !p.isLinked) {
+                        return;
+                    }
+                    if (!window.confirm('Unlink this project from the board? (The Outlook folder will not be deleted.)')) {
+                        return;
+                    }
+
+                    var next = [];
+                    ($scope.config.PROJECTS.linkedProjects || []).forEach(function (lp) {
+                        if (lp && lp.entryID && lp.entryID !== entryID) {
+                            next.push(lp);
+                        }
+                    });
+                    $scope.config.PROJECTS.linkedProjects = next;
+
+                    // Also unhide (so it does not stay hidden if re-linked later)
+                    setProjectHidden(entryID, false);
+
+                    saveConfig();
+                    loadProjects();
+
+                    if ($scope.config.PROJECTS.defaultProjectEntryID === entryID) {
+                        if ($scope.projects.length > 0) {
+                            $scope.config.PROJECTS.defaultProjectEntryID = $scope.projects[0].entryID;
+                            saveConfig();
+                        }
+                    }
+                    ensureSelectedProject();
+                    saveState();
+                    showToast('info', 'Project unlinked', p.name);
+                    $scope.refreshTasks();
+                } catch (e) {
+                    writeLog('unlinkProject: ' + e);
+                }
+            };
+
+            $scope.openRenameProject = function (p) {
+                if (!p || !p.entryID) return;
+                if (p.isDefaultTasks) {
+                    alert('The default Tasks folder cannot be renamed from here.');
+                    return;
+                }
+                $scope.ui.renameProjectEntryID = p.entryID;
+                $scope.ui.renameProjectStoreID = p.storeID;
+                $scope.ui.renameProjectName = p.name;
+                $scope.ui.showRenameProject = true;
+            };
+
+            $scope.submitRenameProject = function () {
+                try {
+                    var entryID = $scope.ui.renameProjectEntryID;
+                    var storeID = $scope.ui.renameProjectStoreID;
+                    var newName = String($scope.ui.renameProjectName || '').trim();
+                    if (!entryID) return;
+                    if (!newName) {
+                        alert('Project name is required.');
+                        return;
+                    }
+
+                    var folder = getFolderFromIDs(entryID, storeID);
+                    if (!folder) {
+                        alert('Could not locate the project folder in Outlook.');
+                        return;
+                    }
+                    folder.Name = newName;
+
+                    // Update linked project display name (best-effort)
+                    ($scope.config.PROJECTS.linkedProjects || []).forEach(function (lp) {
+                        if (lp && lp.entryID === entryID) {
+                            lp.name = newName;
+                        }
+                    });
+                    saveConfig();
+                    loadProjects();
+                    $scope.ui.showRenameProject = false;
+                    showToast('success', 'Project renamed', newName);
+                } catch (e) {
+                    writeLog('submitRenameProject: ' + e);
+                    alert('Rename failed: ' + e);
+                }
+            };
+
+            function linkExistingProject(entryID) {
+                var id = String(entryID || '').trim();
+                if (!id) {
+                    alert('Please select a folder.');
+                    return null;
+                }
+                var folder = null;
+                for (var i = 0; i < $scope.availableProjectFolders.length; i++) {
+                    if ($scope.availableProjectFolders[i].entryID === id) {
+                        folder = $scope.availableProjectFolders[i];
+                        break;
+                    }
+                }
+                if (!folder) {
+                    alert('Selected folder is not available.');
+                    return null;
+                }
+                if (!$scope.config.PROJECTS.linkedProjects) {
+                    $scope.config.PROJECTS.linkedProjects = [];
+                }
+                var exists = false;
+                $scope.config.PROJECTS.linkedProjects.forEach(function (p) {
+                    if (p && p.entryID === folder.entryID) exists = true;
+                });
+                if (!exists) {
+                    $scope.config.PROJECTS.linkedProjects.push({
+                        name: folder.name,
+                        entryID: folder.entryID,
+                        storeID: folder.storeID
+                    });
+                }
+                saveConfig();
+                loadProjects();
+                return folder;
+            }
+
+            $scope.submitCreateProject = function () {
+                if ($scope.ui.createProjectMode === 'link') {
+                    var f = linkExistingProject($scope.ui.linkProjectEntryID);
+                    if (!f) return;
+                    $scope.ui.projectEntryID = f.entryID;
+                    if (!$scope.config.PROJECTS.defaultProjectEntryID) {
+                        $scope.config.PROJECTS.defaultProjectEntryID = f.entryID;
+                        saveConfig();
+                    }
+                    saveState();
+                    $scope.ui.showCreateProject = false;
+                    showToast('success', 'Project linked', f.name || 'Project');
+                    $scope.refreshTasks();
+                    return;
+                }
+                $scope.createProject($scope.ui.newProjectName);
+            };
+
+            $scope.createProject = function (name) {
+                try {
+                    var projectName = String(name || '').trim();
+                    if (!projectName) {
+                        alert('Project name is required.');
+                        return;
+                    }
+
+                    // Create (or reuse) root folder
+                    var root = getTaskFolder($scope.filter.mailbox, $scope.config.PROJECTS.rootFolderName);
+                    // Create project folder under root
+                    var pf = getOrCreateFolder($scope.filter.mailbox, projectName, root.Folders, OlDefaultFolders.olFolderTasks);
+
+                    // Refresh projects and select
+                    loadProjects();
+                    $scope.ui.projectEntryID = pf.EntryID;
+                    if (!$scope.config.PROJECTS.defaultProjectEntryID) {
+                        $scope.config.PROJECTS.defaultProjectEntryID = pf.EntryID;
+                    }
+                    saveConfig();
+                    saveState();
+
+                    $scope.ui.showCreateProject = false;
+                    $scope.ui.newProjectName = '';
+                    showToast('success', 'Project created', projectName);
+                    $scope.refreshTasks();
+                } catch (e) {
+                    writeLog('createProject: ' + e);
+                    alert('Failed to create project: ' + e);
+                }
+            };
+
+            // Tools: Move tasks between projects
+            $scope.openMoveTasks = function () {
+                try {
+                    rebuildLaneOptions();
+                    $scope.ui.move.fromProjectEntryID = $scope.ui.projectEntryID;
+                    $scope.ui.move.toProjectEntryID = '';
+                    $scope.ui.move.mode = 'all';
+                    $scope.ui.move.laneId = ($scope.laneOptions.length > 0) ? $scope.laneOptions[0].id : '';
+                    $scope.ui.move.running = false;
+                    $scope.ui.move.progress = { total: 0, done: 0, percent: 0 };
+
+                    // Pick a default destination if possible
+                    for (var i = 0; i < $scope.projectsAll.length; i++) {
+                        if ($scope.projectsAll[i].entryID && $scope.projectsAll[i].entryID !== $scope.ui.move.fromProjectEntryID) {
+                            $scope.ui.move.toProjectEntryID = $scope.projectsAll[i].entryID;
+                            break;
+                        }
+                    }
+
+                    $scope.ui.showMoveTasks = true;
+                } catch (e) {
+                    writeLog('openMoveTasks: ' + e);
+                }
+            };
+
+            $scope.closeMoveTasks = function () {
+                if ($scope.ui.move && $scope.ui.move.running) {
+                    alert('Move is in progress.');
+                    return;
+                }
+                $scope.ui.showMoveTasks = false;
+            };
+
+            function getProjectFolderByEntryID(entryID) {
+                var p = getProjectAll(entryID);
+                if (!p) return null;
+                return getFolderFromIDs(p.entryID, p.storeID);
+            }
+
+            $scope.runMoveTasks = function () {
+                try {
+                    if ($scope.ui.move.running) return;
+
+                    var fromId = $scope.ui.move.fromProjectEntryID;
+                    var toId = $scope.ui.move.toProjectEntryID;
+                    if (!fromId || !toId) {
+                        alert('Please select both source and destination projects.');
+                        return;
+                    }
+                    if (fromId === toId) {
+                        alert('Source and destination must be different.');
+                        return;
+                    }
+
+                    var fromFolder = getProjectFolderByEntryID(fromId);
+                    var toFolder = getProjectFolderByEntryID(toId);
+                    if (!fromFolder || !toFolder) {
+                        alert('Could not locate one of the project folders in Outlook.');
+                        return;
+                    }
+
+                    var fromStoreID = '';
+                    try { fromStoreID = fromFolder.StoreID; } catch (e0) { fromStoreID = ''; }
+
+                    var mode = $scope.ui.move.mode;
+                    var laneFilter = sanitizeId($scope.ui.move.laneId);
+                    if (mode === 'lane' && !laneFilter) {
+                        alert('Please select a lane.');
+                        return;
+                    }
+
+                    // Scan source folder
+                    var moveList = [];
+                    var items = fromFolder.Items;
+                    var count = items.Count;
+                    for (var i = 1; i <= count; i++) {
+                        try {
+                            var it = items(i);
+                            var currentLane = '';
+                            try { currentLane = sanitizeId(getUserProperty(it, PROP_LANE_ID)); } catch (e1) { currentLane = ''; }
+
+                            var laneOrder = null;
+                            try {
+                                var laneOrderRaw = getUserProperty(it, PROP_LANE_ORDER);
+                                if (laneOrderRaw !== '' && laneOrderRaw !== null && laneOrderRaw !== undefined) {
+                                    var n = parseInt(laneOrderRaw, 10);
+                                    if (!isNaN(n)) laneOrder = n;
+                                }
+                            } catch (e1b) {
+                                laneOrder = null;
+                            }
+
+                            var match = false;
+                            if (mode === 'all') {
+                                match = true;
+                            } else if (mode === 'unassigned') {
+                                match = (currentLane === '');
+                            } else if (mode === 'lane') {
+                                match = (currentLane === laneFilter);
+                            }
+
+                            if (match) {
+                                moveList.push({ entryID: it.EntryID, laneId: currentLane, laneOrder: laneOrder });
+                            }
+                        } catch (e2) {
+                            // ignore
+                        }
+                    }
+
+                    if (moveList.length === 0) {
+                        alert('No tasks matched your selection.');
+                        return;
+                    }
+
+                    var fromName = (function () { var p = getProjectAll(fromId); return p ? p.name : 'source'; })();
+                    var toName = (function () { var p = getProjectAll(toId); return p ? p.name : 'destination'; })();
+                    if (!window.confirm('Move ' + moveList.length + ' tasks from "' + fromName + '" to "' + toName + '"?')) {
+                        return;
+                    }
+
+                    $scope.ui.move.running = true;
+                    $scope.ui.move.progress.total = moveList.length;
+                    $scope.ui.move.progress.done = 0;
+                    $scope.ui.move.progress.percent = 0;
+
+                    var idx = 0;
+                    var batchSize = 10;
+
+                    function step() {
+                        var end = Math.min(idx + batchSize, moveList.length);
+                        for (; idx < end; idx++) {
+                            try {
+                                var w = moveList[idx];
+                                var taskitem = getTaskItemFromIDs(w.entryID, fromStoreID);
+                                var moved = taskitem.Move(toFolder);
+                                // Ensure lane metadata remains on the moved task
+                                try {
+                                    if (moved) {
+                                        if (w.laneId) {
+                                            setUserProperty(moved, PROP_LANE_ID, w.laneId, OlUserPropertyType.olText);
+                                        }
+                                        if (w.laneOrder !== null && w.laneOrder !== undefined) {
+                                            setUserProperty(moved, PROP_LANE_ORDER, w.laneOrder, OlUserPropertyType.olNumber);
+                                        }
+                                        moved.Save();
+                                    }
+                                } catch (e3b) {
+                                    // ignore
+                                }
+                            } catch (e3) {
+                                writeLog('move task: ' + e3);
+                            }
+                            $scope.ui.move.progress.done = idx + 1;
+                        }
+                        $scope.ui.move.progress.percent = Math.round(($scope.ui.move.progress.done * 100) / $scope.ui.move.progress.total);
+
+                        if (idx < moveList.length) {
+                            $timeout(step, 0);
+                        } else {
+                            $scope.ui.move.running = false;
+                            $scope.ui.showMoveTasks = false;
+                            showToast('success', 'Move completed', String(moveList.length) + ' tasks moved');
+                            $scope.refreshTasks();
+                        }
+                    }
+
+                    $timeout(step, 0);
+                } catch (e) {
+                    writeLog('runMoveTasks: ' + e);
+                    alert('Move failed: ' + e);
+                    $scope.ui.move.running = false;
+                }
+            };
+
+            // Tools: Migration (assign lane ids based on Outlook Task Status)
+            function outlookStatusLabel(value) {
+                return taskStatusText(value) || ('Status ' + value);
+            }
+
+            function buildKnownLaneSet() {
+                var known = {};
+                ($scope.config.LANES || []).forEach(function (l) {
+                    var id = sanitizeId(l.id);
+                    if (id) known[id] = true;
+                });
+                return known;
+            }
+
+            function defaultLaneForStatus(statusValue) {
+                var lanes = ($scope.config.LANES || []);
+                for (var i = 0; i < lanes.length; i++) {
+                    if (lanes[i].outlookStatus === statusValue) {
+                        var id = sanitizeId(lanes[i].id);
+                        if (id) return id;
+                    }
+                }
+                return '';
+            }
+
+            function updateMigrationCounts() {
+                try {
+                    if (!$scope.ui.migration || !$scope.ui.migration.scanTasks) return;
+                    var known = buildKnownLaneSet();
+                    var onlyUnassigned = !!$scope.ui.migration.onlyUnassigned;
+                    var treatUnknown = !!$scope.ui.migration.treatUnknownAsUnassigned;
+
+                    var rows = $scope.ui.migration.mappingRows || [];
+                    var byStatus = {};
+                    rows.forEach(function (r) { byStatus[r.statusValue] = r; r.count = 0; });
+
+                    $scope.ui.migration.scanTasks.forEach(function (t) {
+                        var lane = sanitizeId(t.laneId);
+                        var assigned = lane && known[lane];
+                        if (lane && !known[lane] && treatUnknown) {
+                            assigned = false;
+                            lane = '';
+                        }
+                        if (onlyUnassigned && assigned) {
+                            return;
+                        }
+                        var r = byStatus[t.statusValue];
+                        if (r) {
+                            r.count++;
+                        }
+                    });
+                } catch (e) {
+                    writeLog('updateMigrationCounts: ' + e);
+                }
+            }
+
+            $scope.$watch('ui.migration.onlyUnassigned', function () {
+                if ($scope.ui.showMigration) {
+                    updateMigrationCounts();
+                }
+            });
+
+            $scope.$watch('ui.migration.treatUnknownAsUnassigned', function () {
+                if ($scope.ui.showMigration) {
+                    updateMigrationCounts();
+                }
+            });
+
+            $scope.openMigration = function () {
+                try {
+                    rebuildLaneOptions();
+                    $scope.ui.migration.running = false;
+                    $scope.ui.migration.progress = { total: 0, done: 0, percent: 0, updated: 0, skipped: 0, errors: 0 };
+
+                    var statusValues = [0, 1, 3, 2, 4];
+                    var rows = [];
+                    for (var i = 0; i < statusValues.length; i++) {
+                        var sv = statusValues[i];
+                        rows.push({
+                            statusValue: sv,
+                            statusText: outlookStatusLabel(sv),
+                            laneId: defaultLaneForStatus(sv),
+                            count: 0
+                        });
+                    }
+                    $scope.ui.migration.mappingRows = rows;
+
+                    // Scan tasks in the current project
+                    var folder = getSelectedProjectFolder();
+                    if (!folder) {
+                        $scope.ui.migration.scanTasks = [];
+                        updateMigrationCounts();
+                        $scope.ui.showMigration = true;
+                        return;
+                    }
+
+                    var folderStoreID = '';
+                    try { folderStoreID = folder.StoreID; } catch (e0) { folderStoreID = ''; }
+
+                    var scan = [];
+                    var items = folder.Items;
+                    var count = items.Count;
+                    for (var j = 1; j <= count; j++) {
+                        try {
+                            var it = items(j);
+                            var laneId = '';
+                            try { laneId = getUserProperty(it, PROP_LANE_ID); } catch (e1) { laneId = ''; }
+                            scan.push({
+                                entryID: it.EntryID,
+                                storeID: folderStoreID,
+                                statusValue: it.Status,
+                                laneId: laneId
+                            });
+                        } catch (e2) {
+                            // ignore
+                        }
+                    }
+                    $scope.ui.migration.scanTasks = scan;
+                    updateMigrationCounts();
+                    $scope.ui.showMigration = true;
+                } catch (e) {
+                    writeLog('openMigration: ' + e);
+                }
+            };
+
+            $scope.closeMigration = function () {
+                if ($scope.ui.migration && $scope.ui.migration.running) {
+                    alert('Migration is in progress.');
+                    return;
+                }
+                $scope.ui.showMigration = false;
+            };
+
+            $scope.runMigration = function () {
+                try {
+                    if ($scope.ui.migration.running) return;
+                    var scan = $scope.ui.migration.scanTasks || [];
+                    if (scan.length === 0) {
+                        alert('No tasks found in the current project.');
+                        return;
+                    }
+
+                    var known = buildKnownLaneSet();
+                    var onlyUnassigned = !!$scope.ui.migration.onlyUnassigned;
+                    var treatUnknown = !!$scope.ui.migration.treatUnknownAsUnassigned;
+
+                    var mapping = {};
+                    ($scope.ui.migration.mappingRows || []).forEach(function (r) {
+                        mapping[r.statusValue] = sanitizeId(r.laneId);
+                    });
+
+                    var work = [];
+                    scan.forEach(function (t) {
+                        var current = sanitizeId(t.laneId);
+                        var assigned = current && known[current];
+                        if (current && !known[current] && treatUnknown) {
+                            assigned = false;
+                            current = '';
+                        }
+                        if (onlyUnassigned && assigned) {
+                            return;
+                        }
+                        var target = mapping[t.statusValue] || '';
+                        if (!target) {
+                            return;
+                        }
+                        if (target === current) {
+                            return;
+                        }
+                        work.push({ entryID: t.entryID, storeID: t.storeID, laneId: target });
+                    });
+
+                    if (work.length === 0) {
+                        alert('No tasks matched your migration scope.');
+                        return;
+                    }
+
+                    if (!window.confirm('Assign lanes for ' + work.length + ' tasks in this project?')) {
+                        return;
+                    }
+
+                    $scope.ui.migration.running = true;
+                    $scope.ui.migration.progress.total = work.length;
+                    $scope.ui.migration.progress.done = 0;
+                    $scope.ui.migration.progress.updated = 0;
+                    $scope.ui.migration.progress.skipped = scan.length - work.length;
+                    $scope.ui.migration.progress.errors = 0;
+                    $scope.ui.migration.progress.percent = 0;
+
+                    var idx = 0;
+                    var batchSize = 12;
+                    function step() {
+                        var end = Math.min(idx + batchSize, work.length);
+                        for (; idx < end; idx++) {
+                            try {
+                                var w = work[idx];
+                                var taskitem = getTaskItemFromIDs(w.entryID, w.storeID);
+                                setUserProperty(taskitem, PROP_LANE_ID, w.laneId, OlUserPropertyType.olText);
+                                taskitem.Save();
+                                $scope.ui.migration.progress.updated++;
+                            } catch (e1) {
+                                $scope.ui.migration.progress.errors++;
+                                writeLog('migrate task: ' + e1);
+                            }
+                            $scope.ui.migration.progress.done = idx + 1;
+                        }
+                        $scope.ui.migration.progress.percent = Math.round(($scope.ui.migration.progress.done * 100) / $scope.ui.migration.progress.total);
+                        if (idx < work.length) {
+                            $timeout(step, 0);
+                        } else {
+                            $scope.ui.migration.running = false;
+                            $scope.ui.showMigration = false;
+                            showToast('success', 'Migration completed', String($scope.ui.migration.progress.updated) + ' tasks updated');
+                            $scope.refreshTasks();
+                        }
+                    }
+                    $timeout(step, 0);
+                } catch (e) {
+                    writeLog('runMigration: ' + e);
+                    alert('Migration failed: ' + e);
+                    $scope.ui.migration.running = false;
+                }
+            };
+
+            // Setup wizard
+            $scope.closeSetupWizard = function () {
+                $scope.ui.showSetupWizard = false;
+            };
+
+            $scope.prevSetupStep = function () {
+                if ($scope.ui.setupStep > 1) {
+                    $scope.ui.setupStep--;
+                }
+            };
+
+            $scope.nextSetupStep = function () {
+                try {
+                    if ($scope.ui.setupStep === 2) {
+                        // Ensure root + default project exist
+                        var rootName = String($scope.config.PROJECTS.rootFolderName || DEFAULT_ROOT_FOLDER_NAME).trim();
+                        if (!rootName) rootName = DEFAULT_ROOT_FOLDER_NAME;
+                        $scope.config.PROJECTS.rootFolderName = rootName;
+
+                        // Always create root (recommended; used for new projects)
+                        var root = getTaskFolder($scope.filter.mailbox, rootName);
+
+                        if ($scope.ui.setupProjectMode === 'link') {
+                            var lf = linkExistingProject($scope.ui.setupExistingProjectEntryID);
+                            if (!lf) {
+                                alert('Please select an existing folder to link.');
+                                return;
+                            }
+                            $scope.config.PROJECTS.defaultProjectEntryID = lf.entryID;
+                            $scope.ui.projectEntryID = lf.entryID;
+                            saveConfig();
+                        } else {
+                            var projName = String($scope.ui.setupDefaultProjectName || 'General').trim();
+                            if (!projName) projName = 'General';
+                            var pf = getOrCreateFolder($scope.filter.mailbox, projName, root.Folders, OlDefaultFolders.olFolderTasks);
+                            loadProjects();
+                            $scope.config.PROJECTS.defaultProjectEntryID = pf.EntryID;
+                            $scope.ui.projectEntryID = pf.EntryID;
+                            saveConfig();
+                        }
+                    }
+                    if ($scope.ui.setupStep < 4) {
+                        $scope.ui.setupStep++;
+                    }
+                } catch (e) {
+                    writeLog('nextSetupStep: ' + e);
+                    alert('Setup failed: ' + e);
+                }
+            };
+
+            $scope.finishSetup = function () {
+                try {
+                    $scope.config.SETUP.completed = true;
+                    saveConfig();
+                    $scope.ui.showSetupWizard = false;
+                    $scope.ui.mode = 'board';
+                    loadProjects();
+                    ensureSelectedProject();
+                    $scope.applyTheme();
+                    showToast('success', 'Setup complete', '');
+                    $scope.refreshTasks();
+                } catch (e) {
+                    writeLog('finishSetup: ' + e);
+                }
+            };
+
+            $scope.saveAndReturn = function () {
+                saveConfig();
+                $scope.applyTheme();
+                loadProjects();
+                ensureSelectedProject();
+                $scope.switchMode('board');
+                showToast('success', 'Settings saved', '');
+                $scope.refreshTasks();
+            };
+
+            // Diagnostics
+            $scope.openDiagnostics = function () {
+                try {
+                    var logRaw = getJournalItem(LOG_ID);
+                    var log = [];
+                    if (logRaw !== null) {
+                        try { log = JSON.parse(logRaw); } catch (e) { log = []; }
+                    }
+                    var payload = {
+                        app: 'Kanban for Outlook',
+                        version: $scope.version,
+                        outlookVersion: (function () { try { return getOutlookVersion(); } catch (e) { return 'unknown'; } })(),
+                        mailbox: $scope.filter.mailbox,
+                        projectEntryID: $scope.ui.projectEntryID,
+                        filter: $scope.filter,
+                        config: $scope.config,
+                        recentLog: log.slice(0, 50)
+                    };
+                    $scope.diagnosticsText = JSON.stringify(payload, null, 2);
+                    $scope.ui.showDiagnostics = true;
+                } catch (e) {
+                    writeLog('openDiagnostics: ' + e);
+                }
+            };
+
+            $scope.copyDiagnostics = function () {
+                try {
+                    var text = $scope.diagnosticsText || '';
+                    if (window.clipboardData && window.clipboardData.setData) {
+                        window.clipboardData.setData('Text', text);
+                        return;
+                    }
+                    // best-effort fallback
+                    var ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                } catch (e) {
+                    alert('Copy failed. You can still select and copy from the text box.');
+                }
+            };
+
+            $scope.dismissToast = function () {
+                try {
+                    if ($scope.ui && $scope.ui.toast) {
+                        $scope.ui.toast.show = false;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            // Init
+            $scope.init = function () {
+                $scope.isBrowserSupported = checkBrowser();
+                if (!$scope.isBrowserSupported) {
+                    return;
+                }
+
+                readConfig();
+                rebuildLaneOptions();
+                rebuildThemeList();
+                $scope.applyTheme();
+
+                initCategories();
+                initMailboxes();
+                loadAvailableProjectFolders();
+
+                readState();
+
+                // If mailbox was not restored, use default
+                if (!$scope.filter.mailbox) {
+                    $scope.filter.mailbox = $scope.mailboxes[0];
+                }
+
+                loadProjects();
+                ensureSelectedProject();
+
+                // First run: if not set up or no projects exist
+                if (!$scope.config.SETUP.completed || $scope.projects.length === 0) {
+                    $scope.ui.showSetupWizard = true;
+                    $scope.ui.setupStep = 1;
+                    $scope.ui.setupProjectMode = 'create';
+                    $scope.applyLaneTemplate($scope.ui.setupLaneTemplate);
+                    saveConfig();
+                }
+
+                // Auto refresh guard (lightweight)
+                if (refreshTimer) {
+                    $interval.cancel(refreshTimer);
+                    refreshTimer = undefined;
+                }
+                refreshTimer = $interval(function () {
+                    if ($scope.ui.mode === 'board' && !$scope.ui.showSetupWizard) {
+                        // Do not auto-refresh too aggressively; Outlook can be slow.
+                    }
+                }, 60000);
+
+                $scope.refreshTasks();
+            };
+        }]);
+})();

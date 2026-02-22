@@ -1,0 +1,205 @@
+/*
+  Kanban for Outlook (KFO) - Skeleton Theme
+
+  This is a starter theme intended to be copied and edited.
+
+  How to use (recommended: folder theme)
+  1) Copy this folder to: themes/<your-id>/
+  2) Update the selectors in this file from:
+       .kfo.theme-my-theme
+     to:
+       .kfo.theme-<your-id>
+  3) In the app: Settings -> Appearance -> Folder theme
+       - Name: Your theme name
+       - Id:   <your-id>
+       - CSS:  themes/<your-id>/theme.css
+
+  Optional (theme authoring helpers)
+  - Open themes/<your-id>/preview.html to preview your CSS without Outlook.
+
+  Local-only expectations
+  - Do not reference remote resources (no http/https URLs, no @import).
+  - Imported themes are rejected by the app if they contain http/https/@import,
+    or IE scriptable CSS (expression/behavior). Treat folder themes the same.
+
+  IE11 / Outlook notes
+  - Keep it simple. Prefer solid colors, borders, and modest shadows.
+  - Avoid relying on CSS variables (custom properties): IE11 does not support them.
+  - Newer CSS properties are fine if they fail gracefully (they will be ignored).
+
+  Theme contract (stable class names)
+  - The app adds a class to <body>: theme-<id>
+  - Your theme should scope all rules under: .kfo.theme-<id>
+*/
+
+/* -------------------------------------------------------------------------- */
+/* Palette (edit these values and apply throughout)                            */
+/* -------------------------------------------------------------------------- */
+/*
+  Text
+  - Primary:   #0f172a
+  - Muted:     rgba(15,23,42,0.75)
+
+  Surfaces
+  - App bg:    #eef2f7
+  - Surface:   rgba(255,255,255,0.82)
+  - Surface 2: rgba(255,255,255,0.92)
+
+  Borders
+  - Subtle:    rgba(15,23,42,0.10)
+
+  Accent
+  - Brand:     #60a5fa
+*/
+
+/* -------------------------------------------------------------------------- */
+/* Root surface + typography                                                   */
+/* -------------------------------------------------------------------------- */
+.kfo.theme-my-theme {
+  color: #0f172a;
+  background-color: #eef2f7;
+  background: linear-gradient(180deg, #f7f8fb 0%, #eef2f7 55%, #edf1f6 100%);
+}
+
+/* Links should typically inherit so the UI feels native */
+.kfo.theme-my-theme a {
+  color: inherit;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Top bar                                                                     */
+/* -------------------------------------------------------------------------- */
+.kfo.theme-my-theme .kfo-topbar {
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.kfo.theme-my-theme .kfo-brandTitle {
+  color: inherit;
+}
+
+.kfo.theme-my-theme .kfo-brandMeta {
+  opacity: 0.78;
+}
+
+.kfo.theme-my-theme .kfo-input,
+.kfo.theme-my-theme .kfo-select {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.10);
+  color: inherit;
+}
+
+.kfo.theme-my-theme .kfo-input:focus,
+.kfo.theme-my-theme .kfo-select:focus {
+  border-color: rgba(96, 165, 250, 0.55);
+}
+
+.kfo.theme-my-theme .kfo-btn,
+.kfo.theme-my-theme .kfo-iconBtn {
+  border-color: rgba(15, 23, 42, 0.10);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.kfo.theme-my-theme .kfo-btn:hover,
+.kfo.theme-my-theme .kfo-iconBtn:hover {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.kfo.theme-my-theme .kfo-pill,
+.kfo.theme-my-theme .kfo-step {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Board + lanes                                                                */
+/* -------------------------------------------------------------------------- */
+.kfo.theme-my-theme .kfo-board {
+  background: transparent;
+}
+
+.kfo.theme-my-theme .kfo-lane {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.08);
+}
+
+.kfo.theme-my-theme .kfo-laneHeader {
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Task cards                                                                    */
+/* -------------------------------------------------------------------------- */
+.kfo.theme-my-theme .kfo-task {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08);
+}
+
+.kfo.theme-my-theme .kfo-taskHeader {
+  background: linear-gradient(180deg, rgba(248, 250, 252, 1) 0%, rgba(255, 255, 255, 1) 100%);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+/* Optional emphasis rules used by the app */
+.kfo.theme-my-theme .kfo-task--high {
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.kfo.theme-my-theme .kfo-task--private {
+  border-color: rgba(234, 179, 8, 0.45);
+  background: linear-gradient(180deg, rgba(255, 251, 235, 1) 0%, rgba(255, 255, 255, 1) 55%);
+}
+
+/* Due-state text color (base colors are defined in css/kfo.css) */
+.kfo.theme-my-theme .kfo-due {
+  color: inherit;
+}
+
+.kfo.theme-my-theme .kfo-tag {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Settings cards / lists                                                       */
+/* -------------------------------------------------------------------------- */
+.kfo.theme-my-theme .kfo-card,
+.kfo.theme-my-theme .kfo-modal {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  box-shadow: 0 14px 40px rgba(2, 6, 23, 0.14);
+}
+
+.kfo.theme-my-theme .kfo-listItem {
+  background: rgba(255, 255, 255, 0.70);
+  border-color: rgba(15, 23, 42, 0.10);
+}
+
+.kfo.theme-my-theme .kfo-divider {
+  background: rgba(15, 23, 42, 0.2);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Modals + toast                                                               */
+/* -------------------------------------------------------------------------- */
+.kfo.theme-my-theme .kfo-modalBackdrop {
+  background: rgba(2, 6, 23, 0.35);
+}
+
+.kfo.theme-my-theme .kfo-toast {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(15, 23, 42, 0.12);
+  box-shadow: 0 14px 40px rgba(2, 6, 23, 0.16);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Progress                                                                      */
+/* -------------------------------------------------------------------------- */
+.kfo.theme-my-theme .kfo-progress {
+  border-color: rgba(127, 127, 127, 0.20);
+}
+
+.kfo.theme-my-theme .kfo-progressBar {
+  background: rgba(96, 165, 250, 0.90);
+}
