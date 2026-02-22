@@ -1,1 +1,1 @@
-var VERSION = "3.5.2";
+var VERSION = "3.5.3";

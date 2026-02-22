@@ -4,6 +4,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 3.5.3
+
+- Add a prominent "New task" quick-add entrypoint and clearer empty states
+- Improve filter UX (clear indicator + safer drag/drop while filtered)
+- Redesign the lane editor for readability and safety (cannot disable/remove the last lane)
+- Improve classic Outlook/IE11 behaviour (modal scrolling, focus rings, state write debouncing)
+- Dark mode polish for inputs and dropdown lists
+
 ## 3.5.2
 
 - Make projects optional by always including the default Outlook Tasks folder
