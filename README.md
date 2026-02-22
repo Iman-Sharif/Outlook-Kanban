@@ -4,31 +4,11 @@
 
 A local-only Kanban board that turns classic Microsoft Outlook Tasks into a drag-and-drop workflow (Windows desktop).
 
-## Download (recommended)
-
-- Download: [`kanban-for-outlook.zip`](https://github.com/Iman-Sharif/Kanban-for-Outlook/releases/latest/download/kanban-for-outlook.zip)
-- Checksum (optional): [`kanban-for-outlook.zip.sha256`](https://github.com/Iman-Sharif/Kanban-for-Outlook/releases/latest/download/kanban-for-outlook.zip.sha256)
-
-Important:
-
-- For installation, do not use GitHub's green `Code` button -> `Download ZIP`.
-- On the Releases page, do not use the auto-generated `Source code (zip/tar.gz)` downloads.
-
-If you already downloaded a source code zip, you can still install: extract it, run `install.cmd`, and restart Outlook.
-
-Install:
-
-1) Extract the zip.
-2) Run `install.cmd`.
-3) Restart Outlook.
-
-See [`docs/SETUP.md`](docs/SETUP.md) for the full setup guide (including manual install).
-
 Kanban began at Toyota as a way to manage flow using visual signals, and it's now a practical method for personal task management: make work visible, limit work in progress, and focus on finishing ([Kanban on Wikipedia](https://en.wikipedia.org/wiki/Kanban)). Outlook is the day-to-day hub in many organisations, so keeping your board alongside your mail and calendar makes it easier to stay on top of work.
 
 I use this every day and have benefited from it greatly. That's why I'm maintaining this fork: to keep it usable, local-only, and to help you improve your productivity and task management inside Outlook.
 
-[Setup](docs/SETUP.md) | [Usage](docs/USAGE.md) | [Projects](docs/PROJECTS.md) | [Themes](docs/THEMES.md) | [Theme Authoring](docs/THEME_AUTHORING.md) | [Troubleshooting](docs/TROUBLESHOOTING.md)
+[Download latest zip](https://github.com/Iman-Sharif/Kanban-for-Outlook/releases/latest/download/kanban-for-outlook.zip) | [Setup](docs/SETUP.md) | [Usage](docs/USAGE.md) | [Projects](docs/PROJECTS.md) | [Themes](docs/THEMES.md) | [Troubleshooting](docs/TROUBLESHOOTING.md)
 
 This repository continues **JanBan**, which is based on the original **Outlook Taskboard** by Evren Varol.
 Credits: [`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md).
@@ -37,6 +17,27 @@ Maintainer: Iman Sharif.
 
 > [!IMPORTANT]
 > Non-negotiable: local-only. No external downloads, update checks, telemetry, or prefilled support email targets.
+
+## Get started (recommended)
+
+1) Download: [`kanban-for-outlook.zip`](https://github.com/Iman-Sharif/Kanban-for-Outlook/releases/latest/download/kanban-for-outlook.zip)
+2) Extract it.
+3) Run `install.cmd` (or `install-local.cmd`).
+4) Restart Outlook.
+
+Tip: if you'd like a simple walkthrough, open `START_HERE.html`.
+
+Optional verification:
+
+- Checksum: [`kanban-for-outlook.zip.sha256`](https://github.com/Iman-Sharif/Kanban-for-Outlook/releases/latest/download/kanban-for-outlook.zip.sha256)
+
+> [!IMPORTANT]
+> For installation, do not use GitHub's green `Code` button -> `Download ZIP`.
+> On the Releases page, do not download `Source code (zip/tar.gz)`.
+>
+> If you already downloaded a source code zip, you can still install (it just includes extra files): extract it, run `install.cmd`, then restart Outlook.
+
+See [`docs/SETUP.md`](docs/SETUP.md) for the full setup guide (including manual install).
 
 ## What it is
 
@@ -60,16 +61,6 @@ flowchart LR
 - Projects as folders: create, link existing folders, hide/show, rename
 - Tools: migrate lanes from Outlook Status, move tasks between projects
 - Theme system: built-in themes + local theme import + folder themes ([`themes/`](themes/))
-
-## Setup (local)
-
-1) Download and extract the release zip to a folder you control.
-2) Run `install.cmd` (or `install-local.cmd`).
-3) Restart Outlook.
-
-The installer copies files to `%USERPROFILE%\kanban-for-outlook` and registers `kanban.html` as the Folder Home Page.
-
-See [`docs/SETUP.md`](docs/SETUP.md) for detailed steps and manual install.
 
 ## Documentation
 
