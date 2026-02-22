@@ -41,6 +41,15 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body: |
+            ## Download (recommended)
+
+            - Download `kanban-for-outlook.zip` from the Assets section below.
+            - Do not download `Source code (zip/tar.gz)` for installation (that is for developers).
+            - Install: extract the zip, run `install.cmd`, then restart Outlook.
+
+            Setup guide: https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/SETUP.md
+            Checksum: `kanban-for-outlook.zip.sha256`
           files: |
             dist/kanban-for-outlook.zip
             dist/kanban-for-outlook.zip.sha256

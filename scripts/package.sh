@@ -19,6 +19,7 @@ zip -r "$OUT_ZIP" \
   LICENSE \
   PRIVACY.md \
   README.md \
+  START_HERE.html \
   ROADMAP.md \
   SECURITY.md \
   THIRD_PARTY_NOTICES.md \

@@ -4,6 +4,26 @@
 
 A local-only Kanban board that turns classic Microsoft Outlook Tasks into a drag-and-drop workflow (Windows desktop).
 
+## Download (recommended)
+
+- Download: [`kanban-for-outlook.zip`](https://github.com/Iman-Sharif/Kanban-for-Outlook/releases/latest/download/kanban-for-outlook.zip)
+- Checksum (optional): [`kanban-for-outlook.zip.sha256`](https://github.com/Iman-Sharif/Kanban-for-Outlook/releases/latest/download/kanban-for-outlook.zip.sha256)
+
+Important:
+
+- For installation, do not use GitHub's green `Code` button -> `Download ZIP`.
+- On the Releases page, do not use the auto-generated `Source code (zip/tar.gz)` downloads.
+
+If you already downloaded a source code zip, you can still install: extract it, run `install.cmd`, and restart Outlook.
+
+Install:
+
+1) Extract the zip.
+2) Run `install.cmd`.
+3) Restart Outlook.
+
+See [`docs/SETUP.md`](docs/SETUP.md) for the full setup guide (including manual install).
+
 Kanban began at Toyota as a way to manage flow using visual signals, and it's now a practical method for personal task management: make work visible, limit work in progress, and focus on finishing ([Kanban on Wikipedia](https://en.wikipedia.org/wiki/Kanban)). Outlook is the day-to-day hub in many organisations, so keeping your board alongside your mail and calendar makes it easier to stay on top of work.
 
 I use this every day and have benefited from it greatly. That's why I'm maintaining this fork: to keep it usable, local-only, and to help you improve your productivity and task management inside Outlook.

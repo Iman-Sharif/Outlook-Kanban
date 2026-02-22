@@ -14,9 +14,17 @@ Kanban for Outlook is designed to run fully locally as an Outlook Folder Home Pa
 
 ## Install (recommended)
 
-1) Download and extract the release zip.
-2) Run `install.cmd` (or `install-local.cmd`).
-3) Restart Outlook.
+1) Download the release zip:
+
+- Download: [kanban-for-outlook.zip](https://github.com/Iman-Sharif/Kanban-for-Outlook/releases/latest/download/kanban-for-outlook.zip)
+- Checksum (optional): [kanban-for-outlook.zip.sha256](https://github.com/Iman-Sharif/Kanban-for-Outlook/releases/latest/download/kanban-for-outlook.zip.sha256)
+
+> [!IMPORTANT]
+> For installation, do not use GitHub's green `Code` button -> `Download ZIP`, and do not use the Release page's `Source code (zip/tar.gz)` downloads. Those are for developers.
+
+2) Extract the zip.
+3) Run `install.cmd` (or `install-local.cmd`).
+4) Restart Outlook.
 
 The installer copies the app into:
 

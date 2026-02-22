@@ -41,7 +41,7 @@ if not exist "kanban.html" (
 
 if not exist "%APPDIR%" mkdir "%APPDIR%"
 
-robocopy /mir . "%APPDIR%" /XD .git .github dist /XF "*.zip" >nul
+robocopy /mir . "%APPDIR%" /XD .git .github dist node_modules tools tests /XF "*.zip" "package.json" "package-lock.json" ".gitignore" >nul
 
 set "offver="
 for /l %%x in (12,1,16) do (
