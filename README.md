@@ -22,10 +22,11 @@ Maintainer: Iman Sharif.
 
 ```mermaid
 flowchart LR
-  A[Classic Outlook for Windows\nFolder Home Page (IE engine)] --> B[kanban.html]
-  B --> C[AngularJS UI]
-  C <--> D[Outlook Tasks + Folders\n(local profile)]
-  C --> E[Outlook Journal Items\nKanbanConfig / KanbanState]
+  A["Classic Outlook for Windows<br/>Folder Home Page (IE engine)"] --> B["kanban.html"]
+  B --> C["AngularJS UI"]
+  C --> D["Outlook Tasks + Folders<br/>(local profile)"]
+  D --> C
+  C --> E["Outlook Journal Items<br/>KanbanConfig / KanbanState"]
 ```
 
 ## Features
