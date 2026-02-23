@@ -1,0 +1,192 @@
+/* KFO Theme: Dark mode (Outlook-style) */
+
+.kfo.theme-kfo-dark {
+  /* Neutral Office/Outlook-like dark palette */
+  color: #f3f2f1;
+  background-color: #1f1f1f;
+  background: linear-gradient(180deg, #1f1f1f 0%, #1b1a19 100%);
+}
+
+.kfo.theme-kfo-dark .kfo-topbar {
+  background: rgba(32,31,30,0.96);
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+
+.kfo.theme-kfo-dark .kfo-input,
+.kfo.theme-kfo-dark .kfo-select {
+  background: #201f1e;
+  border-color: rgba(255,255,255,0.16);
+  color: #f3f2f1;
+}
+
+.kfo.theme-kfo-dark .kfo-btn,
+.kfo.theme-kfo-dark .kfo-iconBtn {
+  border-color: rgba(255,255,255,0.16);
+  background: #292827;
+}
+
+.kfo.theme-kfo-dark .kfo-btn:hover,
+.kfo.theme-kfo-dark .kfo-iconBtn:hover {
+  background: #323130;
+}
+
+.kfo.theme-kfo-dark .kfo-pill,
+.kfo.theme-kfo-dark .kfo-step {
+  background: #323130;
+}
+
+.kfo.theme-kfo-dark .kfo-lane {
+  background: #252423;
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.45);
+}
+
+.kfo.theme-kfo-dark .kfo-laneHeader {
+  background: #201f1e;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+
+.kfo.theme-kfo-dark .kfo-drawer {
+  background: #252423;
+  border-left-color: rgba(255,255,255,0.12);
+  box-shadow: -14px 0 40px rgba(0,0,0,0.55);
+}
+
+.kfo.theme-kfo-dark .kfo-drawerHeader {
+  background: #201f1e;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+
+.kfo.theme-kfo-dark .kfo-lane--overLimit .kfo-laneHeader {
+  background: linear-gradient(180deg, rgba(209,52,56,0.18) 0%, #201f1e 100%);
+  box-shadow: inset 0 0 0 1px rgba(209,52,56,0.22);
+}
+
+.kfo.theme-kfo-dark .kfo-task {
+  background: #292827;
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.45);
+}
+
+.kfo.theme-kfo-dark .kfo-task--high {
+  border-color: rgba(248,113,113,0.55);
+}
+
+.kfo.theme-kfo-dark .kfo-task--private {
+  border-color: rgba(251,191,36,0.55);
+  background: #323130;
+}
+
+.kfo.theme-kfo-dark .kfo-taskHeader {
+  background: #201f1e;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+
+.kfo.theme-kfo-dark .kfo-tag {
+  background: rgba(255,255,255,0.10);
+}
+
+.kfo.theme-kfo-dark .kfo-card,
+.kfo.theme-kfo-dark .kfo-modal {
+  background: #252423;
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+}
+
+.kfo.theme-kfo-dark .kfo-listItem {
+  background: #201f1e;
+  border-color: rgba(255,255,255,0.12);
+}
+
+.kfo.theme-kfo-dark .kfo-divider {
+  background: rgba(255,255,255,0.22);
+}
+
+.kfo.theme-kfo-dark .kfo-toast {
+  background: #252423;
+  border-color: rgba(255,255,255,0.14);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+}
+
+.kfo.theme-kfo-dark .kfo-bulkBar {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+}
+
+.kfo.theme-kfo-dark .kfo-pop {
+  background: #252423;
+  border-color: rgba(255,255,255,0.14);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+}
+
+.kfo.theme-kfo-dark .kfo-popHeader {
+  background: #201f1e;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+
+.kfo.theme-kfo-dark .kfo-popOption {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+}
+
+.kfo.theme-kfo-dark .kfo-modalBackdrop {
+  background: rgba(0,0,0,0.60);
+}
+
+/* Inputs */
+.kfo.theme-kfo-dark .kfo-input::placeholder {
+  color: rgba(243,242,241,0.55);
+}
+
+/* IE11 placeholder */
+.kfo.theme-kfo-dark .kfo-input:-ms-input-placeholder {
+  color: rgba(243,242,241,0.55);
+}
+
+.kfo.theme-kfo-dark .kfo-input::-ms-input-placeholder {
+  color: rgba(243,242,241,0.55);
+}
+
+/* Select dropdown list (best-effort; host may still override option styling) */
+.kfo.theme-kfo-dark select option {
+  background: #201f1e;
+  color: #f3f2f1;
+}
+
+.kfo.theme-kfo-dark select optgroup {
+  background: #201f1e;
+  color: #f3f2f1;
+}
+
+/* Semantic due date colours (Office-like) */
+.kfo.theme-kfo-dark .kfo-due--overdue { color: #d13438; }
+.kfo.theme-kfo-dark .kfo-due--today { color: #0078d4; }
+.kfo.theme-kfo-dark .kfo-due--soon { color: #f7630c; }
+
+/* Divider opacity in dark mode */
+.kfo.theme-kfo-dark .kfo-divider {
+  opacity: 1;
+  background: rgba(255,255,255,0.12);
+}
+
+/* Pills/tags definition */
+.kfo.theme-kfo-dark .kfo-pill,
+.kfo.theme-kfo-dark .kfo-tag {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10);
+}
+
+/* Progress */
+.kfo.theme-kfo-dark .kfo-progress {
+  border-color: rgba(255,255,255,0.14);
+  background: #201f1e;
+}
+
+.kfo.theme-kfo-dark .kfo-progressBar {
+  background: #0078d4;
+}
+
+/* Drag/drop placeholder */
+.kfo.theme-kfo-dark .kfo-sort-placeholder {
+  border-color: rgba(255,255,255,0.20);
+  background: rgba(255,255,255,0.06);
+}

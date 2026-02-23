@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verify tag matches app version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VERSION=$(node -p "require('fs').readFileSync('js/version.js','utf8').match(/VERSION\\s*=\\s*\\\"([^\\\"]+)\\\"/)[1]")
+          echo "tag=$TAG"
+          echo "version=$VERSION"
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "Tag ($TAG) does not match js/version.js ($VERSION)" >&2
+            exit 1
+          fi
+
+      - name: Run maintainer checks
+        run: npm run check
+
+      - name: Build release zip
+        run: |
+          chmod +x scripts/package.sh
+          scripts/package.sh
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            ## Download (recommended)
+
+            - Download `kanban-for-outlook.zip` from the Assets section below.
+            - Do not download `Source code (zip/tar.gz)` for installation (that is for developers).
+            - Install: extract the zip, run `install.cmd`, then restart Outlook.
+
+            Setup guide: https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/SETUP.md
+            Checksum: `kanban-for-outlook.zip.sha256`
+          files: |
+            dist/kanban-for-outlook.zip
+            dist/kanban-for-outlook.zip.sha256
+          fail_on_unmatched_files: true
+          generate_release_notes: true

@@ -1,0 +1,493 @@
+<!doctype html>
+<html>
+
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=11">
+    <meta charset="utf-8">
+    <title>KFO Theme Preview (Local)</title>
+
+    <!-- Use the real app CSS so your theme overrides the same components -->
+    <link rel="stylesheet" href="../../css/bootstrap.min.css">
+    <link rel="stylesheet" href="../../css/kfo.css">
+    <link rel="stylesheet" href="theme.css">
+  </head>
+
+  <body class="kfo theme-my-theme density-comfortable motion-full">
+    <div class="kfo-app">
+      <header class="kfo-topbar">
+        <div class="kfo-brand">
+          <div class="kfo-brandTitle">Kanban for Outlook</div>
+          <div class="kfo-brandMeta">Theme preview</div>
+        </div>
+
+        <div class="kfo-topbarSection">
+          <button class="kfo-btn" type="button" data-action="view-board">Board</button>
+          <button class="kfo-btn" type="button" data-action="view-settings">Settings</button>
+        </div>
+
+        <div class="kfo-topbarGrow"></div>
+
+        <div class="kfo-topbarSection">
+          <button class="kfo-btn" type="button" data-action="toggle-density" title="Toggle compact/comfortable">Density</button>
+          <button class="kfo-btn" type="button" data-action="cycle-motion" title="Cycle motion: full/subtle/off">Motion</button>
+          <button class="kfo-btn" type="button" data-action="toggle-modal">Modal</button>
+          <button class="kfo-btn" type="button" data-action="toggle-toast">Toast</button>
+        </div>
+      </header>
+
+      <main class="kfo-main">
+        <!-- Board view -->
+        <section class="kfo-board" id="kfoPreviewBoard">
+          <div class="kfo-lanes">
+            <div class="kfo-lane">
+              <div class="kfo-laneHeader" style="border-top-color:#94a3b8;">
+                <div class="kfo-laneHeaderLeft">
+                  <div class="kfo-laneTitle">Backlog</div>
+                  <div class="kfo-laneSub">3 tasks</div>
+                </div>
+                <div class="kfo-laneHeaderRight">
+                  <button class="kfo-iconBtn" type="button" aria-label="Add task">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                  </button>
+                </div>
+              </div>
+              <ul class="kfo-tasklist">
+                <li class="kfo-task">
+                  <div class="kfo-taskHeader">Write theme guidelines</div>
+                  <div class="kfo-taskMeta">
+                    <div>
+                      <span class="kfo-due kfo-due--overdue">Due: 2026-02-01</span>
+                    </div>
+                    <div>
+                      <span class="kfo-pill">High</span>
+                    </div>
+                  </div>
+                  <div class="kfo-taskBody">A short notes preview shows up here. Keep it readable on your surface colours.</div>
+                  <div class="kfo-taskFooter">
+                    <div class="kfo-taskTags">
+                      <span class="kfo-tag">Docs</span>
+                      <span class="kfo-tag">Design</span>
+                    </div>
+                    <div class="kfo-taskActions">
+                      <button class="kfo-iconBtn" type="button" aria-label="Edit">
+                        <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+                      </button>
+                      <button class="kfo-iconBtn" type="button" aria-label="Delete">
+                        <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                      </button>
+                    </div>
+                  </div>
+                </li>
+
+                <li class="kfo-task kfo-task--private">
+                  <div class="kfo-taskHeader">Private task example</div>
+                  <div class="kfo-taskMeta">
+                    <div>
+                      <span class="kfo-due kfo-due--today">Due: Today</span>
+                    </div>
+                    <div>
+                      <span class="glyphicon glyphicon-lock" aria-hidden="true"></span>
+                    </div>
+                  </div>
+                  <div class="kfo-taskBody">Private tasks get a subtle border/background treatment. Ensure contrast is still strong.</div>
+                  <div class="kfo-taskFooter">
+                    <div class="kfo-taskTags">
+                      <span class="kfo-tag">Personal</span>
+                    </div>
+                    <div class="kfo-taskActions">
+                      <button class="kfo-iconBtn" type="button" aria-label="Edit">
+                        <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+                      </button>
+                      <button class="kfo-iconBtn" type="button" aria-label="Delete">
+                        <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                      </button>
+                    </div>
+                  </div>
+                </li>
+
+                <li class="kfo-sort-placeholder" style="height:64px;"></li>
+              </ul>
+            </div>
+
+            <div class="kfo-lane">
+              <div class="kfo-laneHeader" style="border-top-color:#60a5fa;">
+                <div class="kfo-laneHeaderLeft">
+                  <div class="kfo-laneTitle">In Progress</div>
+                  <div class="kfo-laneSub">2 tasks</div>
+                </div>
+                <div class="kfo-laneHeaderRight">
+                  <span class="kfo-pill">WIP 5</span>
+                  <button class="kfo-iconBtn" type="button" aria-label="Add task">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                  </button>
+                </div>
+              </div>
+              <ul class="kfo-tasklist">
+                <li class="kfo-task kfo-task--high">
+                  <div class="kfo-taskHeader">High priority example</div>
+                  <div class="kfo-taskMeta">
+                    <div>
+                      <span class="kfo-due kfo-due--soon">Due: Soon</span>
+                    </div>
+                    <div>
+                      <span class="kfo-pill">High</span>
+                    </div>
+                  </div>
+                  <div class="kfo-taskBody">If your theme uses stronger borders/shadows, make sure the board still feels calm and scannable.</div>
+                  <div class="kfo-taskFooter">
+                    <div class="kfo-taskTags">
+                      <span class="kfo-tag">Work</span>
+                    </div>
+                    <div class="kfo-taskActions">
+                      <button class="kfo-iconBtn" type="button" aria-label="OneNote">
+                        <span class="glyphicon glyphicon-book" aria-hidden="true"></span>
+                      </button>
+                      <button class="kfo-iconBtn" type="button" aria-label="Edit">
+                        <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+                      </button>
+                      <button class="kfo-iconBtn" type="button" aria-label="Delete">
+                        <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                      </button>
+                    </div>
+                  </div>
+                </li>
+
+                <li class="kfo-task">
+                  <div class="kfo-taskHeader">Neutral card</div>
+                  <div class="kfo-taskMeta">
+                    <div>
+                      <span>&nbsp;</span>
+                    </div>
+                    <div>
+                      <span>&nbsp;</span>
+                    </div>
+                  </div>
+                  <div class="kfo-taskBody">No due date, no tags, no extras. This is the most common baseline card.</div>
+                  <div class="kfo-taskFooter">
+                    <div class="kfo-taskTags"></div>
+                    <div class="kfo-taskActions">
+                      <button class="kfo-iconBtn" type="button" aria-label="Edit">
+                        <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <div class="kfo-lane">
+              <div class="kfo-laneHeader" style="border-top-color:#34d399;">
+                <div class="kfo-laneHeaderLeft">
+                  <div class="kfo-laneTitle">Done</div>
+                  <div class="kfo-laneSub">1 task</div>
+                </div>
+                <div class="kfo-laneHeaderRight">
+                  <button class="kfo-iconBtn" type="button" aria-label="Add task">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                  </button>
+                </div>
+              </div>
+              <ul class="kfo-tasklist">
+                <li class="kfo-task">
+                  <div class="kfo-taskHeader">Completed item</div>
+                  <div class="kfo-taskMeta">
+                    <div>
+                      <span class="kfo-due">Due: (ignored)</span>
+                    </div>
+                    <div>
+                      <span class="kfo-pill">Done</span>
+                    </div>
+                  </div>
+                  <div class="kfo-taskBody">In the real app, due-state colours are not applied to completed tasks.</div>
+                  <div class="kfo-taskFooter">
+                    <div class="kfo-taskTags">
+                      <span class="kfo-tag">Release</span>
+                    </div>
+                    <div class="kfo-taskActions">
+                      <button class="kfo-iconBtn" type="button" aria-label="Delete">
+                        <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- Settings view -->
+        <section class="kfo-view" id="kfoPreviewSettings" style="display:none;">
+          <div class="kfo-grid">
+            <div class="kfo-gridCol">
+              <div class="kfo-card">
+                <div class="kfo-cardTitle">Appearance</div>
+
+                <div class="kfo-row">
+                  <div class="kfo-rowLabel">Theme</div>
+                  <div class="kfo-rowControl">
+                    <select class="kfo-select">
+                      <option>Light mode</option>
+                      <option>Dark mode</option>
+                      <option selected>My Theme</option>
+                    </select>
+                    <div class="kfo-small">This is a preview-only control.</div>
+                  </div>
+                </div>
+
+                <div class="kfo-row">
+                  <div class="kfo-rowLabel">Lane width</div>
+                  <div class="kfo-rowControl">
+                    <input class="kfo-input" type="number" value="320" style="max-width:120px;" />
+                    <span class="kfo-small">px</span>
+                  </div>
+                </div>
+
+                <div class="kfo-divider"></div>
+
+                <div class="kfo-row">
+                  <div class="kfo-rowLabel">Toggles</div>
+                  <div class="kfo-rowControl">
+                    <label class="kfo-pill" style="margin:0;">
+                      <input type="checkbox" checked="checked" /> Due date
+                    </label>
+                    <label class="kfo-pill" style="margin:0;">
+                      <input type="checkbox" checked="checked" /> Notes
+                    </label>
+                    <label class="kfo-pill" style="margin:0;">
+                      <input type="checkbox" checked="checked" /> Categories
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="kfo-card">
+                <div class="kfo-cardTitle">Projects (List UI)</div>
+                <div class="kfo-list">
+                  <div class="kfo-listItem">
+                    <div class="kfo-listItemMain">
+                      <div class="kfo-listItemTitle">General</div>
+                      <div class="kfo-listItemMeta">
+                        <span class="kfo-pill">Selected</span>
+                        <span class="kfo-pill">Linked</span>
+                      </div>
+                    </div>
+                    <div class="kfo-listItemActions">
+                      <button class="kfo-btn" type="button">Select</button>
+                      <button class="kfo-btn" type="button">Rename</button>
+                      <button class="kfo-btn" type="button">Hide</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="kfo-gridCol">
+              <div class="kfo-card">
+                <div class="kfo-cardTitle">Progress + Stepper</div>
+
+                <div class="kfo-stepper">
+                  <span class="kfo-step kfo-stepActive">Theme</span>
+                  <span class="kfo-step">Projects</span>
+                  <span class="kfo-step">Lanes</span>
+                  <span class="kfo-step">Finish</span>
+                </div>
+
+                <div class="kfo-small">This shows the setup wizard stepper UI.</div>
+
+                <div class="kfo-divider"></div>
+
+                <div class="kfo-small">Moving 4 / 10 tasks</div>
+                <div class="kfo-progress" style="margin-top:8px;">
+                  <div class="kfo-progressBar" style="width: 40%;"></div>
+                </div>
+              </div>
+
+              <div class="kfo-card">
+                <div class="kfo-cardTitle">Buttons</div>
+                <div class="kfo-row">
+                  <button class="kfo-btn" type="button">
+                    <span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span>
+                    <span>Project</span>
+                  </button>
+                  <button class="kfo-btn" type="button">Primary action</button>
+                  <button class="kfo-btn" type="button">Secondary</button>
+                  <button class="kfo-iconBtn" type="button" aria-label="Refresh">
+                    <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <div class="kfo-small" style="padding: 10px 12px; opacity: 0.75;">
+        Tip: copy this folder, then edit theme.css. Keep everything local (no http/https, no @import).
+      </div>
+    </div>
+
+    <!-- Modal (toggle with the "Modal" button) -->
+    <div class="kfo-modalBackdrop" id="kfoPreviewModal" style="display:none;">
+      <div class="kfo-modal">
+        <div class="kfo-modalHeader">
+          <h3 class="kfo-modalTitle">Example Modal</h3>
+          <button class="kfo-iconBtn" type="button" data-action="toggle-modal" aria-label="Close">
+            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="kfo-modalBody">
+          <div class="kfo-row">
+            <div class="kfo-rowLabel">Input</div>
+            <div class="kfo-rowControl">
+              <input class="kfo-input" type="text" value="Theme value" />
+              <div class="kfo-small">Modals should remain readable over your backdrop.</div>
+            </div>
+          </div>
+        </div>
+        <div class="kfo-modalFooter">
+          <button class="kfo-btn" type="button" data-action="toggle-modal">Cancel</button>
+          <button class="kfo-btn" type="button">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast (toggle with the "Toast" button) -->
+    <div class="kfo-toastWrap" id="kfoPreviewToast" style="display:none;">
+      <div class="kfo-toast kfo-toast--info">
+        <div class="kfo-toastHeader">
+          <div class="kfo-toastTitle">Toast title</div>
+          <button class="kfo-iconBtn" type="button" data-action="toggle-toast" aria-label="Dismiss">
+            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="kfo-toastMsg">A short toast message. Make sure this has enough contrast on your surfaces.</div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        function sanitizeId(raw) {
+          if (!raw) return '';
+          return String(raw)
+            .toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9\-]/g, '')
+            .replace(/\-\-+/g, '-')
+            .replace(/^\-+|\-+$/g, '');
+        }
+
+        function detectThemeIdFromPath() {
+          try {
+            var p = String(window.location.pathname || '');
+            p = p.replace(/\\/g, '/');
+            var parts = p.split('/');
+            var clean = [];
+            for (var i = 0; i < parts.length; i++) {
+              if (parts[i]) clean.push(parts[i]);
+            }
+            // .../themes/<id>/preview.html
+            if (clean.length < 2) return '';
+            return sanitizeId(clean[clean.length - 2]);
+          } catch (e) {
+            return '';
+          }
+        }
+
+        function applyDetectedThemeId() {
+          try {
+            var id = detectThemeIdFromPath();
+            if (!id) return;
+            var b = document.body;
+            // remove any existing theme-* token
+            b.className = b.className.replace(/\btheme-[a-z0-9\-]+\b/g, '');
+            b.className = (b.className + ' theme-' + id).replace(/\s\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+            document.title = 'KFO Theme Preview (Local) - ' + id;
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        function byId(id) { return document.getElementById(id); }
+
+        var board = byId('kfoPreviewBoard');
+        var settings = byId('kfoPreviewSettings');
+        var modal = byId('kfoPreviewModal');
+        var toast = byId('kfoPreviewToast');
+
+        function setDisplay(el, show) {
+          if (!el) return;
+          el.style.display = show ? '' : 'none';
+        }
+
+        function setView(view) {
+          setDisplay(board, view === 'board');
+          setDisplay(settings, view === 'settings');
+        }
+
+        function toggleDensity() {
+          var b = document.body;
+          if (b.className.indexOf('density-compact') !== -1) {
+            b.className = b.className.replace('density-compact', 'density-comfortable');
+          } else if (b.className.indexOf('density-comfortable') !== -1) {
+            b.className = b.className.replace('density-comfortable', 'density-compact');
+          } else {
+            b.className += ' density-comfortable';
+          }
+        }
+
+        function cycleMotion() {
+          var b = document.body;
+          if (b.className.indexOf('motion-full') !== -1) {
+            b.className = b.className.replace('motion-full', 'motion-subtle');
+            return;
+          }
+          if (b.className.indexOf('motion-subtle') !== -1) {
+            b.className = b.className.replace('motion-subtle', 'motion-off');
+            return;
+          }
+          if (b.className.indexOf('motion-off') !== -1) {
+            b.className = b.className.replace('motion-off', 'motion-full');
+            return;
+          }
+          b.className += ' motion-full';
+        }
+
+        function toggleModal() {
+          setDisplay(modal, modal && modal.style.display === 'none');
+        }
+
+        function toggleToast() {
+          setDisplay(toast, toast && toast.style.display === 'none');
+        }
+
+        function findActionTarget(el) {
+          while (el && el !== document.body) {
+            if (el.getAttribute && el.getAttribute('data-action')) {
+              return el;
+            }
+            el = el.parentNode;
+          }
+          return null;
+        }
+
+        document.addEventListener('click', function (evt) {
+          var t = findActionTarget(evt.target);
+          if (!t) return;
+          var action = t.getAttribute('data-action');
+
+          if (action === 'view-board') return setView('board');
+          if (action === 'view-settings') return setView('settings');
+          if (action === 'toggle-density') return toggleDensity();
+          if (action === 'cycle-motion') return cycleMotion();
+          if (action === 'toggle-modal') return toggleModal();
+          if (action === 'toggle-toast') return toggleToast();
+        });
+
+        // Initial state
+        applyDetectedThemeId();
+        setView('board');
+      })();
+    </script>
+  </body>
+
+</html>

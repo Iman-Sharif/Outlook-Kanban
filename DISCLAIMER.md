@@ -1,0 +1,18 @@
+# Disclaimer
+
+[README](README.md) | [Docs index](docs/README.md) | [License](LICENSE)
+
+Kanban for Outlook is provided for convenience and productivity.
+
+## No warranty
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+See [`LICENSE`](LICENSE) for the full license terms.
+
+## Microsoft trademark notice
+
+Microsoft and Outlook are trademarks of Microsoft Corporation.
+This project is not affiliated with or endorsed by Microsoft.

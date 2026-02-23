@@ -1,0 +1,144 @@
+/* KFO Theme: Light mode */
+
+.kfo.theme-kfo-light {
+  color: #0f172a;
+  background-color: #eef2f7;
+  background: linear-gradient(180deg, #f7f8fb 0%, #eef2f7 55%, #edf1f6 100%);
+}
+
+.kfo.theme-kfo-light .kfo-topbar {
+  background: rgba(255,255,255,0.92);
+  border-bottom: 1px solid rgba(15,23,42,0.08);
+  backdrop-filter: blur(8px);
+}
+
+.kfo.theme-kfo-light .kfo-input,
+.kfo.theme-kfo-light .kfo-select {
+  background: #ffffff;
+  border-color: rgba(15,23,42,0.10);
+  color: #0f172a;
+}
+
+.kfo.theme-kfo-light .kfo-btn,
+.kfo.theme-kfo-light .kfo-iconBtn {
+  border-color: rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.70);
+}
+
+.kfo.theme-kfo-light .kfo-btn:hover,
+.kfo.theme-kfo-light .kfo-iconBtn:hover {
+  background: rgba(255,255,255,0.92);
+}
+
+.kfo.theme-kfo-light .kfo-pill,
+.kfo.theme-kfo-light .kfo-step {
+  background: rgba(15,23,42,0.06);
+}
+
+.kfo.theme-kfo-light .kfo-board {
+  background: transparent;
+}
+
+.kfo.theme-kfo-light .kfo-drawer {
+  background: rgba(255,255,255,0.92);
+  border-left-color: rgba(15,23,42,0.10);
+  box-shadow: -10px 0 28px rgba(2,6,23,0.06);
+}
+
+.kfo.theme-kfo-light .kfo-drawerHeader {
+  background: rgba(255,255,255,0.92);
+  border-bottom: 1px solid rgba(15,23,42,0.06);
+}
+
+.kfo.theme-kfo-light .kfo-lane {
+  background: rgba(255,255,255,0.78);
+  border: 1px solid rgba(15,23,42,0.08);
+  box-shadow: 0 10px 28px rgba(2,6,23,0.08);
+}
+
+.kfo.theme-kfo-light .kfo-laneHeader {
+  background: rgba(255,255,255,0.92);
+  border-bottom: 1px solid rgba(15,23,42,0.06);
+}
+
+.kfo.theme-kfo-light .kfo-lane--overLimit .kfo-laneHeader {
+  background: linear-gradient(180deg, rgba(254,242,242,0.96) 0%, rgba(255,255,255,0.92) 100%);
+  box-shadow: inset 0 0 0 1px rgba(239,68,68,0.18);
+}
+
+.kfo.theme-kfo-light .kfo-task {
+  background: #ffffff;
+  border: 1px solid rgba(15,23,42,0.10);
+  box-shadow: 0 6px 16px rgba(2,6,23,0.08);
+}
+
+.kfo.theme-kfo-light .kfo-task--high {
+  border-color: rgba(239,68,68,0.45);
+}
+
+.kfo.theme-kfo-light .kfo-task--private {
+  border-color: rgba(234,179,8,0.45);
+  background: linear-gradient(180deg, rgba(255,251,235,1) 0%, rgba(255,255,255,1) 55%);
+}
+
+.kfo.theme-kfo-light .kfo-taskHeader {
+  background: linear-gradient(180deg, rgba(248,250,252,1) 0%, rgba(255,255,255,1) 100%);
+  border-bottom: 1px solid rgba(15,23,42,0.06);
+}
+
+.kfo.theme-kfo-light .kfo-tag {
+  background: rgba(15,23,42,0.06);
+}
+
+.kfo.theme-kfo-light .kfo-card,
+.kfo.theme-kfo-light .kfo-modal {
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(15,23,42,0.10);
+  box-shadow: 0 14px 40px rgba(2,6,23,0.14);
+}
+
+.kfo.theme-kfo-light .kfo-listItem {
+  background: rgba(255,255,255,0.70);
+  border-color: rgba(15,23,42,0.10);
+}
+
+.kfo.theme-kfo-light .kfo-divider {
+  background: rgba(15,23,42,0.2);
+}
+
+.kfo.theme-kfo-light .kfo-toast {
+  background: rgba(255,255,255,0.94);
+  border-color: rgba(15,23,42,0.12);
+  box-shadow: 0 14px 40px rgba(2,6,23,0.16);
+}
+
+.kfo.theme-kfo-light .kfo-bulkBar {
+  border-color: rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.70);
+}
+
+.kfo.theme-kfo-light .kfo-pop {
+  background: rgba(255,255,255,0.94);
+  border-color: rgba(15,23,42,0.12);
+  box-shadow: 0 14px 40px rgba(2,6,23,0.16);
+}
+
+.kfo.theme-kfo-light .kfo-popHeader {
+  background: rgba(255,255,255,0.92);
+  border-bottom: 1px solid rgba(15,23,42,0.06);
+}
+
+.kfo.theme-kfo-light .kfo-popOption {
+  border-color: rgba(15,23,42,0.10);
+  background: rgba(15,23,42,0.06);
+}
+
+.kfo.theme-kfo-light .kfo-modalBackdrop {
+  background: rgba(2,6,23,0.35);
+}
+
+/* Select dropdown list (best-effort; host may still override option styling) */
+.kfo.theme-kfo-light select optgroup {
+  background: #ffffff;
+  color: #0f172a;
+}

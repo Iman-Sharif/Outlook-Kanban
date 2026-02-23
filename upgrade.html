@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=11">
+    <title>Kanban for Outlook - Upgrade</title>
+    <style>
+      body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; font-size: 13px; line-height: 1.5; margin: 18px; }
+      code { background: #f2f2f2; padding: 1px 4px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <h2>Upgrade (Local Installation)</h2>
+    <p>This application is designed to run fully locally. Upgrading is a file replacement.</p>
+    <ol>
+      <li>Close Outlook.</li>
+      <li>Extract the new release zip to a temporary folder.</li>
+      <li>Copy the extracted files over your install folder.</li>
+      <li>Run <code>install-local.cmd</code> again (safe to re-run).</li>
+      <li>Start Outlook.</li>
+    </ol>
+    <p><strong>Tip:</strong> Your configuration is stored locally in Outlook (Journal item) and will be preserved.</p>
+    <p><strong>Note:</strong> If you are upgrading from an older JanBan-based installation, this fork may create a new configuration format.
+       Your previous configuration is backed up locally in Outlook as a Journal item with a subject like <code>KanbanConfig.legacy.YYYYMMDD-HHMMSS</code>.</p>
+  </body>
+</html>

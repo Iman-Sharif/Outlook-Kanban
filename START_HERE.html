@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kanban for Outlook - Start Here</title>
+    <style>
+      body { font-family: Segoe UI, Arial, sans-serif; margin: 0; background: #f6f7fb; color: #111827; }
+      .wrap { max-width: 900px; margin: 0 auto; padding: 28px 18px 42px 18px; }
+      .card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 18px; box-shadow: 0 8px 24px rgba(17,24,39,0.06); }
+      h1 { margin: 0 0 10px 0; font-size: 26px; }
+      h2 { margin: 18px 0 10px 0; font-size: 18px; }
+      p { margin: 10px 0; line-height: 1.45; }
+      ul { margin: 10px 0 10px 22px; }
+      code { background: #f3f4f6; padding: 2px 6px; border-radius: 8px; }
+      .hint { color: #374151; font-size: 13px; }
+      .warn { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 14px; padding: 12px 12px; }
+      .ok { background: #ecfeff; border: 1px solid #a5f3fc; border-radius: 14px; padding: 12px 12px; }
+      a { color: #0b5fff; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .btn { display: inline-block; background: #111827; color: #ffffff; padding: 10px 12px; border-radius: 12px; text-decoration: none; }
+      .btn:hover { text-decoration: none; background: #0b1220; }
+      .grid { display: grid; grid-template-columns: 1fr; grid-gap: 12px; }
+      @media (min-width: 860px) { .grid { grid-template-columns: 1fr 1fr; } }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>Kanban for Outlook - Start here</h1>
+        <p>This app runs locally inside classic Outlook for Windows (Folder Home Page).</p>
+
+        <div class="grid">
+          <div class="ok">
+            <h2>Install (recommended)</h2>
+            <ul>
+              <li>Extract the downloaded zip.</li>
+              <li>Run <code>install.cmd</code>.</li>
+              <li>Restart Outlook.</li>
+            </ul>
+            <p class="hint">If Windows SmartScreen blocks the script: click "More info" -> "Run anyway" (or use manual install).</p>
+          </div>
+          <div class="warn">
+            <h2>Did you use "Code -> Download ZIP"?</h2>
+            <p>That zip is the source code (developer download) and contains extra files.</p>
+            <p>You can still install from it by running <code>install.cmd</code>, but the easiest path is to download the official release zip.</p>
+          </div>
+        </div>
+
+        <h2>Download links</h2>
+        <p>
+          <a class="btn" href="https://github.com/Iman-Sharif/Outlook-Kanban/releases/latest/download/kanban-for-outlook.zip">Download latest release zip</a>
+        </p>
+        <p class="hint">
+          On the Releases page, ignore the auto-generated <code>Source code (zip/tar.gz)</code> downloads. You want <code>kanban-for-outlook.zip</code>.
+        </p>
+
+        <h2>Install options</h2>
+        <ul>
+          <li><strong>Recommended:</strong> run <code>install.cmd</code> (copies files to your profile and registers the home page).</li>
+          <li><strong>Manual:</strong> follow the steps in <code>docs/SETUP.md</code> (no scripts required).</li>
+        </ul>
+
+        <h2>Troubleshooting</h2>
+        <ul>
+          <li>If your organisation blocks Folder Home Pages, the app cannot run. See <code>docs/SETUP.md</code> (Troubleshooting section).</li>
+          <li>If you are using the new Outlook: it is not supported.</li>
+        </ul>
+
+        <p class="hint">Open-source software, provided as-is (no warranty). See LICENSE.</p>
+      </div>
+    </div>
+  </body>
+</html>

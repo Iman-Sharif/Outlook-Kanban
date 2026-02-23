@@ -1,0 +1,1357 @@
+/*
+  Kanban for Outlook (KFO)
+  Base layout + components. Theme-specific colors live in themes/*/theme.css.
+*/
+
+.kfo {
+  height: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  font: 400 12px/1.5 "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
+html, body {
+  height: 100%;
+}
+
+body.kfo {
+  margin: 0;
+  padding: 0;
+}
+
+.kfo * {
+  box-sizing: border-box;
+}
+
+.kfo a {
+  color: inherit;
+}
+
+.kfo-app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.kfo-topbar {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kfo-topbar > * {
+  margin: 4px 10px 4px 0;
+}
+
+.kfo-topbar > *:last-child {
+  margin-right: 0;
+}
+
+.kfo-brand {
+  display: flex;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.kfo-brand > * + * {
+  margin-left: 8px;
+}
+
+.kfo-brandTitle {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.kfo-brandMeta {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.kfo-topbarSection {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kfo-topbarSection > * {
+  margin: 4px 8px 4px 0;
+}
+
+.kfo-topbarSection > *:last-child {
+  margin-right: 0;
+}
+
+.kfo-topbarGrow {
+  flex: 1 1 auto;
+  min-width: 120px;
+}
+
+.kfo-search {
+  position: relative;
+}
+
+.kfo-searchIcon {
+  position: absolute;
+  left: 10px;
+  top: 8px;
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.kfo-searchInput {
+  padding-left: 30px;
+  padding-right: 34px;
+  position: relative;
+  z-index: 1;
+}
+
+.kfo-searchClear {
+  position: absolute;
+  right: 4px;
+  top: 2px;
+  z-index: 2;
+}
+
+.kfo-input {
+  height: 30px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  outline: none;
+  width: 220px;
+  max-width: 100%;
+  min-width: 140px;
+}
+
+.kfo-topbarGrow .kfo-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.kfo-select {
+  height: 30px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  outline: none;
+}
+
+/* Focus ring (keyboard accessibility) */
+.kfo-input:focus,
+.kfo-select:focus {
+  border-color: rgba(0,120,212,0.85);
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.22);
+}
+
+.kfo .kfo-input--error,
+.kfo .kfo-select--error {
+  border-color: rgba(239,68,68,0.85) !important;
+  box-shadow: 0 0 0 2px rgba(239,68,68,0.16);
+}
+
+.kfo-error {
+  font-size: 11px;
+  font-weight: 800;
+  color: #ef4444;
+  margin-top: 4px;
+}
+
+.kfo-btn {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.kfo-btn > * + * {
+  margin-left: 6px;
+}
+
+.kfo-btn:focus {
+  outline: none;
+  border-color: rgba(0,120,212,0.85);
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.22);
+}
+
+.kfo-iconBtn:focus,
+.kfo-pillBtn:focus {
+  outline: none;
+  border-color: rgba(0,120,212,0.85);
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.22);
+}
+
+.kfo-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.kfo-pillBtn {
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Filter chips */
+.kfo-chipRow {
+  flex: 0 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.kfo-chipRow > * {
+  margin: 4px 8px 0 0;
+}
+
+.kfo-chip {
+  max-width: 320px;
+}
+
+.kfo-chipKey {
+  font-weight: 900;
+  opacity: 0.85;
+}
+
+.kfo-chipVal {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kfo-chip--clearAll {
+  font-weight: 900;
+}
+
+.kfo-pill > * + * {
+  margin-left: 6px;
+}
+
+.kfo-main {
+  flex: 1 1 auto;
+  overflow: hidden;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+}
+
+.kfo-board {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 12px;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Task details drawer */
+.kfo-drawer {
+  flex: 0 0 360px;
+  width: 360px;
+  max-width: 45%;
+  min-width: 280px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid rgba(127,127,127,0.18);
+}
+
+.kfo-drawerHeader {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kfo-drawerHeaderMain {
+  min-width: 0;
+}
+
+.kfo-drawerTitle {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.kfo-drawerMeta {
+  font-size: 11px;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.kfo-drawerBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.kfo-drawerSubject {
+  font-size: 13px;
+  font-weight: 900;
+  word-wrap: break-word;
+  margin-bottom: 10px;
+}
+
+.kfo-drawerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.kfo-drawerActions > * {
+  margin: 4px 8px 0 0;
+}
+
+.kfo-drawerNotesText {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+@media (max-width: 920px) {
+  .kfo-drawer {
+    flex: 0 0 320px;
+    width: 320px;
+    max-width: 50%;
+  }
+}
+
+.kfo-refreshBanner {
+  padding: 8px 10px;
+  margin: 0 0 10px 0;
+  border-radius: 12px;
+  border: 1px solid rgba(127,127,127,0.18);
+  background: rgba(127,127,127,0.08);
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0.95;
+}
+
+.kfo-banner {
+  padding: 10px;
+  margin: 0 0 10px 0;
+  border-radius: 14px;
+  border: 1px solid rgba(127,127,127,0.18);
+  background: rgba(127,127,127,0.06);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.kfo-bannerTitle {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.kfo-bannerMsg {
+  font-size: 11px;
+  opacity: 0.9;
+  margin-top: 4px;
+  max-width: 720px;
+}
+
+.kfo-bannerActions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.kfo-bannerActions > * {
+  margin: 6px 8px 0 0;
+}
+
+.kfo-banner--warning {
+  border-color: rgba(245,158,11,0.35);
+  background: rgba(245,158,11,0.10);
+}
+
+/* Bulk action bar */
+.kfo-bulkBar {
+  padding: 10px;
+  margin: 0 0 10px 0;
+  border-radius: 14px;
+  border: 1px solid rgba(127,127,127,0.18);
+  background: rgba(127,127,127,0.06);
+}
+
+.kfo-bulkBarMain {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.kfo-bulkBarLeft {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kfo-bulkBarLeft > * {
+  margin: 4px 10px 0 0;
+}
+
+.kfo-bulkBarActions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kfo-bulkBarActions > * {
+  margin: 4px 8px 0 0;
+}
+
+/* Popovers */
+.kfo-popBackdrop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 11000;
+  background: rgba(0,0,0,0);
+}
+
+.kfo-pop {
+  position: fixed;
+  z-index: 11010;
+  width: 340px;
+  max-width: calc(100% - 24px);
+  max-height: calc(100vh - 24px);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(127,127,127,0.22);
+  background: rgba(255,255,255,0.96);
+  box-shadow: 0 18px 60px rgba(2,6,23,0.18);
+}
+
+.kfo-popHeader {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kfo-popTitle {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.kfo-popBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.kfo-popSearch {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 10px;
+}
+
+.kfo-popOptions {
+  display: flex;
+  flex-direction: column;
+}
+
+.kfo-popOption {
+  text-align: left;
+  border: 1px solid rgba(127,127,127,0.18);
+  background: rgba(127,127,127,0.06);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.kfo-popOption:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.kfo-popOptionMain {
+  min-width: 0;
+}
+
+.kfo-popOptionLabel {
+  font-weight: 800;
+}
+
+.kfo-popInline {
+  margin-bottom: 10px;
+}
+
+.kfo-lanes {
+  display: flex;
+  align-items: flex-start;
+}
+
+.kfo-lanes > * + * {
+  margin-left: 12px;
+}
+
+.kfo-lane {
+  flex: 0 0 auto;
+  width: 320px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.kfo-laneHeader {
+  padding: 10px 10px 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 4px solid transparent;
+}
+
+.kfo-laneTitle {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.kfo-laneSub {
+  margin-top: 2px;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.kfo-laneHeaderLeft {
+  min-width: 0;
+}
+
+.kfo-laneHeaderRight {
+  display: inline-flex;
+  align-items: center;
+}
+
+.kfo-laneHeaderRight > * + * {
+  margin-left: 6px;
+}
+
+/* Quick add */
+.kfo-quickAdd {
+  padding: 0 10px 8px 10px;
+  display: flex;
+  align-items: center;
+}
+
+.kfo-quickAdd > * + * {
+  margin-left: 6px;
+}
+
+.kfo-quickAddInput {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kfo-quickAddHint {
+  padding: 0 10px 10px 10px;
+}
+
+.kfo-tasklist {
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+  min-height: 50px;
+}
+
+.kfo-task {
+  border-radius: 12px;
+  margin: 0 0 10px 0;
+  overflow: hidden;
+}
+
+.kfo-task--selected {
+  border-color: rgba(0,120,212,0.65) !important;
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.18), 0 6px 16px rgba(2,6,23,0.08);
+}
+
+.kfo-task--focused {
+  border-color: rgba(0,120,212,0.85) !important;
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.22), 0 8px 22px rgba(2,6,23,0.10);
+}
+
+.kfo-task--completed .kfo-taskSubject {
+  text-decoration: line-through;
+  opacity: 0.78;
+}
+
+.kfo-task--stale {
+  border-color: rgba(245,158,11,0.55) !important;
+}
+
+.kfo-due {
+  font-weight: 800;
+}
+
+.kfo-due--overdue {
+  color: #ef4444;
+}
+
+.kfo-due--today {
+  color: #60a5fa;
+}
+
+.kfo-due--soon {
+  color: #f59e0b;
+}
+
+/* Density */
+.kfo.density-compact .kfo-laneHeader {
+  padding: 8px 10px 6px 10px;
+}
+
+.kfo.density-compact .kfo-taskHeader {
+  padding: 8px 10px 6px 10px;
+}
+
+.kfo.density-compact .kfo-taskMeta {
+  padding: 0 10px 6px 10px;
+}
+
+.kfo.density-compact .kfo-taskBody {
+  padding: 0 10px 8px 10px;
+}
+
+.kfo.density-compact .kfo-taskFooter {
+  padding: 6px 10px;
+}
+
+/* Motion */
+@keyframes kfoLaneIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes kfoCardIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes kfoModalIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes kfoBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes kfoSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes kfoToastIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.kfo.motion-full .kfo-lane {
+  animation: kfoLaneIn 420ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+.kfo.motion-full .kfo-task {
+  animation: kfoCardIn 280ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+.kfo.motion-subtle .kfo-lane {
+  animation: kfoLaneIn 220ms ease-out both;
+}
+
+.kfo.motion-subtle .kfo-task {
+  animation: kfoCardIn 160ms ease-out both;
+}
+
+.kfo.motion-off * {
+  transition: none !important;
+  animation: none !important;
+}
+
+.kfo-modalBackdrop {
+  animation: kfoBackdropIn 160ms ease-out both;
+}
+
+.kfo-modal {
+  animation: kfoModalIn 220ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+/* Hover affordances */
+.kfo-btn, .kfo-iconBtn {
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.kfo-btn:active, .kfo-iconBtn:active {
+  transform: translateY(1px);
+}
+
+.kfo-task {
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.kfo-task:hover {
+  transform: translateY(-1px);
+}
+
+.ui-sortable-helper {
+  animation: none !important;
+}
+
+.kfo-sort-placeholder {
+  visibility: visible !important;
+  border-radius: 12px;
+  border: 2px dashed rgba(127,127,127,0.32);
+  background: rgba(127,127,127,0.08);
+  margin: 0 0 10px 0;
+}
+
+.kfo-refreshing .glyphicon-refresh {
+  animation: kfoSpin 900ms linear infinite;
+}
+
+.kfo-toastWrap {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10050;
+  width: 360px;
+  max-width: calc(100% - 32px);
+}
+
+.kfo-toast {
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(127,127,127,0.22);
+  animation: kfoToastIn 220ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+.kfo-toast--success { border-left: 4px solid #34d399; }
+.kfo-toast--info { border-left: 4px solid #60a5fa; }
+.kfo-toast--error { border-left: 4px solid #ef4444; }
+
+.kfo-toastHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kfo-toastHeaderActions {
+  display: inline-flex;
+  align-items: center;
+}
+
+.kfo-toastHeaderActions > * + * {
+  margin-left: 8px;
+}
+
+.kfo-btn--toast {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.kfo-toastTitle {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.kfo-toastMsg {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+.kfo-taskHeader {
+  padding: 10px 10px 8px 10px;
+  cursor: move;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.kfo.drag-handle-only .kfo-taskHeader {
+  cursor: default;
+}
+
+.kfo-taskHeaderLeft {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.kfo-taskSelectBtn {
+  height: 22px;
+  width: 22px;
+  padding: 0;
+  border-radius: 8px;
+  opacity: 0.25;
+}
+
+.kfo-task:hover .kfo-taskSelectBtn,
+.kfo-task--selected .kfo-taskSelectBtn,
+.kfo-task--focused .kfo-taskSelectBtn {
+  opacity: 1;
+}
+
+.kfo-taskSubject {
+  min-width: 0;
+  word-wrap: break-word;
+}
+
+.kfo-taskHeaderActions {
+  flex: 0 0 auto;
+  margin-left: 8px;
+}
+
+.kfo-pill--stale {
+  font-weight: 900;
+  border: 1px solid rgba(245,158,11,0.35);
+  background: rgba(245,158,11,0.10);
+}
+
+.kfo-dragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  opacity: 0.6;
+  cursor: move;
+}
+
+.kfo-taskMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px 8px 10px;
+  font-size: 11px;
+  opacity: 0.92;
+}
+
+.kfo-taskBody {
+  padding: 0 10px 10px 10px;
+  font-size: 11px;
+  line-height: 1.45;
+  word-wrap: break-word;
+}
+
+.kfo-taskFooter {
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kfo-taskTags {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.kfo-taskTags .kfo-tag {
+  margin-right: 6px;
+  margin-bottom: 6px;
+}
+
+.kfo-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.kfo-taskActions {
+  display: inline-flex;
+}
+
+.kfo-taskActions > * + * {
+  margin-left: 6px;
+}
+
+.kfo-iconBtn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: center;
+  line-height: 24px;
+  vertical-align: middle;
+  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kfo-iconBtn--danger {
+  border-color: rgba(239, 68, 68, 0.30);
+}
+
+.kfo-iconBtn--danger .glyphicon {
+  color: #ef4444;
+}
+
+.kfo-iconBtn--danger:hover {
+  background: rgba(239, 68, 68, 0.10);
+  border-color: rgba(239, 68, 68, 0.55);
+}
+
+/* Active state (used for top-bar toggles) */
+.kfo .kfo-iconBtn.kfo-iconBtn--active {
+  border-color: rgba(0,120,212,0.75) !important;
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.16);
+}
+
+.kfo .kfo-iconBtn.kfo-iconBtn--active:hover {
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.22);
+}
+
+.kfo-view {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 12px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.kfo-card {
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+/* Board empty state */
+.kfo-emptyWrap {
+  padding: 12px;
+}
+
+.kfo-empty {
+  max-width: 640px;
+  margin: 10px auto 0 auto;
+}
+
+.kfo-emptyTitle {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  margin-bottom: 6px;
+}
+
+.kfo-emptyMsg {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 10px;
+}
+
+.kfo-emptyActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.kfo-emptyActions > * + * {
+  margin-left: 8px;
+}
+
+.kfo-cardTitle {
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0 0 10px 0;
+}
+
+/* Settings nav */
+.kfo-settingsNav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.kfo-settingsNav > * {
+  margin: 4px 8px 0 0;
+}
+
+.kfo-settingsTab {
+  font-weight: 900;
+}
+
+.kfo .kfo-settingsTab.kfo-settingsTab--active {
+  border-color: rgba(0,120,212,0.75) !important;
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.14);
+}
+
+.kfo-grid {
+  /* Single-column layout (Outlook panes are often narrow) */
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  margin: 0;
+}
+
+@media (min-width: 1100px) {
+  .kfo-settingsView .kfo-grid {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .kfo-settingsView .kfo-gridCol {
+    flex: 1 1 0;
+  }
+  .kfo-settingsView .kfo-gridCol + .kfo-gridCol {
+    margin-left: 12px;
+  }
+}
+
+.kfo-gridCol {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+}
+
+.kfo-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 820px) {
+  .kfo-settingsView .kfo-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .kfo-settingsView .kfo-row > * + * {
+    margin-left: 0;
+    margin-top: 6px;
+  }
+  .kfo-settingsView .kfo-rowLabel {
+    width: auto;
+  }
+  .kfo-settingsView .kfo-row .kfo-input,
+  .kfo-settingsView .kfo-row .kfo-select {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+.kfo-row > * + * {
+  margin-left: 10px;
+}
+
+.kfo-row .kfo-input {
+  flex: 1 1 auto;
+  min-width: 160px;
+}
+
+.kfo-rowLabel {
+  width: 140px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.kfo-rowControl {
+  flex: 1 1 auto;
+}
+
+/* Allow long settings rows to wrap inside the control area */
+.kfo-rowControl .kfo-row {
+  flex-wrap: wrap;
+}
+
+.kfo-rowControl .kfo-row > * {
+  margin-bottom: 6px;
+}
+
+.kfo-small {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.kfo-divider {
+  height: 1px;
+  opacity: 1;
+  margin: 10px 0;
+  background: rgba(127,127,127,0.18);
+}
+
+.kfo-modalBackdrop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px;
+  overflow: auto;
+  z-index: 12000;
+}
+
+.kfo-modal {
+  width: 760px;
+  max-width: 100%;
+  max-height: calc(100vh - 40px);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.kfo-modalHeader {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kfo-modalTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.kfo-modalBody {
+  padding: 14px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.kfo-modalFooter {
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.kfo-modalFooter > * + * {
+  margin-left: 10px;
+}
+
+.kfo-modalFooterGroup {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kfo-modalFooterGroup > * + * {
+  margin-left: 10px;
+}
+
+.kfo-stepper {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.kfo-stepper > * + * {
+  margin-left: 8px;
+}
+
+.kfo-list {
+  margin: 0;
+  padding: 0;
+}
+
+.kfo-listItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(127,127,127,0.18);
+  margin-bottom: 8px;
+}
+
+.kfo-listItemMain {
+  min-width: 0;
+}
+
+.kfo-listItemTitle {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kfo-listItemMeta {
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.kfo-listItemActions {
+  display: inline-flex;
+  align-items: center;
+}
+
+.kfo-listItemActions > * + * {
+  margin-left: 8px;
+}
+
+/* Stacked field layout (used in Settings) */
+.kfo-fieldRow {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.kfo-fieldRow > * + * {
+  margin-left: 10px;
+}
+
+.kfo-field {
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+
+.kfo-fieldLabel {
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0.85;
+  margin-bottom: 6px;
+}
+
+.kfo-field .kfo-input,
+.kfo-field .kfo-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.kfo-readonlyRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.kfo-readonlyRow > * {
+  margin: 0 8px 6px 0;
+}
+
+.kfo-code {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(127,127,127,0.18);
+  background: rgba(127,127,127,0.08);
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 11px;
+}
+
+/* Lane editor */
+.kfo-laneItem {
+  display: block;
+}
+
+.kfo-laneItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.kfo-laneItemHeaderLeft {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.kfo-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(127,127,127,0.25);
+  margin-right: 8px;
+  flex: 0 0 auto;
+}
+
+.kfo-laneItemName {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 420px;
+}
+
+.kfo-laneItemHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 10px;
+}
+
+.kfo-laneItemHeaderActions > * + * {
+  margin-left: 8px;
+}
+
+.kfo-progress {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(127,127,127,0.20);
+}
+
+.kfo-progressBar {
+  height: 10px;
+  width: 0;
+  background: rgba(96,165,250,0.90);
+}
+
+.kfo-mono {
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.kfo-step {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.65;
+}
+
+.kfo-stepActive {
+  opacity: 1;
+}
+
+@media (max-width: 900px) {
+  .kfo-lane {
+    flex-basis: 300px;
+  }
+  .kfo-rowLabel {
+    width: 120px;
+  }
+}
