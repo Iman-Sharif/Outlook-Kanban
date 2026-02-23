@@ -898,10 +898,15 @@ body.kfo {
 .kfo-iconBtn {
   width: 26px;
   height: 26px;
+  padding: 0;
   border-radius: 9px;
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
+  text-align: center;
+  line-height: 24px;
+  vertical-align: middle;
+  display: inline-block;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -918,6 +923,16 @@ body.kfo {
 .kfo-iconBtn--danger:hover {
   background: rgba(239, 68, 68, 0.10);
   border-color: rgba(239, 68, 68, 0.55);
+}
+
+/* Active state (used for top-bar toggles) */
+.kfo .kfo-iconBtn.kfo-iconBtn--active {
+  border-color: rgba(0,120,212,0.75) !important;
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.16);
+}
+
+.kfo .kfo-iconBtn.kfo-iconBtn--active:hover {
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.22);
 }
 
 .kfo-view {
@@ -974,12 +989,45 @@ body.kfo {
   margin: 0 0 10px 0;
 }
 
+/* Settings nav */
+.kfo-settingsNav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.kfo-settingsNav > * {
+  margin: 4px 8px 0 0;
+}
+
+.kfo-settingsTab {
+  font-weight: 900;
+}
+
+.kfo .kfo-settingsTab.kfo-settingsTab--active {
+  border-color: rgba(0,120,212,0.75) !important;
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.14);
+}
+
 .kfo-grid {
   /* Single-column layout (Outlook panes are often narrow) */
   display: flex;
   flex-direction: column;
   flex-wrap: nowrap;
   margin: 0;
+}
+
+@media (min-width: 1100px) {
+  .kfo-settingsView .kfo-grid {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .kfo-settingsView .kfo-gridCol {
+    flex: 1 1 0;
+  }
+  .kfo-settingsView .kfo-gridCol + .kfo-gridCol {
+    margin-left: 12px;
+  }
 }
 
 .kfo-gridCol {
@@ -992,6 +1040,25 @@ body.kfo {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
+}
+
+@media (max-width: 820px) {
+  .kfo-settingsView .kfo-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .kfo-settingsView .kfo-row > * + * {
+    margin-left: 0;
+    margin-top: 6px;
+  }
+  .kfo-settingsView .kfo-rowLabel {
+    width: auto;
+  }
+  .kfo-settingsView .kfo-row .kfo-input,
+  .kfo-settingsView .kfo-row .kfo-select {
+    min-width: 0;
+    width: 100%;
+  }
 }
 
 .kfo-row > * + * {

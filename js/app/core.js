@@ -15,9 +15,11 @@
     var SCHEMA_VERSION = 3;
 
     // Outlook task user properties (stored locally in Outlook)
-    var PROP_LANE_ID = 'KFO_LaneId';
-    var PROP_LANE_ORDER = 'KFO_LaneOrder';
-    var PROP_LANE_CHANGED_AT = 'KFO_LaneChangedAt';
+    // Note: some Outlook installs reject custom field names containing underscores.
+    // Use underscore-free names, but keep backward-compatible reads in the controller.
+    var PROP_LANE_ID = 'KFOLaneId';
+    var PROP_LANE_ORDER = 'KFOLaneOrder';
+    var PROP_LANE_CHANGED_AT = 'KFOLaneChangedAt';
 
     var DEFAULT_ROOT_FOLDER_NAME = 'Kanban Projects';
 

@@ -10,9 +10,14 @@
     var STATE_ID = core ? core.STATE_ID : 'KanbanState';
     var LOG_ID = core ? core.LOG_ID : 'KanbanErrorLog';
     var SCHEMA_VERSION = core ? core.SCHEMA_VERSION : 3;
-    var PROP_LANE_ID = core ? core.PROP_LANE_ID : 'KFO_LaneId';
-    var PROP_LANE_ORDER = core ? core.PROP_LANE_ORDER : 'KFO_LaneOrder';
-    var PROP_LANE_CHANGED_AT = core ? core.PROP_LANE_CHANGED_AT : 'KFO_LaneChangedAt';
+    var PROP_LANE_ID = core ? core.PROP_LANE_ID : 'KFOLaneId';
+    var PROP_LANE_ORDER = core ? core.PROP_LANE_ORDER : 'KFOLaneOrder';
+    var PROP_LANE_CHANGED_AT = core ? core.PROP_LANE_CHANGED_AT : 'KFOLaneChangedAt';
+
+    // Backward compatibility (older releases used underscore names which are rejected on some Outlook installs)
+    var LEGACY_PROP_LANE_ID = 'KFO_LaneId';
+    var LEGACY_PROP_LANE_ORDER = 'KFO_LaneOrder';
+    var LEGACY_PROP_LANE_CHANGED_AT = 'KFO_LaneChangedAt';
     var DEFAULT_ROOT_FOLDER_NAME = core ? core.DEFAULT_ROOT_FOLDER_NAME : 'Kanban Projects';
     var BUILTIN_THEMES = core ? core.BUILTIN_THEMES : [];
 
@@ -48,6 +53,36 @@
         return core && core.laneTemplate ? core.laneTemplate(templateId) : [];
     }
 
+    function readUserProp(item, propPrimary, propLegacy) {
+        // Read a user property using the current name, with an optional legacy fallback.
+        // Returns '' when missing/unreadable.
+        try {
+            var v = '';
+            try {
+                v = (outlook && outlook.getUserProperty) ? outlook.getUserProperty(item, propPrimary) : '';
+            } catch (e0) {
+                v = '';
+            }
+
+            if (v !== '' && v !== null && v !== undefined) {
+                return v;
+            }
+
+            if (propLegacy && propLegacy !== propPrimary) {
+                try {
+                    v = (outlook && outlook.getUserProperty) ? outlook.getUserProperty(item, propLegacy) : '';
+                } catch (e1) {
+                    v = '';
+                }
+            }
+
+            if (v === null || v === undefined) return '';
+            return v;
+        } catch (e) {
+            return '';
+        }
+    }
+
     angular
         .module('taskboardApp', ['ui.sortable'])
         .controller('taskboardController', ['$scope', '$timeout', function ($scope, $timeout) {
@@ -63,6 +98,9 @@
             $scope.ui = {
                 mode: 'board',
                 projectEntryID: '',
+
+                // Settings UI
+                settingsTab: 'appearance',
                 settingsDirty: false,
                 settingsBaselineRaw: '',
                 isRefreshing: false,
@@ -770,6 +808,69 @@
                 }
             };
 
+            $scope.isDarkTheme = function () {
+                try {
+                    return !!($scope.config && $scope.config.THEME && $scope.config.THEME.activeThemeId === 'kfo-dark');
+                } catch (e) {
+                    return false;
+                }
+            };
+
+            $scope.isCompactMode = function () {
+                try {
+                    return !!($scope.config && $scope.config.UI && $scope.config.UI.density === 'compact');
+                } catch (e) {
+                    return false;
+                }
+            };
+
+            $scope.toggleThemeMode = function () {
+                try {
+                    if (!$scope.config) $scope.config = DEFAULT_CONFIG_V3();
+                    if (!$scope.config.THEME) $scope.config.THEME = DEFAULT_CONFIG_V3().THEME;
+
+                    var cur = String($scope.config.THEME.activeThemeId || 'kfo-light');
+                    var next = (cur === 'kfo-dark') ? 'kfo-light' : 'kfo-dark';
+                    $scope.config.THEME.activeThemeId = next;
+                    $scope.applyTheme();
+                    showToast('info', (next === 'kfo-dark') ? 'Dark mode' : 'Light mode', '', 1600);
+                } catch (e) {
+                    reportError('toggleThemeMode', e, 'Theme toggle failed', 'Could not switch theme. Click the ! icon for details.');
+                }
+            };
+
+            $scope.toggleCompactMode = function () {
+                try {
+                    if (!$scope.config) $scope.config = DEFAULT_CONFIG_V3();
+                    if (!$scope.config.UI) $scope.config.UI = DEFAULT_CONFIG_V3().UI;
+
+                    var cur = String($scope.config.UI.density || 'comfortable');
+                    var next = (cur === 'compact') ? 'comfortable' : 'compact';
+                    $scope.config.UI.density = next;
+                    $scope.applyRootClasses();
+
+                    // Persist immediately (top-bar toggle).
+                    saveConfig();
+
+                    showToast('info', (next === 'compact') ? 'Compact mode' : 'Comfortable mode', '', 1600);
+                } catch (e) {
+                    reportError('toggleCompactMode', e, 'Compact toggle failed', 'Could not switch density. Click the ! icon for details.');
+                }
+            };
+
+            $scope.setSettingsTab = function (tab) {
+                try {
+                    var t = String(tab || 'appearance');
+                    if (t !== 'all' && t !== 'appearance' && t !== 'projects' && t !== 'board' && t !== 'views' && t !== 'lanes' && t !== 'tools') {
+                        t = 'appearance';
+                    }
+                    if (!$scope.ui) return;
+                    $scope.ui.settingsTab = t;
+                } catch (e) {
+                    // ignore
+                }
+            };
+
             function readConfig() {
                 if (hasReadConfig) return;
                 try {
@@ -880,6 +981,20 @@
                         if (motion !== 'full' && motion !== 'subtle' && motion !== 'off') motion = 'full';
                         $scope.config.UI.motion = motion;
                     }
+
+                    // Clamp card note preview length
+                    try {
+                        if ($scope.config && $scope.config.BOARD) {
+                            var lim = parseInt($scope.config.BOARD.taskNoteMaxLen, 10);
+                            if (isNaN(lim)) lim = DEFAULT_CONFIG_V3().BOARD.taskNoteMaxLen;
+                            if (lim < 0) lim = 0;
+                            if (lim > 2000) lim = 2000;
+                            $scope.config.BOARD.taskNoteMaxLen = lim;
+                        }
+                    } catch (eLim) {
+                        // ignore
+                    }
+
                     var ok = storageWrite(CONFIG_ID, JSON.stringify($scope.config, null, 2), 'config', false);
                     if (!ok) {
                         var why = '';
@@ -1517,11 +1632,11 @@
                                 }
                             }
 
-                            var laneId = outlook && outlook.getUserProperty ? outlook.getUserProperty(task, PROP_LANE_ID) : '';
-                            var laneOrderRaw = outlook && outlook.getUserProperty ? outlook.getUserProperty(task, PROP_LANE_ORDER) : '';
+                            var laneId = readUserProp(task, PROP_LANE_ID, LEGACY_PROP_LANE_ID);
+                            var laneOrderRaw = readUserProp(task, PROP_LANE_ORDER, LEGACY_PROP_LANE_ORDER);
 
-                            // Time-in-lane (best-effort): KFO_LaneChangedAt, else Outlook LastModificationTime
-                            var laneChangedAtRaw = (outlook && outlook.getUserProperty) ? outlook.getUserProperty(task, PROP_LANE_CHANGED_AT) : '';
+                            // Time-in-lane (best-effort): KFOLaneChangedAt (legacy: KFO_LaneChangedAt), else Outlook LastModificationTime
+                            var laneChangedAtRaw = readUserProp(task, PROP_LANE_CHANGED_AT, LEGACY_PROP_LANE_CHANGED_AT);
                             var laneChangedAtMs = null;
                             if (laneChangedAtRaw !== '' && laneChangedAtRaw !== null && laneChangedAtRaw !== undefined) {
                                 try {
@@ -5158,7 +5273,7 @@
                                 var task = null;
                                 try {
                                     task = currentItems(itemIdx);
-                                    var lid = outlook.getUserProperty(task, PROP_LANE_ID);
+                                    var lid = readUserProp(task, PROP_LANE_ID, LEGACY_PROP_LANE_ID);
                                     lid = sanitizeId(lid);
                                     if (lid && lid === oldId) {
                                         outlook.setUserProperty(task, PROP_LANE_ID, newId, OlUserPropertyType.olText);
@@ -5669,11 +5784,11 @@
                         try {
                             var it = items(i);
                             var currentLane = '';
-                            currentLane = sanitizeId((outlook && outlook.getUserProperty) ? outlook.getUserProperty(it, PROP_LANE_ID) : '');
+                            currentLane = sanitizeId(readUserProp(it, PROP_LANE_ID, LEGACY_PROP_LANE_ID));
 
                             var laneOrder = null;
                             try {
-                                var laneOrderRaw = (outlook && outlook.getUserProperty) ? outlook.getUserProperty(it, PROP_LANE_ORDER) : '';
+                                var laneOrderRaw = readUserProp(it, PROP_LANE_ORDER, LEGACY_PROP_LANE_ORDER);
                                 if (laneOrderRaw !== '' && laneOrderRaw !== null && laneOrderRaw !== undefined) {
                                     var n = parseInt(laneOrderRaw, 10);
                                     if (!isNaN(n)) laneOrder = n;
@@ -5880,7 +5995,7 @@
                     for (var j = 1; j <= count; j++) {
                         try {
                             var it = items(j);
-                            var laneId = (outlook && outlook.getUserProperty) ? outlook.getUserProperty(it, PROP_LANE_ID) : '';
+                            var laneId = readUserProp(it, PROP_LANE_ID, LEGACY_PROP_LANE_ID);
                             scan.push({
                                 entryID: it.EntryID,
                                 storeID: folderStoreID,

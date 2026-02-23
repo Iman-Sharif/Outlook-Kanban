@@ -365,12 +365,27 @@ function getUserName() {
 }
 
 function getUserProperty(item, prop) {
-    var userprop = item.UserProperties(prop);
-    var value = '';
-    if (userprop != null) {
-        value = userprop.Value;
+    // Best-effort read: missing/invalid field names should not crash the app.
+    // Some Outlook installs reject certain characters in user field names.
+    try {
+        var userprop = null;
+        try {
+            userprop = item.UserProperties(prop);
+        } catch (e1) {
+            userprop = null;
+        }
+        var value = '';
+        if (userprop != null) {
+            try {
+                value = userprop.Value;
+            } catch (e2) {
+                value = '';
+            }
+        }
+        return value;
+    } catch (e) {
+        return '';
     }
-    return value;
 };
 
 function setUserProperty(item, prop, value, type) {
