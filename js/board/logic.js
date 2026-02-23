@@ -91,22 +91,39 @@
             if ((filter.category || '<All Categories>') !== '<All Categories>') return true;
             if (String(filter.private) !== String(privacyFilter.all.value)) return true;
             if (String(filter.due || 'any') !== 'any') return true;
+            if (String(filter.status || 'all') !== 'all') return true;
+            if (String(filter.stale || 'any') !== 'any') return true;
         } catch (e) {
             // ignore
         }
         return false;
     }
 
-    function applyFilters(lanes, filter, privacyFilter) {
+    function applyFilters(lanes, filter, privacyFilter, config) {
         // Treat whitespace-only searches as empty.
         var search = String(filter.search || '').toLowerCase();
         search = search.replace(/^\s+|\s+$/g, '');
         var category = filter.category || '<All Categories>';
         var privacy = String(filter.private);
         var due = String(filter.due || 'any');
+        var status = String(filter.status || 'all');
+        var stale = String(filter.stale || 'any');
+
+        var showDoneCompletedInActiveView = !!(config && config.BOARD && config.BOARD.showDoneCompletedInActiveView);
 
         (lanes || []).forEach(function (lane) {
             lane.filteredTasks = (lane.tasks || []).filter(function (t) {
+                // completed/active
+                if (status === 'completed') {
+                    if (t.statusValue !== 2) return false;
+                } else if (status === 'active') {
+                    if (t.statusValue === 2) {
+                        if (!(showDoneCompletedInActiveView && lane && lane.outlookStatus === 2)) {
+                            return false;
+                        }
+                    }
+                }
+
                 // privacy
                 if (privacy === String(privacyFilter.private.value)) {
                     if (t.sensitivity !== 2) return false;
@@ -152,6 +169,26 @@
                         if (days === null || days !== 0) return false;
                     } else if (due === 'next7') {
                         if (days === null || days < 0 || days > 7) return false;
+                    }
+                }
+
+                // staleness (time in lane; computed by runtime as laneAgeDays)
+                if (stale && stale !== 'any') {
+                    var threshold = 0;
+                    if (stale === 'stale7') threshold = 7;
+                    else if (stale === 'stale14') threshold = 14;
+                    else if (stale === 'stale30') threshold = 30;
+                    else threshold = 0;
+
+                    if (threshold > 0) {
+                        var sd = (t.laneAgeDays === undefined) ? null : t.laneAgeDays;
+                        if (sd === '' || sd === null || sd === undefined) {
+                            sd = null;
+                        } else {
+                            var sn = parseInt(sd, 10);
+                            sd = isNaN(sn) ? null : sn;
+                        }
+                        if (sd === null || sd < threshold) return false;
                     }
                 }
 

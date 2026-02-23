@@ -130,3 +130,67 @@ test('applyFilters() filters by due date buckets', () => {
   board.applyFilters(lanes, filter, privacyFilter);
   assert.deepEqual(lanes[0].filteredTasks.map(t => t.entryID), ['x']);
 });
+
+test('applyFilters() filters by status (active/all/completed)', () => {
+  const config = {
+    BOARD: { saveOrder: false, showDoneCompletedInActiveView: false },
+    LANES: [
+      { id: 'doing', title: 'Doing', color: '#60a5fa', wipLimit: 0, enabled: true, outlookStatus: 1 },
+      { id: 'done', title: 'Done', color: '#34d399', wipLimit: 0, enabled: true, outlookStatus: 2 }
+    ]
+  };
+
+  const tasks = [
+    { entryID: 'a', laneId: 'doing', subject: 'Active', sensitivity: 0, categoriesCsv: '', categories: [], statusValue: 1, dueDateMs: 100 },
+    { entryID: 'b', laneId: 'doing', subject: 'Completed in Doing', sensitivity: 0, categoriesCsv: '', categories: [], statusValue: 2, dueDateMs: 200 },
+    { entryID: 'c', laneId: 'done', subject: 'Completed in Done', sensitivity: 0, categoriesCsv: '', categories: [], statusValue: 2, dueDateMs: 100 },
+    { entryID: 'd', laneId: 'done', subject: 'Active in Done', sensitivity: 0, categoriesCsv: '', categories: [], statusValue: 0, dueDateMs: 200 }
+  ];
+
+  const lanes = board.buildLanes(tasks, config);
+  const privacyFilter = mkPrivacyFilter();
+
+  // Active view: hide all completed tasks by default
+  let filter = { private: privacyFilter.all.value, search: '', category: '<All Categories>', due: 'any', status: 'active', stale: 'any' };
+  board.applyFilters(lanes, filter, privacyFilter, config);
+  assert.deepEqual(lanes[0].filteredTasks.map(t => t.entryID), ['a']);
+  assert.deepEqual(lanes[1].filteredTasks.map(t => t.entryID), ['d']);
+
+  // Active view: optionally keep completed tasks visible in Done lane
+  const config2 = { ...config, BOARD: { ...config.BOARD, showDoneCompletedInActiveView: true } };
+  const lanes2 = board.buildLanes(tasks, config2);
+  board.applyFilters(lanes2, filter, privacyFilter, config2);
+  assert.deepEqual(lanes2[0].filteredTasks.map(t => t.entryID), ['a']);
+  assert.deepEqual(lanes2[1].filteredTasks.map(t => t.entryID), ['c', 'd']);
+
+  // Completed view
+  filter = { private: privacyFilter.all.value, search: '', category: '<All Categories>', due: 'any', status: 'completed', stale: 'any' };
+  board.applyFilters(lanes2, filter, privacyFilter, config2);
+  assert.deepEqual(lanes2[0].filteredTasks.map(t => t.entryID), ['b']);
+  assert.deepEqual(lanes2[1].filteredTasks.map(t => t.entryID), ['c']);
+});
+
+test('applyFilters() filters by staleness (time in lane)', () => {
+  const config = {
+    BOARD: { saveOrder: false },
+    LANES: [{ id: 'backlog', title: 'Backlog', color: '#94a3b8', wipLimit: 0, enabled: true, outlookStatus: 0 }]
+  };
+
+  const tasks = [
+    { entryID: 'n', laneId: 'backlog', subject: 'New', sensitivity: 0, categoriesCsv: '', categories: [], laneAgeDays: 2, dueDateMs: 50 },
+    { entryID: 's7', laneId: 'backlog', subject: 'Stale7', sensitivity: 0, categoriesCsv: '', categories: [], laneAgeDays: 7, dueDateMs: 100 },
+    { entryID: 's20', laneId: 'backlog', subject: 'Stale20', sensitivity: 0, categoriesCsv: '', categories: [], laneAgeDays: 20, dueDateMs: 200 },
+    { entryID: 'u', laneId: 'backlog', subject: 'Unknown age', sensitivity: 0, categoriesCsv: '', categories: [], laneAgeDays: null, dueDateMs: null }
+  ];
+
+  const lanes = board.buildLanes(tasks, config);
+  const privacyFilter = mkPrivacyFilter();
+
+  let filter = { private: privacyFilter.all.value, search: '', category: '<All Categories>', due: 'any', status: 'all', stale: 'stale7' };
+  board.applyFilters(lanes, filter, privacyFilter, config);
+  assert.deepEqual(lanes[0].filteredTasks.map(t => t.entryID), ['s7', 's20']);
+
+  filter = { private: privacyFilter.all.value, search: '', category: '<All Categories>', due: 'any', status: 'all', stale: 'stale14' };
+  board.applyFilters(lanes, filter, privacyFilter, config);
+  assert.deepEqual(lanes[0].filteredTasks.map(t => t.entryID), ['s20']);
+});

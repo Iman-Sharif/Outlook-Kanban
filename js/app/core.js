@@ -17,6 +17,7 @@
     // Outlook task user properties (stored locally in Outlook)
     var PROP_LANE_ID = 'KFO_LaneId';
     var PROP_LANE_ORDER = 'KFO_LaneOrder';
+    var PROP_LANE_CHANGED_AT = 'KFO_LaneChangedAt';
 
     var DEFAULT_ROOT_FOLDER_NAME = 'Kanban Projects';
 
@@ -69,6 +70,7 @@
                 linkedProjects: [],
                 hiddenProjectEntryIDs: []
             },
+            VIEWS: [],
             UI: {
                 density: 'comfortable',
                 motion: 'full',
@@ -80,6 +82,9 @@
                 showPriorityPill: true,
                 showPrivacyIcon: true,
                 showLaneCounts: true,
+
+                // Optional: custom dropdowns with typeahead (avoids native <select> rendering quirks)
+                customDropdowns: false,
 
                 // Opt-in (avoid Outlook conflicts)
                 keyboardShortcuts: false
@@ -107,7 +112,17 @@
                 quickAddEnabled: true,
 
                 // Optional: reduce accidental drags
-                dragHandleOnly: false
+                dragHandleOnly: false,
+
+                // Optional: completion flow
+                completeMovesToDone: true,
+
+                // When viewing only active tasks, optionally keep completed tasks visible in the Done lane.
+                showDoneCompletedInActiveView: false,
+
+                // Staleness cues (time in lane)
+                staleDaysThreshold: 7,
+                showStalePill: true
             },
             USE_CATEGORY_COLORS: true,
             USE_CATEGORY_COLOR_FOOTERS: false,
@@ -161,6 +176,7 @@
         SCHEMA_VERSION: SCHEMA_VERSION,
         PROP_LANE_ID: PROP_LANE_ID,
         PROP_LANE_ORDER: PROP_LANE_ORDER,
+        PROP_LANE_CHANGED_AT: PROP_LANE_CHANGED_AT,
         DEFAULT_ROOT_FOLDER_NAME: DEFAULT_ROOT_FOLDER_NAME,
         BUILTIN_THEMES: BUILTIN_THEMES,
 

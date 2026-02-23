@@ -256,6 +256,79 @@ body.kfo {
   min-width: 0;
 }
 
+/* Task details drawer */
+.kfo-drawer {
+  flex: 0 0 360px;
+  width: 360px;
+  max-width: 45%;
+  min-width: 280px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid rgba(127,127,127,0.18);
+}
+
+.kfo-drawerHeader {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kfo-drawerHeaderMain {
+  min-width: 0;
+}
+
+.kfo-drawerTitle {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.kfo-drawerMeta {
+  font-size: 11px;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.kfo-drawerBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.kfo-drawerSubject {
+  font-size: 13px;
+  font-weight: 900;
+  word-wrap: break-word;
+  margin-bottom: 10px;
+}
+
+.kfo-drawerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.kfo-drawerActions > * {
+  margin: 4px 8px 0 0;
+}
+
+.kfo-drawerNotesText {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+@media (max-width: 920px) {
+  .kfo-drawer {
+    flex: 0 0 320px;
+    width: 320px;
+    max-width: 50%;
+  }
+}
+
 .kfo-refreshBanner {
   padding: 8px 10px;
   margin: 0 0 10px 0;
@@ -305,6 +378,127 @@ body.kfo {
 .kfo-banner--warning {
   border-color: rgba(245,158,11,0.35);
   background: rgba(245,158,11,0.10);
+}
+
+/* Bulk action bar */
+.kfo-bulkBar {
+  padding: 10px;
+  margin: 0 0 10px 0;
+  border-radius: 14px;
+  border: 1px solid rgba(127,127,127,0.18);
+  background: rgba(127,127,127,0.06);
+}
+
+.kfo-bulkBarMain {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.kfo-bulkBarLeft {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kfo-bulkBarLeft > * {
+  margin: 4px 10px 0 0;
+}
+
+.kfo-bulkBarActions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kfo-bulkBarActions > * {
+  margin: 4px 8px 0 0;
+}
+
+/* Popovers */
+.kfo-popBackdrop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 11000;
+  background: rgba(0,0,0,0);
+}
+
+.kfo-pop {
+  position: fixed;
+  z-index: 11010;
+  width: 340px;
+  max-width: calc(100% - 24px);
+  max-height: calc(100vh - 24px);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(127,127,127,0.22);
+  background: rgba(255,255,255,0.96);
+  box-shadow: 0 18px 60px rgba(2,6,23,0.18);
+}
+
+.kfo-popHeader {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kfo-popTitle {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.kfo-popBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.kfo-popSearch {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 10px;
+}
+
+.kfo-popOptions {
+  display: flex;
+  flex-direction: column;
+}
+
+.kfo-popOption {
+  text-align: left;
+  border: 1px solid rgba(127,127,127,0.18);
+  background: rgba(127,127,127,0.06);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.kfo-popOption:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.kfo-popOptionMain {
+  min-width: 0;
+}
+
+.kfo-popOptionLabel {
+  font-weight: 800;
+}
+
+.kfo-popInline {
+  margin-bottom: 10px;
 }
 
 .kfo-lanes {
@@ -389,6 +583,25 @@ body.kfo {
   border-radius: 12px;
   margin: 0 0 10px 0;
   overflow: hidden;
+}
+
+.kfo-task--selected {
+  border-color: rgba(0,120,212,0.65) !important;
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.18), 0 6px 16px rgba(2,6,23,0.08);
+}
+
+.kfo-task--focused {
+  border-color: rgba(0,120,212,0.85) !important;
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.22), 0 8px 22px rgba(2,6,23,0.10);
+}
+
+.kfo-task--completed .kfo-taskSubject {
+  text-decoration: line-through;
+  opacity: 0.78;
+}
+
+.kfo-task--stale {
+  border-color: rgba(245,158,11,0.55) !important;
 }
 
 .kfo-due {
@@ -593,6 +806,20 @@ body.kfo {
   min-width: 0;
 }
 
+.kfo-taskSelectBtn {
+  height: 22px;
+  width: 22px;
+  padding: 0;
+  border-radius: 8px;
+  opacity: 0.25;
+}
+
+.kfo-task:hover .kfo-taskSelectBtn,
+.kfo-task--selected .kfo-taskSelectBtn,
+.kfo-task--focused .kfo-taskSelectBtn {
+  opacity: 1;
+}
+
 .kfo-taskSubject {
   min-width: 0;
   word-wrap: break-word;
@@ -601,6 +828,12 @@ body.kfo {
 .kfo-taskHeaderActions {
   flex: 0 0 auto;
   margin-left: 8px;
+}
+
+.kfo-pill--stale {
+  font-weight: 900;
+  border: 1px solid rgba(245,158,11,0.35);
+  background: rgba(245,158,11,0.10);
 }
 
 .kfo-dragHandle {

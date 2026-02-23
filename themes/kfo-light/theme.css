@@ -39,6 +39,17 @@
   background: transparent;
 }
 
+.kfo.theme-kfo-light .kfo-drawer {
+  background: rgba(255,255,255,0.92);
+  border-left-color: rgba(15,23,42,0.10);
+  box-shadow: -10px 0 28px rgba(2,6,23,0.06);
+}
+
+.kfo.theme-kfo-light .kfo-drawerHeader {
+  background: rgba(255,255,255,0.92);
+  border-bottom: 1px solid rgba(15,23,42,0.06);
+}
+
 .kfo.theme-kfo-light .kfo-lane {
   background: rgba(255,255,255,0.78);
   border: 1px solid rgba(15,23,42,0.08);
@@ -99,6 +110,27 @@
   background: rgba(255,255,255,0.94);
   border-color: rgba(15,23,42,0.12);
   box-shadow: 0 14px 40px rgba(2,6,23,0.16);
+}
+
+.kfo.theme-kfo-light .kfo-bulkBar {
+  border-color: rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.70);
+}
+
+.kfo.theme-kfo-light .kfo-pop {
+  background: rgba(255,255,255,0.94);
+  border-color: rgba(15,23,42,0.12);
+  box-shadow: 0 14px 40px rgba(2,6,23,0.16);
+}
+
+.kfo.theme-kfo-light .kfo-popHeader {
+  background: rgba(255,255,255,0.92);
+  border-bottom: 1px solid rgba(15,23,42,0.06);
+}
+
+.kfo.theme-kfo-light .kfo-popOption {
+  border-color: rgba(15,23,42,0.10);
+  background: rgba(15,23,42,0.06);
 }
 
 .kfo.theme-kfo-light .kfo-modalBackdrop {
