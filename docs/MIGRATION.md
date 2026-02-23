@@ -24,3 +24,10 @@ Older JanBan-based installations may have relied on Outlook Status and/or multip
 
 - Migration does not move tasks between folders.
 - It only writes the lane property locally on each task.
+
+## Renaming lane ids
+
+Lane ids are stored on tasks as `KFO_LaneId`.
+
+If you need to rename a lane id (and migrate tasks), use Settings -> Lanes -> Change... .
+This updates tasks first, then updates your lane configuration.

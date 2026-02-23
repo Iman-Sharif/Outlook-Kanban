@@ -104,7 +104,10 @@
                 saveOrder: true,
 
                 // Quick add in lanes (no inspector)
-                quickAddEnabled: true
+                quickAddEnabled: true,
+
+                // Optional: reduce accidental drags
+                dragHandleOnly: false
             },
             USE_CATEGORY_COLORS: true,
             USE_CATEGORY_COLOR_FOOTERS: false,

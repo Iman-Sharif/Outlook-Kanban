@@ -95,3 +95,38 @@ test('applyFilters() filters by privacy, search, and category', () => {
   board.applyFilters(lanes, filter, privacyFilter);
   assert.deepEqual(lanes[0].filteredTasks.map(t => t.entryID), ['2']);
 });
+
+test('applyFilters() filters by due date buckets', () => {
+  const config = {
+    BOARD: { saveOrder: false },
+    LANES: [{ id: 'backlog', title: 'Backlog', color: '#94a3b8', wipLimit: 0, enabled: true, outlookStatus: 0 }]
+  };
+
+  const tasks = [
+    // Include dueDateMs to keep buildLanes() ordering stable.
+    { entryID: 'o', laneId: 'backlog', subject: 'Overdue', sensitivity: 0, categoriesCsv: '', categories: [], dueDaysFromToday: -2, dueDateMs: 100 },
+    { entryID: 't', laneId: 'backlog', subject: 'Today', sensitivity: 0, categoriesCsv: '', categories: [], dueDaysFromToday: 0, dueDateMs: 200 },
+    { entryID: 'n', laneId: 'backlog', subject: 'Next7', sensitivity: 0, categoriesCsv: '', categories: [], dueDaysFromToday: 6, dueDateMs: 300 },
+    { entryID: 'f', laneId: 'backlog', subject: 'Future', sensitivity: 0, categoriesCsv: '', categories: [], dueDaysFromToday: 12, dueDateMs: 400 },
+    { entryID: 'x', laneId: 'backlog', subject: 'No due', sensitivity: 0, categoriesCsv: '', categories: [], dueDaysFromToday: null, dueDateMs: null }
+  ];
+
+  const lanes = board.buildLanes(tasks, config);
+  const privacyFilter = mkPrivacyFilter();
+
+  let filter = { private: privacyFilter.all.value, search: '', category: '<All Categories>', due: 'overdue' };
+  board.applyFilters(lanes, filter, privacyFilter);
+  assert.deepEqual(lanes[0].filteredTasks.map(t => t.entryID), ['o']);
+
+  filter = { private: privacyFilter.all.value, search: '', category: '<All Categories>', due: 'today' };
+  board.applyFilters(lanes, filter, privacyFilter);
+  assert.deepEqual(lanes[0].filteredTasks.map(t => t.entryID), ['t']);
+
+  filter = { private: privacyFilter.all.value, search: '', category: '<All Categories>', due: 'next7' };
+  board.applyFilters(lanes, filter, privacyFilter);
+  assert.deepEqual(lanes[0].filteredTasks.map(t => t.entryID), ['t', 'n']);
+
+  filter = { private: privacyFilter.all.value, search: '', category: '<All Categories>', due: 'nodue' };
+  board.applyFilters(lanes, filter, privacyFilter);
+  assert.deepEqual(lanes[0].filteredTasks.map(t => t.entryID), ['x']);
+});

@@ -14,6 +14,7 @@
 - Use "New task" in the header to quick add a task in the current folder (default Tasks by default).
 - Drag a task card between lanes.
 - Double-click a card to open it in Outlook.
+- After a lane move, you can Undo from the toast for a short time.
 - Quick add: click the lightning icon on a lane, type a subject, then press Enter.
 
 > [!NOTE]
@@ -23,7 +24,9 @@
 
 - Search: filters by subject and notes preview
 - Category: show tasks in a category (or "No Category")
+- Due: Any / Overdue / Today / Next 7 days / No due date
 - Privacy: show All / Private only / Not Private only
+- Active filters appear as chips under the header (click a chip to clear it).
 
 > [!TIP]
 > Drag-and-drop is disabled while filters are active to avoid saving partial ordering.
@@ -31,9 +34,10 @@
 ## Settings
 
 - Appearance: theme, density, motion, lane width, card fields
-- Board: manual ordering, remember filters/project, note preview length, date format, keyboard shortcuts (opt-in)
+- Board: manual ordering, drag handle only, remember filters/project, note preview length, date format, keyboard shortcuts (opt-in)
 - Projects: create/link/hide/rename projects
-- Lanes: create lanes, reorder them, set colours, optional Outlook Status sync
+- Lanes: create lanes, reorder them, set colours, WIP limits, optional Outlook Status sync
+- Lane ids: stored on tasks as `KFO_LaneId` (use the Change tool if you need to rename an id and migrate tasks)
 - Settings transfer: export/import config + view state as JSON (local file)
 
 ## Tools

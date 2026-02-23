@@ -90,6 +90,7 @@
             if ((String(filter.search || '').trim()) !== '') return true;
             if ((filter.category || '<All Categories>') !== '<All Categories>') return true;
             if (String(filter.private) !== String(privacyFilter.all.value)) return true;
+            if (String(filter.due || 'any') !== 'any') return true;
         } catch (e) {
             // ignore
         }
@@ -97,11 +98,12 @@
     }
 
     function applyFilters(lanes, filter, privacyFilter) {
-        // Note: do not trim here to match runtime behaviour (a whitespace search keeps all tasks visible,
-        // but still counts as an active filter for drag/drop disabling).
-        var search = (filter.search || '').toLowerCase();
+        // Treat whitespace-only searches as empty.
+        var search = String(filter.search || '').toLowerCase();
+        search = search.replace(/^\s+|\s+$/g, '');
         var category = filter.category || '<All Categories>';
         var privacy = String(filter.private);
+        var due = String(filter.due || 'any');
 
         (lanes || []).forEach(function (lane) {
             lane.filteredTasks = (lane.tasks || []).filter(function (t) {
@@ -129,6 +131,27 @@
                             if (c.label === category) found = true;
                         });
                         if (!found) return false;
+                    }
+                }
+
+                // due date (relative to today; computed by runtime as dueDaysFromToday)
+                if (due && due !== 'any') {
+                    var days = (t.dueDaysFromToday === undefined) ? null : t.dueDaysFromToday;
+                    if (days === '' || days === null || days === undefined) {
+                        days = null;
+                    } else {
+                        var dn = parseInt(days, 10);
+                        days = isNaN(dn) ? null : dn;
+                    }
+
+                    if (due === 'nodue') {
+                        if (days !== null) return false;
+                    } else if (due === 'overdue') {
+                        if (days === null || days >= 0) return false;
+                    } else if (due === 'today') {
+                        if (days === null || days !== 0) return false;
+                    } else if (due === 'next7') {
+                        if (days === null || days < 0 || days > 7) return false;
                     }
                 }
 

@@ -4,9 +4,19 @@
 */
 
 .kfo {
-  height: 100vh;
+  height: 100%;
+  min-height: 100vh;
   overflow: hidden;
   font: 400 12px/1.5 "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
+html, body {
+  height: 100%;
+}
+
+body.kfo {
+  margin: 0;
+  padding: 0;
 }
 
 .kfo * {
@@ -18,7 +28,7 @@
 }
 
 .kfo-app {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -137,6 +147,19 @@
   box-shadow: 0 0 0 2px rgba(0,120,212,0.22);
 }
 
+.kfo .kfo-input--error,
+.kfo .kfo-select--error {
+  border-color: rgba(239,68,68,0.85) !important;
+  box-shadow: 0 0 0 2px rgba(239,68,68,0.16);
+}
+
+.kfo-error {
+  font-size: 11px;
+  font-weight: 800;
+  color: #ef4444;
+  margin-top: 4px;
+}
+
 .kfo-btn {
   height: 30px;
   padding: 0 10px;
@@ -180,6 +203,39 @@
   cursor: pointer;
 }
 
+/* Filter chips */
+.kfo-chipRow {
+  flex: 0 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.kfo-chipRow > * {
+  margin: 4px 8px 0 0;
+}
+
+.kfo-chip {
+  max-width: 320px;
+}
+
+.kfo-chipKey {
+  font-weight: 900;
+  opacity: 0.85;
+}
+
+.kfo-chipVal {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kfo-chip--clearAll {
+  font-weight: 900;
+}
+
 .kfo-pill > * + * {
   margin-left: 6px;
 }
@@ -198,6 +254,57 @@
   padding: 12px;
   min-height: 0;
   min-width: 0;
+}
+
+.kfo-refreshBanner {
+  padding: 8px 10px;
+  margin: 0 0 10px 0;
+  border-radius: 12px;
+  border: 1px solid rgba(127,127,127,0.18);
+  background: rgba(127,127,127,0.08);
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0.95;
+}
+
+.kfo-banner {
+  padding: 10px;
+  margin: 0 0 10px 0;
+  border-radius: 14px;
+  border: 1px solid rgba(127,127,127,0.18);
+  background: rgba(127,127,127,0.06);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.kfo-bannerTitle {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.kfo-bannerMsg {
+  font-size: 11px;
+  opacity: 0.9;
+  margin-top: 4px;
+  max-width: 720px;
+}
+
+.kfo-bannerActions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.kfo-bannerActions > * {
+  margin: 6px 8px 0 0;
+}
+
+.kfo-banner--warning {
+  border-color: rgba(245,158,11,0.35);
+  background: rgba(245,158,11,0.10);
 }
 
 .kfo-lanes {
@@ -440,6 +547,21 @@
   justify-content: space-between;
 }
 
+.kfo-toastHeaderActions {
+  display: inline-flex;
+  align-items: center;
+}
+
+.kfo-toastHeaderActions > * + * {
+  margin-left: 8px;
+}
+
+.kfo-btn--toast {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
 .kfo-toastTitle {
   font-weight: 900;
   letter-spacing: 0.2px;
@@ -456,6 +578,40 @@
   cursor: move;
   font-weight: 700;
   font-size: 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.kfo.drag-handle-only .kfo-taskHeader {
+  cursor: default;
+}
+
+.kfo-taskHeaderLeft {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.kfo-taskSubject {
+  min-width: 0;
+  word-wrap: break-word;
+}
+
+.kfo-taskHeaderActions {
+  flex: 0 0 auto;
+  margin-left: 8px;
+}
+
+.kfo-dragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  opacity: 0.6;
+  cursor: move;
 }
 
 .kfo-taskMeta {
@@ -701,6 +857,16 @@
   margin-left: 10px;
 }
 
+.kfo-modalFooterGroup {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kfo-modalFooterGroup > * + * {
+  margin-left: 10px;
+}
+
 .kfo-stepper {
   display: flex;
   flex-wrap: wrap;
@@ -782,6 +948,26 @@
 .kfo-field .kfo-select {
   width: 100%;
   min-width: 0;
+}
+
+.kfo-readonlyRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.kfo-readonlyRow > * {
+  margin: 0 8px 6px 0;
+}
+
+.kfo-code {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(127,127,127,0.18);
+  background: rgba(127,127,127,0.08);
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 11px;
 }
 
 /* Lane editor */
