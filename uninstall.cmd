@@ -10,7 +10,6 @@ echo Maintained by Iman Sharif
 echo ============================================================
 echo.
 echo Disclaimer: provided "AS IS" (no warranty).
-echo See DISCLAIMER.md for details.
 echo.
 
 where choice >nul 2>&1

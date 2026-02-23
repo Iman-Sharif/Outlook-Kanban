@@ -4,6 +4,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 3.5.5
+
+- Fix drag/drop failures on some Outlook installs by switching lane metadata fields to underscore-free names (backward-compatible reads for legacy installs)
+- Fix mojibake bullet separators in lane headers by declaring UTF-8 and using HTML entities
+- Improve icon button centering in legacy Outlook/IE document modes
+- Add top-bar toggles for Light/Dark mode and Compact/Comfortable density
+- Make Compact mode show only key card details (title, due date, priority) while keeping footer actions
+- Improve Settings UX with section navigation and a responsive two-column layout on wider panes
+- Move notes preview length into Appearance and hide it in Compact mode
+- Consolidate end-user docs and ship a cleaner release zip layout (single top-level folder, fewer Markdown files)
+
 ## 3.5.4
 
 - Add Due filter and filter chips with one-click clear
@@ -37,7 +48,7 @@ All notable changes to this project will be documented in this file.
 ## 3.5.0
 
 - Add tag-driven GitHub Releases that publish `kanban-for-outlook.zip` + `.sha256`
-- Add a maintainer release checklist (`docs/RELEASING.md`)
+- Add a maintainer release checklist (`docs/MAINTAINERS.md`)
 
 ## 3.4.0
 

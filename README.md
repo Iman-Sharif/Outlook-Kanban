@@ -8,7 +8,7 @@ Kanban began at Toyota as a way to manage flow using visual signals, and it's no
 
 I use this every day and have benefited from it greatly. That's why I'm maintaining this fork: to keep it usable, local-only, and to help you improve your productivity and task management inside Outlook.
 
-[Download latest zip](https://github.com/Iman-Sharif/Kanban-for-Outlook/releases/latest/download/kanban-for-outlook.zip) | [Setup](docs/SETUP.md) | [Usage](docs/USAGE.md) | [Projects](docs/PROJECTS.md) | [Themes](docs/THEMES.md) | [Troubleshooting](docs/TROUBLESHOOTING.md)
+[Download latest zip](https://github.com/Iman-Sharif/Kanban-for-Outlook/releases/latest/download/kanban-for-outlook.zip) | [Start here](START_HERE.html) | [Setup](docs/SETUP.md) | [Usage](docs/USAGE.md) | [Themes](docs/THEMES.md)
 
 This repository continues **JanBan**, which is based on the original **Outlook Taskboard** by Evren Varol.
 Credits: [`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md).
@@ -43,7 +43,7 @@ See [`docs/SETUP.md`](docs/SETUP.md) for the full setup guide (including manual 
 
 - A board UI hosted as an Outlook Folder Home Page (classic Outlook on Windows)
 - Projects = Outlook Task folders
-- Lanes stored on each task via Outlook user properties (`KFO_LaneId`, optional ordering via `KFO_LaneOrder`)
+- Lanes stored on each task via Outlook user properties (`KFOLaneId`, optional ordering via `KFOLaneOrder`; legacy: `KFO_LaneId`/`KFO_LaneOrder`)
 
 ```mermaid
 flowchart LR
@@ -64,16 +64,11 @@ flowchart LR
 
 ## Documentation
 
-- Start here: [`docs/README.md`](docs/README.md)
-- Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- Setup: [`docs/SETUP.md`](docs/SETUP.md) (includes manual install)
-- Usage: [`docs/USAGE.md`](docs/USAGE.md)
-- Projects: [`docs/PROJECTS.md`](docs/PROJECTS.md)
-- Migration: [`docs/MIGRATION.md`](docs/MIGRATION.md)
-- Themes (end-user): [`docs/THEMES.md`](docs/THEMES.md)
-- Theme authoring (creators): [`docs/THEME_AUTHORING.md`](docs/THEME_AUTHORING.md)
-- SmartScreen: [`docs/SMARTSCREEN.md`](docs/SMARTSCREEN.md)
-- Troubleshooting: [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
+- Docs index: [`docs/README.md`](docs/README.md)
+- Setup / upgrade / troubleshooting: [`docs/SETUP.md`](docs/SETUP.md)
+- Using the board (projects, tools, migration): [`docs/USAGE.md`](docs/USAGE.md)
+- Themes (including authoring): [`docs/THEMES.md`](docs/THEMES.md)
+- Maintainers: [`docs/MAINTAINERS.md`](docs/MAINTAINERS.md)
 - Privacy: [`PRIVACY.md`](PRIVACY.md)
 - Security: [`SECURITY.md`](SECURITY.md)
 - Third-party notices: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)

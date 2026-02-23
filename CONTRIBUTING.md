@@ -41,6 +41,10 @@ This currently runs:
 - a local-only runtime audit (prevents accidental network dependencies)
 - an internal Markdown link check (relative links)
 
+## Maintainer notes
+
+See [`docs/MAINTAINERS.md`](docs/MAINTAINERS.md) for repository layout, packaging, and releasing notes.
+
 ## Reporting bugs
 
 If something breaks, include:

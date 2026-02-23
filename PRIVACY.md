@@ -14,8 +14,8 @@ Kanban for Outlook is designed to run fully locally inside classic Outlook for W
 All data stays in your local Outlook profile:
 
 - Configuration and UI state are stored as Outlook items in your Journal folder (subjects like `KanbanConfig` and `KanbanState`).
-- Lane assignment is stored on each task using an Outlook user property (`KFO_LaneId`).
-- Optional manual ordering is stored on each task using `KFO_LaneOrder`.
+- Lane assignment is stored on each task using an Outlook user property (`KFOLaneId`; legacy: `KFO_LaneId`).
+- Optional manual ordering is stored on each task using `KFOLaneOrder` (legacy: `KFO_LaneOrder`).
 
 ## Network access
 

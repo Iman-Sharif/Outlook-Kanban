@@ -1,34 +1,11 @@
 # Documentation
 
-[README](../README.md) | [Privacy](../PRIVACY.md) | [Security](../SECURITY.md) | [Changelog](../CHANGELOG.md) | [Roadmap](../ROADMAP.md)
+Kanban for Outlook runs fully locally inside classic Outlook for Windows (Folder Home Page / legacy IE engine).
 
-> [!IMPORTANT]
-> Kanban for Outlook is designed to run fully locally inside classic Outlook for Windows.
+Start here (offline): [`START_HERE.html`](../START_HERE.html)
 
-## Getting started
+## End users
 
-- [`docs/SETUP.md`](SETUP.md): install (recommended + manual)
-- [`docs/SMARTSCREEN.md`](SMARTSCREEN.md): Windows SmartScreen guidance
-
-## Using the app
-
-- [`docs/USAGE.md`](USAGE.md): board usage + filters + settings
-- [`docs/PROJECTS.md`](PROJECTS.md): projects as folders (create/link/hide/move)
-- [`docs/MIGRATION.md`](MIGRATION.md): migrate from Outlook Status to lanes
-- [`docs/TROUBLESHOOTING.md`](TROUBLESHOOTING.md): common issues and fixes
-
-## Themes
-
-- [`docs/THEMES.md`](THEMES.md): using built-in + adding folder/imported themes
-- [`docs/THEME_AUTHORING.md`](THEME_AUTHORING.md): creating high-quality themes (skeleton + preview)
-
-## Maintainers
-
-- [`docs/SIGNING.md`](SIGNING.md): why signing helps SmartScreen (maintainer doc)
-- [`docs/RELEASING.md`](RELEASING.md): release checklist + tag-driven releases
-- [`CONTRIBUTING.md`](../CONTRIBUTING.md): contribution guide + maintainer checks
-
-## Reference
-
-- [`docs/ARCHITECTURE.md`](ARCHITECTURE.md): repo structure + runtime design
-- [`docs/IMPROVEMENT_PLAN.md`](IMPROVEMENT_PLAN.md): actionable plan for future releases
+- Setup / upgrade / troubleshooting: [`docs/SETUP.md`](SETUP.md)
+- Using the board (projects, tools, migration): [`docs/USAGE.md`](USAGE.md)
+- Themes (including authoring): [`docs/THEMES.md`](THEMES.md)
