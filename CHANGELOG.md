@@ -4,6 +4,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 3.5.4
+
+- Add Due filter and filter chips with one-click clear
+- Add Undo for lane moves and reduce accidental drags (optional drag handle)
+- Improve WIP feedback (count/limit + over-limit styling)
+- Improve refresh UX ("Refreshing" state + last refreshed hint)
+- Improve project selection (grouped list + clearer fallback when a folder is missing)
+- Add a safe lane id rename tool (migrates tasks, then updates lane config)
+- Settings safety: unsaved-changes warning when leaving Settings
+- Accessibility and classic Outlook/IE11 hardening (dialogs, labels, Esc-to-close)
+
 ## 3.5.3
 
 - Add a prominent "New task" quick-add entrypoint and clearer empty states
