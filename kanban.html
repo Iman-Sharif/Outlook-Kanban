@@ -378,14 +378,14 @@
                                             <button class="kfo-iconBtn" type="button" aria-label="OneNote" ng-if="task.oneNoteURL" ng-click="openOneNoteURL(task.oneNoteURL)">
                                                 <span class="glyphicon glyphicon-book" aria-hidden="true"></span>
                                             </button>
-                                            <button class="kfo-iconBtn" type="button" aria-label="Open" title="Open" ng-click="editTask(task)">
-                                                <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
-                                            </button>
-                                            <button class="kfo-iconBtn" type="button" aria-label="Delete" ng-click="deleteTask(task, true)">
-                                                <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
-                                            </button>
-                                        </div>
-                                    </div>
+                                             <button class="kfo-iconBtn" type="button" aria-label="Open" title="Open" ng-click="editTask(task)">
+                                                 <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+                                             </button>
+                                             <button class="kfo-iconBtn kfo-iconBtn--danger" type="button" aria-label="Delete" title="Delete" ng-click="deleteTask(task, true)">
+                                                 <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                                             </button>
+                                         </div>
+                                     </div>
                                 </li>
                              </ul>
                              </div>
@@ -425,16 +425,52 @@
                         <div class="kfo-drawerActions">
                             <button class="kfo-btn" type="button" ng-click="editTask(ui.drawer.task)">Open</button>
                             <button class="kfo-btn" type="button" ng-click="openTaskActions($event, ui.drawer.task)">Actions</button>
-                            <button class="kfo-btn" type="button" ng-if="ui.drawer.task.statusValue !== 2" ng-click="completeTask($event, ui.drawer.task)">Complete</button>
-                            <button class="kfo-btn" type="button" ng-click="deleteTask(ui.drawer.task, true)">Delete</button>
+                            <button class="kfo-btn kfo-btn--success" type="button" ng-if="ui.drawer.task.statusValue !== 2" ng-click="completeTask($event, ui.drawer.task)">
+                                <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+                                <span>Complete</span>
+                            </button>
+                            <button class="kfo-btn kfo-btn--danger" type="button" ng-click="deleteTask(ui.drawer.task, true)">
+                                <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                                <span>Delete</span>
+                            </button>
                         </div>
 
                         <div class="kfo-divider"></div>
 
                         <div class="kfo-drawerNotes">
+                            <div class="kfo-drawerNotesHeader">
+                                <div class="kfo-drawerNotesTitle">Notes</div>
+                                <div class="kfo-drawerNotesHeaderActions">
+                                    <button class="kfo-btn" type="button" ng-if="!ui.drawer.editing && ui.drawer.details && ui.drawer.details.ok" ng-click="startEditDrawerBody()">Edit</button>
+                                    <button class="kfo-btn kfo-btn--success" type="button" ng-if="ui.drawer.editing" ng-click="saveEditDrawerBody()" ng-disabled="ui.drawer.saving || !drawerBodyDirty()">Save</button>
+                                    <button class="kfo-btn" type="button" ng-if="ui.drawer.editing" ng-click="cancelEditDrawerBody()" ng-disabled="ui.drawer.saving">Cancel</button>
+                                </div>
+                            </div>
+
                             <div class="kfo-small" ng-if="ui.drawer.loading">Loading details...</div>
+                            <div class="kfo-small" ng-if="ui.drawer.saving">Saving...</div>
                             <div class="kfo-small" ng-if="ui.drawer.details && ui.drawer.details.ok === false">{{ui.drawer.details.error}}</div>
-                            <div class="kfo-drawerNotesText" ng-if="ui.drawer.details && ui.drawer.details.ok">{{ui.drawer.details.body}}</div>
+
+                            <div ng-if="ui.drawer.details && ui.drawer.details.ok">
+                                <div class="kfo-checklist" ng-if="!ui.drawer.editing && ui.drawer.checklist && ui.drawer.checklist.items && ui.drawer.checklist.items.length">
+                                    <div class="kfo-checklistTitle">Checklist</div>
+                                    <label class="kfo-checkItem" ng-repeat="it in ui.drawer.checklist.items">
+                                        <input type="checkbox" ng-checked="it.checked" ng-click="toggleDrawerChecklistItem(it)" />
+                                        <span class="kfo-checkText" ng-class="{'kfo-checkText--done': it.checked}">{{it.text || '(Untitled)'}} </span>
+                                    </label>
+                                </div>
+
+                                <div class="kfo-checkAdd" ng-if="!ui.drawer.editing">
+                                    <input class="kfo-input" type="text" ng-model="ui.drawer.newChecklistText" placeholder="Add checklist item" aria-label="Add checklist item" ng-keydown="drawerChecklistKeyDown($event)" />
+                                    <button class="kfo-btn" type="button" ng-click="addDrawerChecklistItem()" ng-disabled="ui.drawer.saving">Add</button>
+                                </div>
+                                <div class="kfo-small" ng-if="!ui.drawer.editing">Tip: checklist items are stored as <code>- [ ]</code> lines in the task body.</div>
+
+                                <textarea class="kfo-input kfo-textarea" id="kfo-drawer-body" ng-if="ui.drawer.editing" ng-model="ui.drawer.draftBody" aria-label="Task body" placeholder="Type notes..." ng-disabled="ui.drawer.saving"></textarea>
+
+                                <div class="kfo-drawerNotesText" ng-if="!ui.drawer.editing">{{(ui.drawer.checklist && ui.drawer.checklist.otherText !== undefined) ? ui.drawer.checklist.otherText : ui.drawer.details.body}}</div>
+                            </div>
+
                             <div class="kfo-drawerNotesText" ng-if="!ui.drawer.details && ui.drawer.task.notes">{{ui.drawer.task.notes}}</div>
                         </div>
                     </div>
@@ -1597,7 +1633,7 @@
                     </div>
 
                     <div class="kfo-popOptions">
-                        <button class="kfo-popOption" type="button" ng-repeat="opt in ui.pop.visibleOptions" ng-click="runPopOption(opt)" ng-disabled="opt.disabled">
+                        <button class="kfo-popOption" type="button" ng-repeat="opt in ui.pop.visibleOptions" ng-click="runPopOption(opt)" ng-disabled="opt.disabled" ng-class="opt.className">
                             <span class="glyphicon" ng-if="opt.icon" ng-class="opt.icon" aria-hidden="true"></span>
                             <span class="kfo-popOptionMain">
                                 <span class="kfo-popOptionLabel">{{opt.label}}</span>

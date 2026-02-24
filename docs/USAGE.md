@@ -14,6 +14,7 @@
 - Pick a Project from the header if you want to work within a specific Tasks folder.
 - Use "New task" in the header to quick add a task in the current folder (default Tasks by default).
 - Drag a task card between lanes.
+- Click a card to open the task drawer (details, notes, checklist, and quick actions).
 - Double-click a card to open it in Outlook.
 - After a lane move, you can Undo from the toast for a short time.
 - Quick add: click the lightning icon on a lane, type a subject, then press Enter.
@@ -38,6 +39,12 @@
 - Comfortable mode can show title, due date, priority, notes preview, and categories (configurable in Settings).
 - Compact mode shows only key details (title, due date, priority) to reduce noise; footer action buttons remain.
 - Notes preview length is configurable (characters) and only applies in Comfortable mode.
+
+## Notes + checklist
+
+- Notes are the Outlook task Body.
+- You can edit notes directly in the task drawer.
+- The checklist is stored in the task body as Markdown-style checkboxes (for example `- [ ] Call supplier`). Ticking a checkbox updates the underlying text.
 
 ## Views
 

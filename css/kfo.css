@@ -127,6 +127,16 @@ body.kfo {
   min-width: 140px;
 }
 
+.kfo-textarea {
+  height: auto;
+  min-height: 160px;
+  width: 100%;
+  min-width: 0;
+  resize: vertical;
+  line-height: 1.35;
+  font-family: inherit;
+}
+
 .kfo-topbarGrow .kfo-input {
   width: 100%;
   min-width: 0;
@@ -169,6 +179,28 @@ body.kfo {
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+}
+
+.kfo .kfo-btn.kfo-btn--danger {
+  border-color: rgba(239, 68, 68, 0.55) !important;
+  background: rgba(239, 68, 68, 0.10);
+  color: #ef4444;
+  font-weight: 900;
+}
+
+.kfo .kfo-btn.kfo-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.16);
+}
+
+.kfo .kfo-btn.kfo-btn--success {
+  border-color: rgba(16, 185, 129, 0.55) !important;
+  background: rgba(16, 185, 129, 0.10);
+  color: #10b981;
+  font-weight: 900;
+}
+
+.kfo .kfo-btn.kfo-btn--success:hover {
+  background: rgba(16, 185, 129, 0.16);
 }
 
 .kfo-btn > * + * {
@@ -314,6 +346,81 @@ body.kfo {
 
 .kfo-drawerActions > * {
   margin: 4px 8px 0 0;
+}
+
+.kfo-drawerNotesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.kfo-drawerNotesTitle {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.kfo-drawerNotesHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.kfo-drawerNotesHeaderActions > * + * {
+  margin-left: 8px;
+}
+
+.kfo-checklist {
+  border: 1px solid rgba(127,127,127,0.18);
+  background: rgba(127,127,127,0.06);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.kfo-checklistTitle {
+  font-size: 11px;
+  font-weight: 900;
+  opacity: 0.9;
+  margin-bottom: 6px;
+}
+
+.kfo-checkItem {
+  display: flex;
+  align-items: flex-start;
+  cursor: pointer;
+  margin: 6px 0;
+}
+
+.kfo-checkItem input {
+  margin: 2px 8px 0 0;
+}
+
+.kfo-checkText {
+  font-size: 12px;
+  font-weight: 700;
+  word-wrap: break-word;
+}
+
+.kfo-checkText--done {
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+.kfo-checkAdd {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.kfo-checkAdd > * + * {
+  margin-left: 8px;
+}
+
+.kfo-checkAdd .kfo-input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
 }
 
 .kfo-drawerNotesText {
@@ -482,6 +589,24 @@ body.kfo {
   margin-bottom: 8px;
   display: flex;
   align-items: flex-start;
+}
+
+.kfo-popOption--danger {
+  border-color: rgba(239, 68, 68, 0.40);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.kfo-popOption--danger .glyphicon {
+  color: #ef4444;
+}
+
+.kfo-popOption--success {
+  border-color: rgba(16, 185, 129, 0.40);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.kfo-popOption--success .glyphicon {
+  color: #10b981;
 }
 
 .kfo-popOption:disabled {
@@ -923,6 +1048,19 @@ body.kfo {
 .kfo-iconBtn--danger:hover {
   background: rgba(239, 68, 68, 0.10);
   border-color: rgba(239, 68, 68, 0.55);
+}
+
+.kfo-iconBtn--success {
+  border-color: rgba(16, 185, 129, 0.30);
+}
+
+.kfo-iconBtn--success .glyphicon {
+  color: #10b981;
+}
+
+.kfo-iconBtn--success:hover {
+  background: rgba(16, 185, 129, 0.10);
+  border-color: rgba(16, 185, 129, 0.55);
 }
 
 /* Active state (used for top-bar toggles) */

@@ -45,6 +45,39 @@
         return core && core.isRealDate ? core.isRealDate(d) : false;
     }
 
+    function parseChecklist(bodyText) {
+        try {
+            if (core && core.util && core.util.parseChecklist) {
+                return core.util.parseChecklist(bodyText);
+            }
+        } catch (e) {
+            // ignore
+        }
+        return { items: [], otherText: String(bodyText || '') };
+    }
+
+    function toggleChecklistItem(bodyText, lineIndex, checked) {
+        try {
+            if (core && core.util && core.util.toggleChecklistItem) {
+                return core.util.toggleChecklistItem(bodyText, lineIndex, checked);
+            }
+        } catch (e) {
+            // ignore
+        }
+        return String(bodyText || '');
+    }
+
+    function addChecklistItem(bodyText, itemText) {
+        try {
+            if (core && core.util && core.util.addChecklistItem) {
+                return core.util.addChecklistItem(bodyText, itemText);
+            }
+        } catch (e) {
+            // ignore
+        }
+        return String(bodyText || '');
+    }
+
     function DEFAULT_CONFIG_V3() {
         return core && core.DEFAULT_CONFIG_V3 ? core.DEFAULT_CONFIG_V3() : { SCHEMA_VERSION: SCHEMA_VERSION };
     }
@@ -116,7 +149,20 @@
                 // Selection + details drawer
                 selection: { keys: {}, order: [], count: 0 },
                 focusTaskKey: '',
-                drawer: { open: false, loading: false, entryID: '', storeID: '', task: null, details: null },
+                drawer: {
+                    open: false,
+                    loading: false,
+                    saving: false,
+                    entryID: '',
+                    storeID: '',
+                    task: null,
+                    details: null,
+                    checklist: { items: [], otherText: '' },
+                    newChecklistText: '',
+                    editing: false,
+                    baselineBody: '',
+                    draftBody: ''
+                },
 
                 // Lane UI state (collapse/focus) persisted per project
                 laneUIByProject: {},
@@ -1856,18 +1902,273 @@
                 }
             };
 
+            function drawerHasUnsavedEdits() {
+                try {
+                    if (!$scope.ui || !$scope.ui.drawer) return false;
+                    if (!$scope.ui.drawer.editing) return false;
+                    return String($scope.ui.drawer.draftBody || '') !== String($scope.ui.drawer.baselineBody || '');
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            function resetDrawerTransient() {
+                try {
+                    if (!$scope.ui || !$scope.ui.drawer) return;
+                    $scope.ui.drawer.saving = false;
+                    $scope.ui.drawer.editing = false;
+                    $scope.ui.drawer.baselineBody = '';
+                    $scope.ui.drawer.draftBody = '';
+                    $scope.ui.drawer.newChecklistText = '';
+                    if (!$scope.ui.drawer.checklist) $scope.ui.drawer.checklist = { items: [], otherText: '' };
+                    $scope.ui.drawer.checklist.items = [];
+                    $scope.ui.drawer.checklist.otherText = '';
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            function updateDrawerChecklistFromBody(bodyText) {
+                try {
+                    if (!$scope.ui || !$scope.ui.drawer) return;
+                    var p = parseChecklist(bodyText);
+                    if (!$scope.ui.drawer.checklist) $scope.ui.drawer.checklist = { items: [], otherText: '' };
+                    $scope.ui.drawer.checklist.items = (p && p.items) ? p.items : [];
+                    $scope.ui.drawer.checklist.otherText = (p && p.otherText !== undefined) ? String(p.otherText) : String(bodyText || '');
+                } catch (e) {
+                    try {
+                        if ($scope.ui && $scope.ui.drawer) {
+                            $scope.ui.drawer.checklist = { items: [], otherText: String(bodyText || '') };
+                        }
+                    } catch (e2) {
+                        // ignore
+                    }
+                }
+            }
+
+            function updateDrawerDerived() {
+                try {
+                    if (!$scope.ui || !$scope.ui.drawer) return;
+                    var d = $scope.ui.drawer.details;
+                    if (d && d.ok) {
+                        updateDrawerChecklistFromBody(d.body);
+                        return;
+                    }
+                    var preview = '';
+                    try { preview = ($scope.ui.drawer.task && $scope.ui.drawer.task.notes) ? String($scope.ui.drawer.task.notes) : ''; } catch (e0) { preview = ''; }
+                    if (!$scope.ui.drawer.checklist) $scope.ui.drawer.checklist = { items: [], otherText: '' };
+                    $scope.ui.drawer.checklist.items = [];
+                    $scope.ui.drawer.checklist.otherText = preview;
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            $scope.drawerBodyDirty = function () {
+                return drawerHasUnsavedEdits();
+            };
+
+            $scope.startEditDrawerBody = function () {
+                try {
+                    if (!$scope.ui || !$scope.ui.drawer) return;
+                    if (!$scope.ui.drawer.details || !$scope.ui.drawer.details.ok) return;
+                    $scope.ui.drawer.editing = true;
+                    $scope.ui.drawer.baselineBody = String($scope.ui.drawer.details.body || '');
+                    $scope.ui.drawer.draftBody = String($scope.ui.drawer.details.body || '');
+                    focusById('kfo-drawer-body', true);
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.cancelEditDrawerBody = function () {
+                try {
+                    if (!$scope.ui || !$scope.ui.drawer) return;
+                    if ($scope.ui.drawer.saving) return;
+                    if (drawerHasUnsavedEdits()) {
+                        if (!window.confirm('Discard note edits?')) return;
+                    }
+                    $scope.ui.drawer.editing = false;
+                    $scope.ui.drawer.draftBody = '';
+                    $scope.ui.drawer.baselineBody = '';
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            function updateTaskNotesPreviewByIDs(entryID, storeID, bodyText) {
+                try {
+                    var key = taskKeyFromIDs(entryID, storeID);
+                    var hit = findTaskByKey(key);
+                    if (hit && hit.task) {
+                        hit.task.notes = taskBodyNotes(bodyText, ($scope.config && $scope.config.BOARD) ? $scope.config.BOARD.taskNoteMaxLen : 0);
+                    }
+                    if ($scope.ui && $scope.ui.drawer && $scope.ui.drawer.task && taskKey($scope.ui.drawer.task) === key) {
+                        $scope.ui.drawer.task.notes = taskBodyNotes(bodyText, ($scope.config && $scope.config.BOARD) ? $scope.config.BOARD.taskNoteMaxLen : 0);
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            function applyBodyToDrawerIfMatch(entryID, storeID, bodyText) {
+                try {
+                    if (!$scope.ui || !$scope.ui.drawer) return;
+                    if (String($scope.ui.drawer.entryID || '') !== String(entryID || '')) return;
+                    if (String($scope.ui.drawer.storeID || '') !== String(storeID || '')) return;
+
+                    if (!$scope.ui.drawer.details) {
+                        $scope.ui.drawer.details = { ok: true, body: '' };
+                    }
+                    $scope.ui.drawer.details.ok = true;
+                    $scope.ui.drawer.details.body = String(bodyText || '');
+                    $scope.ui.drawer.editing = false;
+                    $scope.ui.drawer.baselineBody = '';
+                    $scope.ui.drawer.draftBody = '';
+                    updateDrawerDerived();
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            function applyTaskBodyUpdate(entryID, storeID, prevBody, nextBody, toastTitle, toastMsg) {
+                try {
+                    var eid = String(entryID || '');
+                    var sid = String(storeID || '');
+                    var before = String(prevBody || '');
+                    var after = String(nextBody || '');
+
+                    if (!eid) return;
+                    if (before === after) return;
+                    if (!$scope.ui || !$scope.ui.drawer) return;
+
+                    $scope.ui.drawer.saving = true;
+
+                    $timeout(function () {
+                        try {
+                            var ok = setTaskBody(eid, sid, after);
+                            $scope.ui.drawer.saving = false;
+                            if (!ok) {
+                                showToast('error', 'Save failed', 'Could not update the task in Outlook', 4200);
+                                return;
+                            }
+
+                            applyBodyToDrawerIfMatch(eid, sid, after);
+                            updateTaskNotesPreviewByIDs(eid, sid, after);
+
+                            showToast('success', toastTitle || 'Saved', toastMsg || '', 6500, 'Undo', function () {
+                                try {
+                                    var ok2 = setTaskBody(eid, sid, before);
+                                    if (!ok2) {
+                                        showToast('error', 'Undo failed', 'Could not update the task in Outlook', 4200);
+                                        return;
+                                    }
+                                    applyBodyToDrawerIfMatch(eid, sid, before);
+                                    updateTaskNotesPreviewByIDs(eid, sid, before);
+                                    showToast('success', 'Undo applied', '', 1600);
+                                } catch (e3) {
+                                    reportError('undoTaskBody', e3, 'Undo failed', 'Could not undo the note change. Click the ! icon for details.');
+                                }
+                            });
+                        } catch (e) {
+                            try { if ($scope.ui && $scope.ui.drawer) $scope.ui.drawer.saving = false; } catch (e2) { /* ignore */ }
+                            reportError('applyTaskBodyUpdate', e, 'Save failed', 'Could not update the task body. Click the ! icon for details.');
+                        }
+                    }, 0);
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            $scope.saveEditDrawerBody = function () {
+                try {
+                    if (!$scope.ui || !$scope.ui.drawer) return;
+                    if (!$scope.ui.drawer.details || !$scope.ui.drawer.details.ok) return;
+                    if (!drawerHasUnsavedEdits()) {
+                        $scope.ui.drawer.editing = false;
+                        $scope.ui.drawer.draftBody = '';
+                        $scope.ui.drawer.baselineBody = '';
+                        return;
+                    }
+
+                    var entryID = String($scope.ui.drawer.entryID || '');
+                    var storeID = String($scope.ui.drawer.storeID || '');
+                    var before = String($scope.ui.drawer.details.body || '');
+                    var after = String($scope.ui.drawer.draftBody || '');
+                    applyTaskBodyUpdate(entryID, storeID, before, after, 'Notes saved', '');
+                } catch (e) {
+                    reportError('saveEditDrawerBody', e, 'Save failed', 'Could not save notes. Click the ! icon for details.');
+                }
+            };
+
+            $scope.drawerChecklistKeyDown = function (ev) {
+                try {
+                    var e = ev || window.event;
+                    var code = e ? (e.keyCode || e.which) : 0;
+                    if (code === 13) {
+                        try { if (e.preventDefault) e.preventDefault(); } catch (e1) { /* ignore */ }
+                        $scope.addDrawerChecklistItem();
+                        return false;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.toggleDrawerChecklistItem = function (item) {
+                try {
+                    if (!$scope.ui || !$scope.ui.drawer) return;
+                    if ($scope.ui.drawer.editing) return;
+                    if ($scope.ui.drawer.saving) return;
+                    if (!$scope.ui.drawer.details || !$scope.ui.drawer.details.ok) return;
+                    if (!item) return;
+                    var before = String($scope.ui.drawer.details.body || '');
+                    var idx = item.lineIndex;
+                    var after = toggleChecklistItem(before, idx, !item.checked);
+                    applyTaskBodyUpdate(String($scope.ui.drawer.entryID || ''), String($scope.ui.drawer.storeID || ''), before, after, 'Checklist updated', '');
+                } catch (e) {
+                    reportError('toggleDrawerChecklistItem', e, 'Checklist update failed', 'Could not update the checklist. Click the ! icon for details.');
+                }
+            };
+
+            $scope.addDrawerChecklistItem = function () {
+                try {
+                    if (!$scope.ui || !$scope.ui.drawer) return;
+                    if ($scope.ui.drawer.editing) return;
+                    if ($scope.ui.drawer.saving) return;
+                    if (!$scope.ui.drawer.details || !$scope.ui.drawer.details.ok) return;
+                    var text = String($scope.ui.drawer.newChecklistText || '').replace(/^\s+|\s+$/g, '');
+                    if (!text) return;
+                    var before = String($scope.ui.drawer.details.body || '');
+                    var after = addChecklistItem(before, text);
+                    $scope.ui.drawer.newChecklistText = '';
+                    applyTaskBodyUpdate(String($scope.ui.drawer.entryID || ''), String($scope.ui.drawer.storeID || ''), before, after, 'Checklist item added', text);
+                } catch (e) {
+                    reportError('addDrawerChecklistItem', e, 'Checklist update failed', 'Could not add the checklist item. Click the ! icon for details.');
+                }
+            };
+
             $scope.openDrawerForTask = function (task) {
                 try {
                     if (!$scope.ui || !$scope.ui.drawer) return;
                     var k = taskKey(task);
                     if (!k) return;
+
+                    if ($scope.ui.drawer.open && drawerHasUnsavedEdits()) {
+                        var curKey = taskKeyFromIDs($scope.ui.drawer.entryID, $scope.ui.drawer.storeID);
+                        if (curKey && curKey !== k) {
+                            if (!window.confirm('Discard note edits?')) return;
+                        }
+                    }
                     $scope.ui.focusTaskKey = k;
                     $scope.ui.drawer.open = true;
                     $scope.ui.drawer.loading = true;
+                    resetDrawerTransient();
                     $scope.ui.drawer.entryID = String(task.entryID || '');
                     $scope.ui.drawer.storeID = String(task.storeID || '');
                     $scope.ui.drawer.task = task;
                     $scope.ui.drawer.details = null;
+                    updateDrawerDerived();
 
                     $timeout(function () {
                         try {
@@ -1884,9 +2185,13 @@
             $scope.closeDrawer = function () {
                 try {
                     if ($scope.ui && $scope.ui.drawer) {
+                        if (drawerHasUnsavedEdits()) {
+                            if (!window.confirm('Discard note edits?')) return;
+                        }
                         $scope.ui.drawer.open = false;
                         $scope.ui.drawer.loading = false;
                         $scope.ui.drawer.details = null;
+                        resetDrawerTransient();
                     }
                 } catch (e) {
                     // ignore
@@ -1943,11 +2248,13 @@
 
                     $scope.ui.drawer.details = d;
                     $scope.ui.drawer.loading = false;
+                    updateDrawerDerived();
                 } catch (e) {
                     try {
                         if ($scope.ui && $scope.ui.drawer) {
                             $scope.ui.drawer.loading = false;
                             $scope.ui.drawer.details = { ok: false, error: safeErrorString(e) };
+                            updateDrawerDerived();
                         }
                     } catch (e2) {
                         // ignore
@@ -2057,6 +2364,19 @@
                             return false;
                         }
                     }
+                    taskitem.Save();
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            function setTaskBody(taskEntryID, storeID, bodyText) {
+                try {
+                    var taskitem = getTaskItemSafe(taskEntryID, storeID);
+                    if (!taskitem) return false;
+                    // Note: uses plain-text Body (not HTMLBody) for maximum compatibility.
+                    taskitem.Body = String(bodyText || '');
                     taskitem.Save();
                     return true;
                 } catch (e) {
@@ -2925,10 +3245,10 @@
                     opts.push({ label: 'Privacy...', meta: '', icon: 'glyphicon-lock', onClick: function () { openPrivacyPicker(ev, keys); } });
 
                     if (task && task.statusValue !== 2) {
-                        opts.push({ label: 'Complete', meta: '', icon: 'glyphicon-ok', onClick: function () { $scope.closePop(); $scope.completeTask(null, task); } });
+                        opts.push({ label: 'Complete', meta: '', icon: 'glyphicon-ok', className: 'kfo-popOption--success', onClick: function () { $scope.closePop(); $scope.completeTask(null, task); } });
                     }
                     opts.push({ label: 'Open in Outlook', meta: '', icon: 'glyphicon-new-window', onClick: function () { $scope.closePop(); $scope.editTask(task); } });
-                    opts.push({ label: 'Delete...', meta: '', icon: 'glyphicon-trash', onClick: function () { $scope.closePop(); $scope.deleteTask(task, true); } });
+                    opts.push({ label: 'Delete...', meta: '', icon: 'glyphicon-trash', className: 'kfo-popOption--danger', onClick: function () { $scope.closePop(); $scope.deleteTask(task, true); } });
 
                     openPop(ev, 'task-actions', 'Actions', opts, false, { keys: keys, action: 'task-actions' });
                 } catch (e) {
@@ -3268,6 +3588,14 @@
                     if (!$scope.ui) return;
                     var k = String(key || '');
                     if (!k) return;
+
+                    if ($scope.ui.drawer && $scope.ui.drawer.open && drawerHasUnsavedEdits()) {
+                        var curKey = taskKeyFromIDs($scope.ui.drawer.entryID, $scope.ui.drawer.storeID);
+                        if (curKey && curKey !== k) {
+                            showToast('info', 'Finish editing', 'Save or Cancel your note edits before switching tasks.', 2600);
+                            return;
+                        }
+                    }
                     $scope.ui.focusTaskKey = k;
 
                     // Keep the drawer in sync with focus when open
@@ -3279,6 +3607,7 @@
                             $scope.ui.drawer.task = hit.task;
                             $scope.ui.drawer.loading = true;
                             $scope.ui.drawer.details = null;
+                            resetDrawerTransient();
                             $timeout(function () { $scope.loadDrawerDetails(); }, 0);
                         }
                     }

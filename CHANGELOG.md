@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.1.0
+
+- Edit task notes (Outlook Body) directly in the task drawer, with Undo
+- Add a checklist in the drawer using Markdown-style checkboxes (`- [ ]` / `- [x]`)
+- Improve task actions with clearer colour cues (green Complete, red Delete)
+
 ## 1.0.0
 
 - Initial release of this repository
