@@ -16,10 +16,9 @@ I use this every day and have benefited from it greatly. That's why I'm maintain
 This repository continues **JanBan**, which is based on the original **Outlook Taskboard** by Evren Varol.
 Credits: [`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md).
 
-Maintainer: Iman Sharif.
 
 > [!IMPORTANT]
-> Non-negotiable: local-only. No external downloads, update checks, telemetry, or prefilled support email targets.
+> Local-only. No external downloads, update checks, telemetry, or prefilled support email targets.
 
 ## Get started (recommended)
 
