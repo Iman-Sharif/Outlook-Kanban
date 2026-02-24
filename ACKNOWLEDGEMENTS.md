@@ -8,4 +8,4 @@ This project is possible thanks to the work of upstream authors and contributors
   - https://github.com/evrenvarol/outlook-taskboard
 
 - Major continuation/refactor: **JanBan** by Jan van Veldhuizen
-  - Historically published via https://janware.nl/janban and maintained under the JanWare/papasmurf.nl umbrella
+  - https://github.com/janban-outlook/janban
