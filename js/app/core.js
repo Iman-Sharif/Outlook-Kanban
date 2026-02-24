@@ -85,6 +85,9 @@
                 showPrivacyIcon: true,
                 showLaneCounts: true,
 
+                // Optional: highlight search matches in cards
+                highlightSearch: false,
+
                 // Optional: custom dropdowns with typeahead (avoids native <select> rendering quirks)
                 customDropdowns: false,
 

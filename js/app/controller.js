@@ -134,6 +134,7 @@
 
                 // Settings UI
                 settingsTab: 'appearance',
+                settingsSearch: '',
                 settingsDirty: false,
                 settingsBaselineRaw: '',
                 isRefreshing: false,
@@ -147,7 +148,7 @@
                 showErrorDetails: false,
 
                 // Selection + details drawer
-                selection: { keys: {}, order: [], count: 0 },
+                selection: { keys: {}, order: [], count: 0, anchorKey: '' },
                 focusTaskKey: '',
                 drawer: {
                     open: false,
@@ -469,6 +470,27 @@
                     showToast('success', 'Copied', '', 1400);
                 } catch (e) {
                     showUserError('Copy failed', 'Select and copy the text manually.');
+                }
+            };
+
+            $scope.openLocal = function (relPath) {
+                try {
+                    var p = String(relPath || '').replace(/^\s+|\s+$/g, '');
+                    if (!p) return;
+                    var ok = false;
+                    try {
+                        var w = window.open(p, '_blank');
+                        ok = !!w;
+                    } catch (e0) {
+                        ok = false;
+                    }
+                    if (!ok) {
+                        // Fallback: copy path so the user can open it manually.
+                        try { $scope.copyText(p); } catch (e1) { /* ignore */ }
+                        showToast('info', 'Open manually', 'Copied path: ' + p, 4200);
+                    }
+                } catch (e) {
+                    // ignore
                 }
             };
 
@@ -912,6 +934,167 @@
                     }
                     if (!$scope.ui) return;
                     $scope.ui.settingsTab = t;
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            function settingsQueryNorm() {
+                try {
+                    if (!$scope.ui) return '';
+                    return String($scope.ui.settingsSearch || '').toLowerCase().replace(/^\s+|\s+$/g, '');
+                } catch (e) {
+                    return '';
+                }
+            }
+
+            function settingsSectionKeywords(section) {
+                var s = String(section || '');
+                if (s === 'appearance') return 'appearance theme light dark density compact comfortable motion cards notes preview highlight search lane width categories priority privacy';
+                if (s === 'board') return 'board ordering drag handle complete done stale date format dropdowns shortcuts remember category colours colors';
+                if (s === 'projects') return 'projects project folders folder root create link unlink hide show rename move tasks';
+                if (s === 'lanes') return 'lanes lane wip limit status sync template colour color id enabled migrate change lane id';
+                if (s === 'views') return 'views view pinned pin save manage clear';
+                if (s === 'tools') return 'tools automation migrate move export import diagnostics privacy local only';
+                return s;
+            }
+
+            function settingsQueryMatches(haystack, query) {
+                try {
+                    var q = String(query || '').replace(/^\s+|\s+$/g, '');
+                    if (!q) return true;
+                    var hay = String(haystack || '').toLowerCase();
+                    var parts = q.split(/\s+/);
+                    for (var i = 0; i < parts.length; i++) {
+                        var p = String(parts[i] || '').replace(/^\s+|\s+$/g, '');
+                        if (!p) continue;
+                        if (hay.indexOf(p) === -1) return false;
+                    }
+                    return true;
+                } catch (e) {
+                    return true;
+                }
+            }
+
+            $scope.settingsSearchActive = function () {
+                return settingsQueryNorm() !== '';
+            };
+
+            $scope.clearSettingsSearch = function () {
+                try {
+                    if ($scope.ui) {
+                        $scope.ui.settingsSearch = '';
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.settingsCardVisible = function (section) {
+                try {
+                    if (!$scope.ui) return false;
+                    var q = settingsQueryNorm();
+                    if (q) {
+                        return settingsQueryMatches(settingsSectionKeywords(section), q);
+                    }
+                    return ($scope.ui.settingsTab === 'all' || $scope.ui.settingsTab === String(section || ''));
+                } catch (e) {
+                    return false;
+                }
+            };
+
+            $scope.resetSettingsSection = function (section) {
+                try {
+                    var s = String(section || '');
+                    var d = DEFAULT_CONFIG_V3();
+                    if (!$scope.config) $scope.config = d;
+
+                    var msg = 'Reset this section to defaults?';
+                    if (s === 'projects') msg = 'Reset Projects to defaults? This will clear linked/hidden projects (no Outlook folders are deleted).';
+                    if (s === 'views') msg = 'Reset Views to defaults? This will delete your saved views.';
+                    if (s === 'lanes') msg = 'Reset Lanes to defaults? Tasks keep their lane ids; tasks in unknown lanes may appear unassigned/hidden until you migrate or re-create lanes.';
+                    if (s === 'tools') msg = 'Reset Tools/Automation settings to defaults?';
+                    if (s === 'appearance') msg = 'Reset Appearance to defaults? Imported/folder themes will be kept, but the active theme may change.';
+
+                    if (!window.confirm(msg)) return;
+
+                    if (s === 'appearance') {
+                        if (!$scope.config.UI) $scope.config.UI = d.UI;
+                        if (!$scope.config.BOARD) $scope.config.BOARD = d.BOARD;
+                        if (!$scope.config.THEME) $scope.config.THEME = d.THEME;
+
+                        // Keep user-added themes.
+                        var keepFolder = $scope.config.THEME.folderThemes || [];
+                        var keepCustom = $scope.config.THEME.customThemes || [];
+
+                        $scope.config.UI.density = d.UI.density;
+                        $scope.config.UI.motion = d.UI.motion;
+                        $scope.config.UI.laneWidthPx = d.UI.laneWidthPx;
+                        $scope.config.UI.showDueDate = d.UI.showDueDate;
+                        $scope.config.UI.showNotes = d.UI.showNotes;
+                        $scope.config.UI.highlightSearch = d.UI.highlightSearch;
+                        $scope.config.UI.showCategories = d.UI.showCategories;
+                        $scope.config.UI.showOnlyFirstCategory = d.UI.showOnlyFirstCategory;
+                        $scope.config.UI.showPriorityPill = d.UI.showPriorityPill;
+                        $scope.config.UI.showPrivacyIcon = d.UI.showPrivacyIcon;
+                        $scope.config.UI.showLaneCounts = d.UI.showLaneCounts;
+                        $scope.config.BOARD.taskNoteMaxLen = d.BOARD.taskNoteMaxLen;
+
+                        $scope.config.THEME.activeThemeId = d.THEME.activeThemeId;
+                        $scope.config.THEME.folderThemes = keepFolder;
+                        $scope.config.THEME.customThemes = keepCustom;
+
+                        $scope.markSettingsDirty();
+                        $scope.applyTheme();
+                        return;
+                    }
+
+                    if (s === 'board') {
+                        if (!$scope.config.UI) $scope.config.UI = d.UI;
+                        $scope.config.BOARD = d.BOARD;
+                        $scope.config.USE_CATEGORY_COLORS = d.USE_CATEGORY_COLORS;
+                        $scope.config.USE_CATEGORY_COLOR_FOOTERS = d.USE_CATEGORY_COLOR_FOOTERS;
+                        $scope.config.DATE_FORMAT = d.DATE_FORMAT;
+                        $scope.config.UI.customDropdowns = d.UI.customDropdowns;
+                        $scope.config.UI.keyboardShortcuts = d.UI.keyboardShortcuts;
+                        $scope.markSettingsDirty();
+                        $scope.applyRootClasses();
+                        try { $scope.applySortableInteractionConfig(); } catch (e0) { /* ignore */ }
+                        $scope.applyFilters();
+                        return;
+                    }
+
+                    if (s === 'projects') {
+                        $scope.config.PROJECTS = d.PROJECTS;
+                        $scope.markSettingsDirty();
+                        try { loadAvailableProjectFolders(); } catch (e1) { /* ignore */ }
+                        try { loadProjects(); } catch (e2) { /* ignore */ }
+                        try { ensureSelectedProject(); } catch (e3) { /* ignore */ }
+                        return;
+                    }
+
+                    if (s === 'views') {
+                        $scope.config.VIEWS = [];
+                        if ($scope.ui) {
+                            $scope.ui.lastViewId = '';
+                            $scope.ui.recentViewIds = [];
+                        }
+                        $scope.markSettingsDirty();
+                        return;
+                    }
+
+                    if (s === 'lanes') {
+                        $scope.config.LANES = d.LANES;
+                        $scope.markSettingsDirty();
+                        try { $scope.validateLanes(); } catch (e4) { /* ignore */ }
+                        return;
+                    }
+
+                    if (s === 'tools') {
+                        $scope.config.AUTOMATION = d.AUTOMATION;
+                        $scope.markSettingsDirty();
+                        return;
+                    }
                 } catch (e) {
                     // ignore
                 }
@@ -1619,7 +1802,7 @@
                         for (var ti = 0; ti < list.length; ti++) {
                             var t = list[ti];
                             if (t && String(t.entryID || '') === entryID && String(t.storeID || '') === storeID) {
-                                return { lane: lane, task: t };
+                                return { lane: lane, task: t, laneIndex: li, taskIndex: ti };
                             }
                         }
                     }
@@ -1725,6 +1908,35 @@
                                 if (!isNaN(n)) laneOrder = n;
                             }
 
+                            var body = '';
+                            try { body = String(task.Body || ''); } catch (eBody) { body = ''; }
+
+                            var checkTotal = 0;
+                            var checkDone = 0;
+                            var otherText = body;
+                            try {
+                                var cl = parseChecklist(body);
+                                var items = (cl && cl.items) ? cl.items : [];
+                                checkTotal = items.length;
+                                for (var ci = 0; ci < items.length; ci++) {
+                                    if (items[ci] && items[ci].checked) checkDone++;
+                                }
+                                if (checkTotal > 0) {
+                                    otherText = (cl && cl.otherText !== undefined) ? String(cl.otherText || '') : body;
+                                }
+                            } catch (eCl) {
+                                checkTotal = 0;
+                                checkDone = 0;
+                                otherText = body;
+                            }
+
+                            var hasNotes = false;
+                            try {
+                                hasNotes = String(otherText || '').replace(/\s+/g, '').length > 0;
+                            } catch (eNotes) {
+                                hasNotes = false;
+                            }
+
                             tasks.push({
                                 entryID: task.EntryID,
                                 storeID: folderStoreID,
@@ -1739,7 +1951,11 @@
                                 dueClass: dueClass,
                                 categoriesCsv: task.Categories,
                                 categories: getCategoryStyles(task.Categories),
-                                notes: taskBodyNotes(task.Body, $scope.config.BOARD.taskNoteMaxLen),
+                                notes: taskBodyNotes(otherText, $scope.config.BOARD.taskNoteMaxLen),
+                                hasNotes: hasNotes,
+                                checkTotal: checkTotal,
+                                checkDone: checkDone,
+                                hasChecklist: (checkTotal > 0),
                                 oneNoteURL: (outlook && outlook.getUserProperty) ? outlook.getUserProperty(task, 'OneNoteURL') : '',
                                 laneId: laneId,
                                 laneOrder: laneOrder,
@@ -1870,6 +2086,53 @@
                     if (!$scope.ui.selection.keys) {
                         $scope.ui.selection.keys = {};
                     }
+                    if (!$scope.ui.selection.order) {
+                        $scope.ui.selection.order = [];
+                    }
+
+                    // Shift+click: range select within the same lane (anchor -> clicked)
+                    try {
+                        if (ev && ev.shiftKey && $scope.ui.selection.anchorKey) {
+                            var a = findTaskByKey($scope.ui.selection.anchorKey);
+                            var b = findTaskByKey(k);
+                            if (a && b && a.lane && b.lane && a.taskIndex !== undefined && b.taskIndex !== undefined) {
+                                var laneIdA = sanitizeId(a.lane.id);
+                                var laneIdB = sanitizeId(b.lane.id);
+                                if (laneIdA && laneIdA === laneIdB) {
+                                    var list = a.lane.filteredTasks || [];
+                                    var start = Math.min(a.taskIndex, b.taskIndex);
+                                    var end = Math.max(a.taskIndex, b.taskIndex);
+                                    for (var i = start; i <= end; i++) {
+                                        var tk = taskKey(list[i]);
+                                        if (tk) {
+                                            $scope.ui.selection.keys[tk] = true;
+                                        }
+                                    }
+
+                                    // Rebuild order in board order
+                                    var order = [];
+                                    for (var li = 0; li < ($scope.lanes || []).length; li++) {
+                                        var ln = $scope.lanes[li];
+                                        var ts = ln && ln.filteredTasks ? ln.filteredTasks : [];
+                                        for (var ti = 0; ti < ts.length; ti++) {
+                                            var kk = taskKey(ts[ti]);
+                                            if (kk && $scope.ui.selection.keys[kk]) {
+                                                order.push(kk);
+                                            }
+                                        }
+                                    }
+                                    $scope.ui.selection.order = order;
+                                    $scope.ui.selection.count = order.length;
+                                    $scope.ui.selection.anchorKey = k;
+                                    $scope.ui.focusTaskKey = k;
+                                    refreshDragDisabled();
+                                    return;
+                                }
+                            }
+                        }
+                    } catch (eShift) {
+                        // ignore
+                    }
 
                     if ($scope.ui.selection.keys[k]) {
                         delete $scope.ui.selection.keys[k];
@@ -1880,6 +2143,7 @@
                     }
 
                     $scope.ui.selection.count = $scope.ui.selection.order.length;
+                    $scope.ui.selection.anchorKey = k;
                     $scope.ui.focusTaskKey = k;
 
                     refreshDragDisabled();
@@ -1894,9 +2158,184 @@
                         $scope.ui.selection.keys = {};
                         $scope.ui.selection.order = [];
                         $scope.ui.selection.count = 0;
+                        $scope.ui.selection.anchorKey = '';
                     }
 
                     refreshDragDisabled();
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            function isLaneVisibleForSelection(lane) {
+                try {
+                    if ($scope.isLaneShown && !$scope.isLaneShown(lane)) return false;
+                } catch (e0) {
+                    // ignore
+                }
+                try {
+                    if ($scope.isLaneCollapsed && $scope.isLaneCollapsed(lane)) return false;
+                } catch (e1) {
+                    // ignore
+                }
+                return true;
+            }
+
+            function visibleTaskKeyList() {
+                var out = [];
+                try {
+                    for (var li = 0; li < ($scope.lanes || []).length; li++) {
+                        var lane = $scope.lanes[li];
+                        if (!lane) continue;
+                        if (!isLaneVisibleForSelection(lane)) continue;
+                        var list = lane.filteredTasks || [];
+                        for (var ti = 0; ti < list.length; ti++) {
+                            var k = taskKey(list[ti]);
+                            if (k) out.push(k);
+                        }
+                    }
+                } catch (e) {
+                    out = [];
+                }
+                return out;
+            }
+
+            function setSelectionFromKeys(keys, anchorKey) {
+                try {
+                    if (!$scope.ui || !$scope.ui.selection) return;
+                    var sel = $scope.ui.selection;
+                    sel.keys = {};
+                    sel.order = [];
+                    (keys || []).forEach(function (k) {
+                        var kk = String(k || '');
+                        if (!kk) return;
+                        if (sel.keys[kk]) return;
+                        sel.keys[kk] = true;
+                        sel.order.push(kk);
+                    });
+                    sel.count = sel.order.length;
+                    sel.anchorKey = String(anchorKey || (sel.order.length ? sel.order[sel.order.length - 1] : ''));
+                    if (sel.anchorKey) {
+                        $scope.ui.focusTaskKey = sel.anchorKey;
+                    }
+                    refreshDragDisabled();
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            function currentLaneForSelectionAction() {
+                try {
+                    if ($scope.ui && $scope.ui.focusLaneId) {
+                        var lid = sanitizeId($scope.ui.focusLaneId);
+                        if (lid) {
+                            return getLaneAnyById(lid);
+                        }
+                    }
+                    if ($scope.ui && $scope.ui.focusTaskKey) {
+                        var hit = findTaskByKey($scope.ui.focusTaskKey);
+                        if (hit && hit.lane) return hit.lane;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+                return null;
+            }
+
+            function invertVisibleSelection() {
+                try {
+                    if (!$scope.ui || !$scope.ui.selection) return;
+                    var keys = visibleTaskKeyList();
+                    if (keys.length === 0) return;
+
+                    var sel = $scope.ui.selection;
+                    if (!sel.keys) sel.keys = {};
+
+                    keys.forEach(function (k) {
+                        if (sel.keys[k]) {
+                            delete sel.keys[k];
+                        } else {
+                            sel.keys[k] = true;
+                        }
+                    });
+
+                    // Rebuild order in board order
+                    var order = [];
+                    for (var li = 0; li < ($scope.lanes || []).length; li++) {
+                        var lane = $scope.lanes[li];
+                        var list = lane && lane.filteredTasks ? lane.filteredTasks : [];
+                        for (var ti = 0; ti < list.length; ti++) {
+                            var kk = taskKey(list[ti]);
+                            if (kk && sel.keys[kk]) order.push(kk);
+                        }
+                    }
+                    sel.order = order;
+                    sel.count = order.length;
+                    sel.anchorKey = order.length ? order[order.length - 1] : '';
+                    refreshDragDisabled();
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            $scope.openSelectMenu = function (ev) {
+                try {
+                    var keys = visibleTaskKeyList();
+                    var lane = currentLaneForSelectionAction();
+                    var laneTitle = '';
+                    try { laneTitle = lane ? String(lane.title || lane.id || '') : ''; } catch (e0) { laneTitle = ''; }
+
+                    var opts = [];
+                    opts.push({
+                        label: 'Select all visible',
+                        meta: keys.length ? (String(keys.length) + ' tasks') : 'No tasks visible',
+                        icon: 'glyphicon-th-list',
+                        disabled: keys.length === 0,
+                        onClick: function () { $scope.closePop(); setSelectionFromKeys(keys); }
+                    });
+
+                    opts.push({
+                        label: 'Select all in lane',
+                        meta: laneTitle || 'Focus a task first',
+                        icon: 'glyphicon-align-justify',
+                        disabled: !lane,
+                        onClick: function () {
+                            try {
+                                $scope.closePop();
+                                if (!lane) return;
+                                if ($scope.isLaneCollapsed && $scope.isLaneCollapsed(lane)) {
+                                    showToast('info', 'Lane collapsed', 'Expand the lane to select its tasks.', 2400);
+                                    return;
+                                }
+                                var list = lane.filteredTasks || [];
+                                var out = [];
+                                for (var i = 0; i < list.length; i++) {
+                                    var k = taskKey(list[i]);
+                                    if (k) out.push(k);
+                                }
+                                setSelectionFromKeys(out);
+                            } catch (e1) {
+                                // ignore
+                            }
+                        }
+                    });
+
+                    opts.push({
+                        label: 'Invert selection (visible)',
+                        meta: '',
+                        icon: 'glyphicon-random',
+                        disabled: keys.length === 0,
+                        onClick: function () { $scope.closePop(); invertVisibleSelection(); }
+                    });
+
+                    opts.push({
+                        label: 'Clear selection',
+                        meta: '',
+                        icon: 'glyphicon-remove',
+                        onClick: function () { $scope.closePop(); $scope.clearSelection(); }
+                    });
+
+                    openPop(ev, 'select-menu', 'Select', opts, false, { action: 'select-menu' });
                 } catch (e) {
                     // ignore
                 }
@@ -1998,13 +2437,45 @@
 
             function updateTaskNotesPreviewByIDs(entryID, storeID, bodyText) {
                 try {
+                    var body = String(bodyText || '');
+
+                    var checkTotal = 0;
+                    var checkDone = 0;
+                    var otherText = body;
+                    try {
+                        var cl = parseChecklist(body);
+                        var items = (cl && cl.items) ? cl.items : [];
+                        checkTotal = items.length;
+                        for (var ci = 0; ci < items.length; ci++) {
+                            if (items[ci] && items[ci].checked) checkDone++;
+                        }
+                        if (checkTotal > 0) {
+                            otherText = (cl && cl.otherText !== undefined) ? String(cl.otherText || '') : body;
+                        }
+                    } catch (eCl) {
+                        checkTotal = 0;
+                        checkDone = 0;
+                        otherText = body;
+                    }
+
+                    var hasNotes = false;
+                    try { hasNotes = String(otherText || '').replace(/\s+/g, '').length > 0; } catch (eNotes) { hasNotes = false; }
+
                     var key = taskKeyFromIDs(entryID, storeID);
                     var hit = findTaskByKey(key);
                     if (hit && hit.task) {
-                        hit.task.notes = taskBodyNotes(bodyText, ($scope.config && $scope.config.BOARD) ? $scope.config.BOARD.taskNoteMaxLen : 0);
+                        hit.task.notes = taskBodyNotes(otherText, ($scope.config && $scope.config.BOARD) ? $scope.config.BOARD.taskNoteMaxLen : 0);
+                        hit.task.hasNotes = hasNotes;
+                        hit.task.checkTotal = checkTotal;
+                        hit.task.checkDone = checkDone;
+                        hit.task.hasChecklist = (checkTotal > 0);
                     }
                     if ($scope.ui && $scope.ui.drawer && $scope.ui.drawer.task && taskKey($scope.ui.drawer.task) === key) {
-                        $scope.ui.drawer.task.notes = taskBodyNotes(bodyText, ($scope.config && $scope.config.BOARD) ? $scope.config.BOARD.taskNoteMaxLen : 0);
+                        $scope.ui.drawer.task.notes = taskBodyNotes(otherText, ($scope.config && $scope.config.BOARD) ? $scope.config.BOARD.taskNoteMaxLen : 0);
+                        $scope.ui.drawer.task.hasNotes = hasNotes;
+                        $scope.ui.drawer.task.checkTotal = checkTotal;
+                        $scope.ui.drawer.task.checkDone = checkDone;
+                        $scope.ui.drawer.task.hasChecklist = (checkTotal > 0);
                     }
                 } catch (e) {
                     // ignore
@@ -2148,6 +2619,120 @@
                 }
             };
 
+            function drawerTaskKeys() {
+                try {
+                    if (!$scope.ui || !$scope.ui.drawer) return [];
+                    var k = taskKeyFromIDs($scope.ui.drawer.entryID, $scope.ui.drawer.storeID);
+                    if (!k) return [];
+                    return [k];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function drawerFieldEditAllowed() {
+                try {
+                    if (!$scope.ui || !$scope.ui.drawer) return false;
+                    if ($scope.ui.drawer.saving) return false;
+                    if ($scope.ui.drawer.editing) {
+                        showToast('info', 'Finish editing', 'Save or Cancel your note edits first.', 2400);
+                        return false;
+                    }
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            $scope.drawerLaneLabel = function () {
+                try {
+                    if (!$scope.ui || !$scope.ui.drawer || !$scope.ui.drawer.task) return '';
+                    var id = sanitizeId($scope.ui.drawer.task.laneId);
+                    if (!id) return 'Unassigned';
+                    var lane = getLaneAnyById(id);
+                    return lane ? String(lane.title || id) : id;
+                } catch (e) {
+                    return '';
+                }
+            };
+
+            $scope.drawerPriorityLabel = function () {
+                try {
+                    var n = 1;
+                    try { n = parseInt(($scope.ui && $scope.ui.drawer && $scope.ui.drawer.task) ? $scope.ui.drawer.task.priority : 1, 10); } catch (e0) { n = 1; }
+                    if (n === 2) return 'High';
+                    if (n === 0) return 'Low';
+                    return 'Normal';
+                } catch (e) {
+                    return '';
+                }
+            };
+
+            $scope.drawerPrivacyLabel = function () {
+                try {
+                    var s = null;
+                    try { s = ($scope.ui && $scope.ui.drawer && $scope.ui.drawer.task) ? $scope.ui.drawer.task.sensitivity : null; } catch (e0) { s = null; }
+                    return (s === 2) ? 'Private' : 'Not private';
+                } catch (e) {
+                    return '';
+                }
+            };
+
+            $scope.openDrawerLanePicker = function (ev) {
+                try {
+                    if (!drawerFieldEditAllowed()) return;
+                    var keys = drawerTaskKeys();
+                    if (keys.length === 0) return;
+                    openLanePicker(ev, keys);
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.openDrawerDuePicker = function (ev) {
+                try {
+                    if (!drawerFieldEditAllowed()) return;
+                    var keys = drawerTaskKeys();
+                    if (keys.length === 0) return;
+                    openDuePicker(ev, keys);
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.openDrawerCategoryPicker = function (ev) {
+                try {
+                    if (!drawerFieldEditAllowed()) return;
+                    var keys = drawerTaskKeys();
+                    if (keys.length === 0) return;
+                    openCategoryPicker(ev, keys);
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.openDrawerPriorityPicker = function (ev) {
+                try {
+                    if (!drawerFieldEditAllowed()) return;
+                    var keys = drawerTaskKeys();
+                    if (keys.length === 0) return;
+                    openPriorityPicker(ev, keys);
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.openDrawerPrivacyPicker = function (ev) {
+                try {
+                    if (!drawerFieldEditAllowed()) return;
+                    var keys = drawerTaskKeys();
+                    if (keys.length === 0) return;
+                    openPrivacyPicker(ev, keys);
+                } catch (e) {
+                    // ignore
+                }
+            };
+
             $scope.openDrawerForTask = function (task) {
                 try {
                     if (!$scope.ui || !$scope.ui.drawer) return;
@@ -2266,6 +2851,12 @@
                 try {
                     var e = ev || window.event;
                     if (e && isInteractiveElement(e.target, 'kfo-task')) {
+                        return;
+                    }
+
+                    // Shift+click selects (supports range selection)
+                    if (e && e.shiftKey) {
+                        $scope.toggleTaskSelected(e, task);
                         return;
                     }
 
@@ -4022,6 +4613,130 @@
                 }
             };
 
+            $scope.activeFilterCount = function () {
+                try {
+                    var n = 0;
+                    if ($scope.filter) {
+                        if (String($scope.filter.search || '').replace(/^\s+|\s+$/g, '') !== '') n++;
+                        if (String($scope.filter.category || '<All Categories>') !== '<All Categories>') n++;
+                        if (String($scope.filter.due || 'any') !== 'any') n++;
+                        if (String($scope.filter.status || 'all') !== 'all') n++;
+                        if (String($scope.filter.stale || 'any') !== 'any') n++;
+                        if (String($scope.filter.private) !== String($scope.privacyFilter.all.value)) n++;
+                    }
+                    return n;
+                } catch (e) {
+                    return 0;
+                }
+            };
+
+            $scope.openFiltersMenu = function (ev) {
+                try {
+                    var opts = [];
+                    var count = 0;
+                    try { count = $scope.activeFilterCount(); } catch (e0) { count = 0; }
+
+                    opts.push({
+                        label: 'Clear all filters',
+                        meta: (count > 0) ? (String(count) + ' active') : '',
+                        icon: 'glyphicon-remove',
+                        onClick: function () { $scope.closePop(); $scope.clearFilters(); }
+                    });
+
+                    opts.push({
+                        label: 'Status',
+                        meta: $scope.statusFilterLabel($scope.filter.status),
+                        icon: 'glyphicon-tasks',
+                        onClick: function () { $scope.closePop(); $scope.openStatusFilterPicker(ev); }
+                    });
+
+                    opts.push({
+                        label: 'Category',
+                        meta: (String($scope.filter.category || '<All Categories>') === '<All Categories>') ? 'All' : String($scope.filter.category || ''),
+                        icon: 'glyphicon-tag',
+                        onClick: function () { $scope.closePop(); $scope.openCategoryFilterPicker(ev); }
+                    });
+
+                    opts.push({
+                        label: 'Due',
+                        meta: $scope.dueFilterLabel($scope.filter.due),
+                        icon: 'glyphicon-calendar',
+                        onClick: function () { $scope.closePop(); $scope.openDueFilterPicker(ev); }
+                    });
+
+                    opts.push({
+                        label: 'Stale',
+                        meta: $scope.staleFilterLabel($scope.filter.stale),
+                        icon: 'glyphicon-time',
+                        onClick: function () { $scope.closePop(); $scope.openStaleFilterPicker(ev); }
+                    });
+
+                    opts.push({
+                        label: 'Privacy',
+                        meta: $scope.privacyFilterLabel($scope.filter.private),
+                        icon: 'glyphicon-lock',
+                        onClick: function () { $scope.closePop(); $scope.openPrivacyFilterPicker(ev); }
+                    });
+
+                    opts.push({
+                        label: 'Focus search',
+                        meta: '',
+                        icon: 'glyphicon-search',
+                        onClick: function () { $scope.closePop(); focusById('kfo-search-input', true); }
+                    });
+
+                    openPop(ev, 'filters-menu', 'Filters', opts, false, { action: 'filters-menu' });
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.isSearchHighlightEnabled = function () {
+                try {
+                    if (!$scope.config || !$scope.config.UI || !$scope.config.UI.highlightSearch) return false;
+                    var q = String($scope.filter && $scope.filter.search ? $scope.filter.search : '').replace(/^\s+|\s+$/g, '');
+                    return q.length > 0;
+                } catch (e) {
+                    return false;
+                }
+            };
+
+            function splitHighlightParts(text, query) {
+                var s = String(text || '');
+                var q = String(query || '').replace(/^\s+|\s+$/g, '');
+                if (!q) return [{ t: s, m: false }];
+
+                // Avoid huge work for very short/very long queries.
+                if (q.length < 2 || q.length > 48) return [{ t: s, m: false }];
+
+                var ls = s.toLowerCase();
+                var lq = q.toLowerCase();
+                var out = [];
+                var idx = 0;
+                var guard = 0;
+                while (guard < 30) {
+                    guard++;
+                    var hit = ls.indexOf(lq, idx);
+                    if (hit === -1) break;
+                    if (hit > idx) out.push({ t: s.substring(idx, hit), m: false });
+                    out.push({ t: s.substring(hit, hit + q.length), m: true });
+                    idx = hit + q.length;
+                    if (idx >= s.length) break;
+                }
+                if (idx < s.length) out.push({ t: s.substring(idx), m: false });
+                if (out.length === 0) return [{ t: s, m: false }];
+                return out;
+            }
+
+            $scope.highlightParts = function (text) {
+                try {
+                    if (!$scope.isSearchHighlightEnabled()) return [{ t: String(text || ''), m: false }];
+                    return splitHighlightParts(text, ($scope.filter && $scope.filter.search) ? $scope.filter.search : '');
+                } catch (e) {
+                    return [{ t: String(text || ''), m: false }];
+                }
+            };
+
             $scope.openStatusFilterPicker = function (ev) {
                 try {
                     var opts = [];
@@ -5682,9 +6397,9 @@
                         $scope.$apply(function () {
                             $scope.config.THEME.customThemes.push({ id: id, name: name, cssText: cssText });
                             $scope.config.THEME.activeThemeId = id;
-                            saveConfig();
                             rebuildThemeList();
                             $scope.applyTheme();
+                            $scope.markSettingsDirty();
                             showToast('success', 'Theme imported', name);
                             $scope.ui.importThemeName = '';
                             $scope.ui.importThemeId = '';
@@ -5715,13 +6430,83 @@
                 }
                 $scope.config.THEME.folderThemes.push({ id: id, name: name, cssHref: href });
                 $scope.config.THEME.activeThemeId = id;
-                saveConfig();
                 rebuildThemeList();
                 $scope.applyTheme();
+                $scope.markSettingsDirty();
                 showToast('success', 'Theme added', name);
                 $scope.ui.folderThemeName = '';
                 $scope.ui.folderThemeId = '';
                 $scope.ui.folderThemeHref = '';
+            };
+
+            $scope.applyThemeById = function (themeId) {
+                try {
+                    var id = String(themeId || '');
+                    if (!id) return;
+                    if (!$scope.config || !$scope.config.THEME) return;
+                    $scope.config.THEME.activeThemeId = id;
+                    rebuildThemeList();
+                    $scope.applyTheme();
+                    $scope.markSettingsDirty();
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.renameTheme = function (kind, theme) {
+                try {
+                    if (!theme) return;
+                    var k = String(kind || '');
+                    if (k !== 'folder' && k !== 'imported') return;
+                    var cur = String(theme.name || '');
+                    var name = window.prompt('Theme name:', cur);
+                    if (name === null) return;
+                    name = String(name || '').replace(/^\s+|\s+$/g, '');
+                    if (!name) return;
+                    theme.name = name;
+                    rebuildThemeList();
+                    $scope.markSettingsDirty();
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.removeTheme = function (kind, themeId) {
+                try {
+                    var k = String(kind || '');
+                    var id = String(themeId || '');
+                    if (!id) return;
+                    if (!$scope.config || !$scope.config.THEME) return;
+
+                    if (!window.confirm('Remove this theme?')) return;
+
+                    if (k === 'folder') {
+                        var nextF = [];
+                        ($scope.config.THEME.folderThemes || []).forEach(function (t) {
+                            if (t && String(t.id || '') !== id) nextF.push(t);
+                        });
+                        $scope.config.THEME.folderThemes = nextF;
+                    } else if (k === 'imported') {
+                        var nextC = [];
+                        ($scope.config.THEME.customThemes || []).forEach(function (t2) {
+                            if (t2 && String(t2.id || '') !== id) nextC.push(t2);
+                        });
+                        $scope.config.THEME.customThemes = nextC;
+                    } else {
+                        return;
+                    }
+
+                    // If the active theme was removed, fall back.
+                    if (String($scope.config.THEME.activeThemeId || '') === id) {
+                        $scope.config.THEME.activeThemeId = 'kfo-light';
+                    }
+
+                    rebuildThemeList();
+                    $scope.applyTheme();
+                    $scope.markSettingsDirty();
+                } catch (e) {
+                    // ignore
+                }
             };
 
             // Projects

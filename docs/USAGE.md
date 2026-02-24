@@ -16,6 +16,8 @@
 - Drag a task card between lanes.
 - Click a card to open the task drawer (details, notes, checklist, and quick actions).
 - Double-click a card to open it in Outlook.
+- Selection: use the checkbox on cards; Shift+click selects a range within the same lane.
+- Use the top-bar Select (checkmark) menu for actions like Select all visible / Select all in lane / Invert selection.
 - After a lane move, you can Undo from the toast for a short time.
 - Quick add: click the lightning icon on a lane, type a subject, then press Enter.
 - Header toggles: switch Light/Dark mode and Compact/Comfortable mode.
@@ -29,6 +31,7 @@
 - Category: show tasks in a category (or "No Category")
 - Due: Any / Overdue / Today / Next 7 days / No due date
 - Privacy: show All / Private only / Not Private only
+- On narrow panes, the filter dropdowns collapse into a single Filters button.
 - Active filters appear as chips under the header (click a chip to clear it).
 
 > [!TIP]
@@ -39,6 +42,7 @@
 - Comfortable mode can show title, due date, priority, notes preview, and categories (configurable in Settings).
 - Compact mode shows only key details (title, due date, priority) to reduce noise; footer action buttons remain.
 - Notes preview length is configurable (characters) and only applies in Comfortable mode.
+- Optional: enable Settings -> Appearance -> Highlight search to highlight matches in card titles and notes.
 
 ## Notes + checklist
 
