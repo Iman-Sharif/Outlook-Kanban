@@ -1,5 +1,3 @@
-![Kanban for Outlook](docs/assets/hero.svg)
-
 # Kanban for Outlook
 
 <img width="1859" height="317" alt="image" src="https://github.com/user-attachments/assets/d6aae5ac-b873-4d10-8934-87a9cb86311a" />
