@@ -2,6 +2,11 @@
 
 # Kanban for Outlook
 
+<img width="1859" height="317" alt="image" src="https://github.com/user-attachments/assets/d6aae5ac-b873-4d10-8934-87a9cb86311a" />
+
+<img width="1859" height="317" alt="image" src="https://github.com/user-attachments/assets/12db38f2-efe4-46ef-b368-cf4a0b7b2b64" />
+
+
 A local-only Kanban board that turns classic Microsoft Outlook Tasks into a drag-and-drop workflow (Windows desktop).
 
 Kanban began at Toyota as a way to manage flow using visual signals, and it's now a practical method for personal task management: make work visible, limit work in progress, and focus on finishing ([Kanban on Wikipedia](https://en.wikipedia.org/wiki/Kanban)). Outlook is the day-to-day hub in many organisations, so keeping your board alongside your mail and calendar makes it easier to stay on top of work.
@@ -53,6 +58,7 @@ flowchart LR
   D --> C
   C --> E["Outlook Journal Items<br/>KanbanConfig / KanbanState"]
 ```
+![Recording 2026-02-24 160511](https://github.com/user-attachments/assets/54e3db92-735c-4643-b1ad-4c6dd7fd8f86)
 
 ## Features
 
@@ -61,6 +67,9 @@ flowchart LR
 - Projects as folders: create, link existing folders, hide/show, rename
 - Tools: migrate lanes from Outlook Status, move tasks between projects
 - Theme system: built-in themes + local theme import + folder themes ([`themes/`](themes/))
+
+
+![Recording 2026-02-24 161525](https://github.com/user-attachments/assets/b1dcb8f0-aede-4670-8fed-52a7ee749a37)
 
 ## Documentation
 
