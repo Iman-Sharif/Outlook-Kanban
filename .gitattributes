@@ -1,0 +1,2 @@
+# Ensure Windows scripts use CRLF line endings in working tree (including the release zip built on Linux).
+*.cmd text eol=crlf

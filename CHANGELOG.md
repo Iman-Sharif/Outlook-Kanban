@@ -2,12 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
-## 1.3.2
+## 1.4.1
 
-- Replace multiple installer scripts with a single `install.cmd` menu (install/upgrade/repair/uninstall)
-- Ship offline HTML docs in the release zip (`docs/index.html`, `docs/setup.html`, etc.) and update in-app Help to use them
-- Simplify the release zip contents (remove extra `.cmd` files and Markdown docs under `docs/`)
-- Extend the local-only audit to include shipped offline docs pages
+- Fix `install.cmd` menu input not being recognised when selecting options (1-5)
+- Ship `install.cmd` with Windows (CRLF) line endings for better compatibility
 
 ## 1.4.0
 
@@ -17,6 +15,13 @@ All notable changes to this project will be documented in this file.
 - Improve popover keyboarding (Up/Down navigation while keeping Tab focus trapping)
 - Make drag disabled state clearer (UI hints + disabled drag cursor/handle)
 - Improve OneNote handling and expose “Open OneNote” in Actions when available
+
+## 1.3.2
+
+- Replace multiple installer scripts with a single `install.cmd` menu (install/upgrade/repair/uninstall)
+- Ship offline HTML docs in the release zip (`docs/index.html`, `docs/setup.html`, etc.) and update in-app Help to use them
+- Simplify the release zip contents (remove extra `.cmd` files and Markdown docs under `docs/`)
+- Extend the local-only audit to include shipped offline docs pages
 
 ## 1.3.1
 

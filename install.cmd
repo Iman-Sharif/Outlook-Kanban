@@ -45,10 +45,10 @@ set "KFO_MENU="
 :PromptMenuChoiceLoop
 if "%HAS_CHOICE%"=="1" (
   choice /c 12345 /m "Select an option"
-  set "KFO_MENU=%errorlevel%"
+  set "KFO_MENU=!errorlevel!"
 ) else (
   set /p "KFO_MENU=Select an option (1-5): "
-  set "KFO_MENU=%KFO_MENU:~0,1%"
+  set "KFO_MENU=!KFO_MENU:~0,1!"
 )
 
 if "%KFO_MENU%"=="1" exit /b 0
@@ -68,8 +68,9 @@ if "%HAS_CHOICE%"=="1" (
   choice /c YN /m "%~1"
   if errorlevel 2 (set "KFO_YN=0") else (set "KFO_YN=1")
 ) else (
+  set "ans="
   set /p "ans=%~1 (Y/N): "
-  if /I "%ans%"=="Y" set "KFO_YN=1"
+  if /I "!ans!"=="Y" set "KFO_YN=1"
 )
 exit /b 0
 
