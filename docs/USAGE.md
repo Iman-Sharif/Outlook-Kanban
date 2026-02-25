@@ -14,8 +14,8 @@
 - Pick a Project from the header if you want to work within a specific Tasks folder.
 - Use "New task" in the header to quick add a task in the current folder (default Tasks by default).
 - Drag a task card between lanes.
-- Click a card to open the task drawer (details, notes, checklist, and quick actions).
-- In the drawer, you can edit the subject, notes, and checklist.
+- Click a card to open the task drawer (details, notes, subtasks, and quick actions).
+- In the drawer, you can edit the subject, notes, and subtasks.
 - Double-click a card to open it in Outlook.
 - Snooze: use the drawer Snooze buttons (or Card Actions snooze presets) to set the due date relative to today. For multiple tasks, select them and use the bulk bar Snooze button.
 - Keyboard: focus a card with `Tab`, press `Enter` to open the drawer, use `Space` to toggle selection, and use `↑ ↓ ← →` (or `h j k l`) to move focus.
@@ -51,11 +51,11 @@
 > [!TIP]
 > If manual ordering is enabled, you can reorder a task without drag-and-drop from Card Actions (Move up/down/top/bottom).
 
-## Notes + checklist
+## Notes + subtasks
 
 - Notes are the Outlook task Body.
 - You can edit notes directly in the task drawer.
-- The checklist is stored in the task body as Markdown-style checkboxes (for example `- [ ] Call supplier`). Ticking a checkbox updates the underlying text.
+- Subtasks are stored in the task body as Markdown-style checkboxes (for example `- [ ] Call supplier`). Ticking a checkbox updates the underlying text.
 
 ## Views
 

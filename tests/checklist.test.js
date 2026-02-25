@@ -41,3 +41,23 @@ test('addChecklistItem() inserts after last checklist item when present', () => 
   const out = util.addChecklistItem(body, 'Three');
   assert.equal(out, 'Intro\n- [ ] One\n- [x] Two\n- [ ] Three\nOutro');
 });
+
+test('mergeNotesAndChecklist() preserves checklist lines and uses original EOL style', () => {
+  const original = 'Intro\r\n- [ ] First\r\n- [x] Second\r\nOutro\r\n';
+  const notes = 'New intro\nNew outro';
+  const out = util.mergeNotesAndChecklist(original, notes);
+  assert.equal(out.indexOf('\r\n') !== -1, true);
+  assert.equal(out, 'New intro\r\nNew outro\r\n\r\n- [ ] First\r\n- [x] Second');
+});
+
+test('mergeNotesAndChecklist() returns checklist-only when notes are empty', () => {
+  const original = 'A\n- [ ] One\nB\n';
+  const out = util.mergeNotesAndChecklist(original, '   ');
+  assert.equal(out, '- [ ] One');
+});
+
+test('mergeNotesAndChecklist() returns notes when original has no checklist', () => {
+  const original = 'Just notes';
+  const out = util.mergeNotesAndChecklist(original, 'New\nText');
+  assert.equal(out, 'New\nText');
+});

@@ -160,6 +160,65 @@
         }
     }
 
+    function mergeNotesAndChecklist(originalBodyText, notesText) {
+        // Merge edited notes text with the checklist lines from the original body.
+        // This keeps checklist/subtask lines out of the notes editor while preserving them on save.
+        try {
+            var orig = String(originalBodyText || '');
+            var notes = String(notesText || '');
+
+            // Prefer the original EOL style (Outlook can be picky); fall back to notes.
+            var eol = detectEol(orig || notes);
+
+            function endsWith(s, suffix) {
+                var str = String(s || '');
+                var suf = String(suffix || '');
+                if (suf === '') return true;
+                if (str.length < suf.length) return false;
+                return str.substr(str.length - suf.length) === suf;
+            }
+
+            // Normalise notes EOL to the chosen EOL.
+            var notesNorm = splitLines(notes).join(eol);
+
+            // Extract checklist lines from the original body.
+            var origLines = splitLines(orig);
+            var checklistLines = [];
+            for (var i = 0; i < origLines.length; i++) {
+                if (matchChecklistLine(origLines[i])) {
+                    checklistLines.push(String(origLines[i] || ''));
+                }
+            }
+
+            // No checklist in the original body: notes becomes the new body.
+            if (checklistLines.length === 0) {
+                return notesNorm;
+            }
+
+            // If notes are empty/whitespace-only, keep only the checklist block.
+            var notesHasContent = String(notesNorm || '').replace(/\s+/g, '') !== '';
+            if (!notesHasContent) {
+                return checklistLines.join(eol);
+            }
+
+            // Ensure at least one blank line between notes and checklist.
+            var out = notesNorm;
+            var sep = eol + eol;
+            if (endsWith(out, sep)) {
+                // ok
+            } else if (endsWith(out, eol)) {
+                out += eol;
+            } else {
+                out += sep;
+            }
+
+            out += checklistLines.join(eol);
+            return out;
+        } catch (e) {
+            return String(notesText || '');
+        }
+    }
+
     return {
         nowIso: nowIso,
         nowStamp: nowStamp,
@@ -171,6 +230,7 @@
         // Task body helpers (pure)
         parseChecklist: parseChecklist,
         toggleChecklistItem: toggleChecklistItem,
-        addChecklistItem: addChecklistItem
+        addChecklistItem: addChecklistItem,
+        mergeNotesAndChecklist: mergeNotesAndChecklist
     };
 });

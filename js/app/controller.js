@@ -78,6 +78,17 @@
         return String(bodyText || '');
     }
 
+    function mergeNotesAndChecklist(originalBodyText, notesText) {
+        try {
+            if (core && core.util && core.util.mergeNotesAndChecklist) {
+                return core.util.mergeNotesAndChecklist(originalBodyText, notesText);
+            }
+        } catch (e) {
+            // ignore
+        }
+        return String(notesText || '');
+    }
+
     function DEFAULT_CONFIG_V3() {
         return core && core.DEFAULT_CONFIG_V3 ? core.DEFAULT_CONFIG_V3() : { SCHEMA_VERSION: SCHEMA_VERSION };
     }
@@ -2537,8 +2548,21 @@
                     }
 
                     $scope.ui.drawer.editing = true;
-                    $scope.ui.drawer.baselineBody = String($scope.ui.drawer.details.body || '');
-                    $scope.ui.drawer.draftBody = String($scope.ui.drawer.details.body || '');
+                    // Edit notes only (exclude checklist/subtasks).
+                    var baseNotes = '';
+                    try {
+                        if ($scope.ui.drawer.checklist && $scope.ui.drawer.checklist.otherText !== undefined) {
+                            baseNotes = String($scope.ui.drawer.checklist.otherText || '');
+                        } else {
+                            var p = parseChecklist($scope.ui.drawer.details.body || '');
+                            baseNotes = (p && p.otherText !== undefined) ? String(p.otherText) : String($scope.ui.drawer.details.body || '');
+                        }
+                    } catch (e0) {
+                        baseNotes = '';
+                    }
+
+                    $scope.ui.drawer.baselineBody = baseNotes;
+                    $scope.ui.drawer.draftBody = baseNotes;
                     focusById('kfo-drawer-body', true);
                 } catch (e) {
                     // ignore
@@ -2867,7 +2891,8 @@
                     var entryID = String($scope.ui.drawer.entryID || '');
                     var storeID = String($scope.ui.drawer.storeID || '');
                     var before = String($scope.ui.drawer.details.body || '');
-                    var after = String($scope.ui.drawer.draftBody || '');
+                    var notes = String($scope.ui.drawer.draftBody || '');
+                    var after = mergeNotesAndChecklist(before, notes);
                     applyTaskBodyUpdate(entryID, storeID, before, after, 'Notes saved', '');
                 } catch (e) {
                     reportError('saveEditDrawerBody', e, 'Save failed', 'Could not save notes. Click the ! icon for details.');
@@ -2898,9 +2923,9 @@
                     var before = String($scope.ui.drawer.details.body || '');
                     var idx = item.lineIndex;
                     var after = toggleChecklistItem(before, idx, !item.checked);
-                    applyTaskBodyUpdate(String($scope.ui.drawer.entryID || ''), String($scope.ui.drawer.storeID || ''), before, after, 'Checklist updated', '');
+                    applyTaskBodyUpdate(String($scope.ui.drawer.entryID || ''), String($scope.ui.drawer.storeID || ''), before, after, 'Subtasks updated', '');
                 } catch (e) {
-                    reportError('toggleDrawerChecklistItem', e, 'Checklist update failed', 'Could not update the checklist. Click the ! icon for details.');
+                    reportError('toggleDrawerChecklistItem', e, 'Subtasks update failed', 'Could not update the subtasks. Click the ! icon for details.');
                 }
             };
 
@@ -2915,9 +2940,9 @@
                     var before = String($scope.ui.drawer.details.body || '');
                     var after = addChecklistItem(before, text);
                     $scope.ui.drawer.newChecklistText = '';
-                    applyTaskBodyUpdate(String($scope.ui.drawer.entryID || ''), String($scope.ui.drawer.storeID || ''), before, after, 'Checklist item added', text);
+                    applyTaskBodyUpdate(String($scope.ui.drawer.entryID || ''), String($scope.ui.drawer.storeID || ''), before, after, 'Subtask added', text);
                 } catch (e) {
-                    reportError('addDrawerChecklistItem', e, 'Checklist update failed', 'Could not add the checklist item. Click the ! icon for details.');
+                    reportError('addDrawerChecklistItem', e, 'Subtask add failed', 'Could not add the subtask. Click the ! icon for details.');
                 }
             };
 
@@ -3007,31 +3032,12 @@
                 }
             };
 
-            $scope.drawerSnooze = function (kind) {
+            $scope.openDrawerSnoozePicker = function (ev) {
                 try {
                     if (!drawerFieldEditAllowed()) return;
                     var keys = drawerTaskKeys();
                     if (keys.length === 0) return;
-
-                    var k = String(kind || '');
-                    var today = nowDayStart();
-
-                    if (k === 'clear') {
-                        bulkSetDue(keys, null);
-                        return;
-                    }
-                    if (k === 'tomorrow') {
-                        bulkSetDue(keys, addDays(today, 1));
-                        return;
-                    }
-                    if (k === '3d') {
-                        bulkSetDue(keys, addDays(today, 3));
-                        return;
-                    }
-                    if (k === 'week') {
-                        bulkSetDue(keys, addDays(today, 7));
-                        return;
-                    }
+                    openSnoozePicker(ev, keys);
                 } catch (e) {
                     // ignore
                 }

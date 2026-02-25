@@ -476,17 +476,15 @@
                              </div>
                          </div>
 
-                         <div class="kfo-row">
-                             <div class="kfo-rowLabel">Snooze</div>
-                             <div class="kfo-rowControl">
-                                 <div class="kfo-row" style="margin:0;">
-                                      <button class="kfo-btn" type="button" ng-click="drawerSnooze('tomorrow')" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.editing || ui.drawer.subjectEditing" title="Snooze until tomorrow (from today)">Tomorrow</button>
-                                      <button class="kfo-btn" type="button" ng-click="drawerSnooze('3d')" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.editing || ui.drawer.subjectEditing" title="Snooze 3 days (from today)">+3 days</button>
-                                      <button class="kfo-btn" type="button" ng-click="drawerSnooze('week')" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.editing || ui.drawer.subjectEditing" title="Snooze 7 days (from today)">+7 days</button>
-                                      <button class="kfo-btn" type="button" ng-click="drawerSnooze('clear')" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.editing || ui.drawer.subjectEditing" title="Clear due date">Clear</button>
-                                 </div>
-                             </div>
-                         </div>
+                          <div class="kfo-row">
+                              <div class="kfo-rowLabel">Snooze</div>
+                              <div class="kfo-rowControl">
+                                  <button class="kfo-btn kfo-btn--field" type="button" ng-click="openDrawerSnoozePicker($event)" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.editing || ui.drawer.subjectEditing" aria-label="Snooze">
+                                      <span class="glyphicon glyphicon-time" aria-hidden="true"></span>
+                                      <span>Snooze...</span>
+                                  </button>
+                              </div>
+                          </div>
                         <div class="kfo-row">
                             <div class="kfo-rowLabel">Categories</div>
                             <div class="kfo-rowControl">
@@ -525,15 +523,17 @@
                         <div class="kfo-divider"></div>
 
                         <div class="kfo-drawerActions">
-                            <button class="kfo-btn" type="button" ng-click="editTask(ui.drawer.task)">Open</button>
-                            <button class="kfo-btn" type="button" ng-click="openTaskActions($event, ui.drawer.task)">Actions</button>
-                            <button class="kfo-btn kfo-btn--success" type="button" ng-if="ui.drawer.task.statusValue !== 2" ng-click="completeTask($event, ui.drawer.task)">
-                                <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
-                                <span>Complete</span>
+                            <button class="kfo-iconBtn" type="button" ng-click="editTask(ui.drawer.task)" aria-label="Open in Outlook" title="Open in Outlook">
+                                <span class="glyphicon glyphicon-new-window" aria-hidden="true"></span>
                             </button>
-                            <button class="kfo-btn kfo-btn--danger" type="button" ng-click="deleteTask(ui.drawer.task, true)">
+                            <button class="kfo-iconBtn" type="button" ng-click="openTaskActions($event, ui.drawer.task)" aria-label="Actions" title="Actions">
+                                <span class="glyphicon glyphicon-option-horizontal" aria-hidden="true"></span>
+                            </button>
+                            <button class="kfo-iconBtn kfo-iconBtn--success" type="button" ng-if="ui.drawer.task.statusValue !== 2" ng-click="completeTask($event, ui.drawer.task)" aria-label="Complete" title="Complete">
+                                <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+                            </button>
+                            <button class="kfo-iconBtn kfo-iconBtn--danger" type="button" ng-click="deleteTask(ui.drawer.task, true)" aria-label="Delete" title="Delete">
                                 <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
-                                <span>Delete</span>
                             </button>
                         </div>
 
@@ -555,7 +555,7 @@
 
                             <div ng-if="ui.drawer.details && ui.drawer.details.ok">
                                 <div class="kfo-checklist" ng-if="!ui.drawer.editing && ui.drawer.checklist && ui.drawer.checklist.items && ui.drawer.checklist.items.length">
-                                    <div class="kfo-checklistTitle">Checklist</div>
+                                    <div class="kfo-checklistTitle">Subtasks</div>
                                     <label class="kfo-checkItem" ng-repeat="it in ui.drawer.checklist.items">
                                         <input type="checkbox" ng-checked="it.checked" ng-click="toggleDrawerChecklistItem(it)" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.subjectEditing" />
                                         <span class="kfo-checkText" ng-class="{'kfo-checkText--done': it.checked}">{{it.text || '(Untitled)'}} </span>
@@ -563,10 +563,10 @@
                                 </div>
 
                                 <div class="kfo-checkAdd" ng-if="!ui.drawer.editing">
-                                    <input class="kfo-input" type="text" ng-model="ui.drawer.newChecklistText" placeholder="Add checklist item" aria-label="Add checklist item" ng-keydown="drawerChecklistKeyDown($event)" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.subjectEditing" />
+                                    <input class="kfo-input" type="text" ng-model="ui.drawer.newChecklistText" placeholder="Add subtask" aria-label="Add subtask" ng-keydown="drawerChecklistKeyDown($event)" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.subjectEditing" />
                                     <button class="kfo-btn" type="button" ng-click="addDrawerChecklistItem()" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.subjectEditing">Add</button>
                                 </div>
-                                <div class="kfo-small" ng-if="!ui.drawer.editing">Tip: checklist items are stored as <code>- [ ]</code> lines in the task body.</div>
+                                <div class="kfo-small" ng-if="!ui.drawer.editing">Tip: subtasks are stored as <code>- [ ]</code> lines in the task body.</div>
 
                                 <textarea class="kfo-input kfo-textarea" id="kfo-drawer-body" ng-if="ui.drawer.editing" ng-model="ui.drawer.draftBody" aria-label="Task body" placeholder="Type notes..." ng-disabled="ui.drawer.saving"></textarea>
 
