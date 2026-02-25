@@ -13,6 +13,11 @@
     <h2>What's New</h2>
     <p class="muted">This page is local-only and ships with the app.</p>
 
+    <h3>v1.4.3</h3>
+    <ul>
+      <li>Fix <code>install.cmd</code> file copy failing with Robocopy (<code>Invalid Parameter</code>) when the source path ends with a trailing backslash (common for extracted folder paths).</li>
+    </ul>
+
     <h3>v1.4.2</h3>
     <ul>
       <li>Fix <code>install.cmd</code> crashing when run from a folder path containing parentheses (common when Windows adds <code>(1)</code> on repeated downloads).</li>

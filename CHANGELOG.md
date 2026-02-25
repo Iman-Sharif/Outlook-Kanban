@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.4.3
+
+- Fix `install.cmd` file copy failing with Robocopy (`Invalid Parameter`) when the source path ends with a trailing backslash (eg extracted folder paths)
+
 ## 1.4.2
 
 - Fix `install.cmd` crashing when run from a folder path containing parentheses (common when Windows adds `(1)` on repeated downloads)
