@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.4.2
+
+- Fix `install.cmd` crashing when run from a folder path containing parentheses (common when Windows adds `(1)` on repeated downloads)
+- Improve installer reliability: verify copied files exist and write an install log to `%TEMP%\kanban-for-outlook-install.log`
+- Improve task drawer UI: Snooze uses a dropdown menu; actions fit on one row
+- Clarify notes vs subtasks: notes editor now preserves subtask checkbox lines and the UI labels checklist as “Subtasks”
+
 ## 1.4.1
 
 - Fix `install.cmd` menu input not being recognised when selecting options (1-5)
