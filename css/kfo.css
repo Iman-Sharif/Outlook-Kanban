@@ -392,7 +392,38 @@ body.kfo {
   font-size: 13px;
   font-weight: 900;
   word-wrap: break-word;
+  margin-bottom: 0;
+}
+
+.kfo-drawerSubjectRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
   margin-bottom: 10px;
+}
+
+.kfo-drawerSubjectMain {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kfo-drawerSubjectActions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-left: 10px;
+}
+
+.kfo-drawerSubjectActions > * + * {
+  margin-left: 8px;
+}
+
+.kfo-drawerSubjectInput {
+  width: 100%;
+  min-width: 0;
+  font-weight: 900;
 }
 
 .kfo-drawerActions {
@@ -987,6 +1018,15 @@ body.kfo {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+}
+
+.kfo.drag-disabled .kfo-taskHeader {
+  cursor: default;
+}
+
+.kfo.drag-disabled .kfo-dragHandle {
+  cursor: default;
+  opacity: 0.25;
 }
 
 .kfo.drag-handle-only .kfo-taskHeader {

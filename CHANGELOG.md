@@ -9,6 +9,15 @@ All notable changes to this project will be documented in this file.
 - Simplify the release zip contents (remove extra `.cmd` files and Markdown docs under `docs/`)
 - Extend the local-only audit to include shipped offline docs pages
 
+## 1.4.0
+
+- Improve keyboard navigation: each task card is a single tab stop; `Enter` opens the drawer; `Space` toggles selection; `↑ ↓ ← →` (or `h j k l`) moves focus; Shift+Up/Down extends selection within a lane
+- Add inline subject editing in the drawer (Edit/Save/Cancel) with Undo
+- Add Bulk Snooze for selected tasks
+- Improve popover keyboarding (Up/Down navigation while keeping Tab focus trapping)
+- Make drag disabled state clearer (UI hints + disabled drag cursor/handle)
+- Improve OneNote handling and expose “Open OneNote” in Actions when available
+
 ## 1.3.1
 
 - Fix release zip packaging to include `docs/ACCESSIBILITY.md`

@@ -4,7 +4,14 @@ Kanban for Outlook runs inside classic Outlook's Folder Home Page (legacy IE eng
 
 ## Keyboard
 
-- Task cards are focusable: use `Tab` to focus a card, then `Enter`/`Space` to open the task drawer.
+- Task cards are focusable: use `Tab` to focus a card.
+- Each card is a single tab stop (card buttons are primarily for mouse use).
+- `Enter` opens the task drawer.
+- `Space` toggles selection for the focused task.
+- `↑ ↓ ← →` (or `h j k l`) moves focus between tasks and lanes.
+- `a` opens Actions, `c` completes, `o` opens in Outlook, `m` moves to a lane.
+- `Delete` deletes the focused task (confirm).
+- `n` opens OneNote for the focused task (if available).
 - Buttons and inputs throughout the UI are standard focusable controls.
 - `Esc` closes open popovers/dialogs (and the task drawer).
 

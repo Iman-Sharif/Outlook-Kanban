@@ -15,9 +15,12 @@
 - Use "New task" in the header to quick add a task in the current folder (default Tasks by default).
 - Drag a task card between lanes.
 - Click a card to open the task drawer (details, notes, checklist, and quick actions).
+- In the drawer, you can edit the subject, notes, and checklist.
 - Double-click a card to open it in Outlook.
-- Snooze: use the drawer Snooze buttons (or Card Actions snooze presets) to set the due date relative to today.
+- Snooze: use the drawer Snooze buttons (or Card Actions snooze presets) to set the due date relative to today. For multiple tasks, select them and use the bulk bar Snooze button.
+- Keyboard: focus a card with `Tab`, press `Enter` to open the drawer, use `Space` to toggle selection, and use `↑ ↓ ← →` (or `h j k l`) to move focus.
 - Selection: use the checkbox on cards; Shift+click selects a range within the same lane.
+- Selection (keyboard): Shift+Up/Down extends selection within a lane.
 - Use the top-bar Select (checkmark) menu for actions like Select all visible / Select all in lane / Invert selection.
 - After a lane move, you can Undo from the toast for a short time.
 - Quick add: click the lightning icon on a lane, type a subject, then press Enter.
