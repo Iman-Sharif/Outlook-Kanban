@@ -349,7 +349,7 @@
                               <div class="kfo-small kfo-quickAddHint" ng-if="config.BOARD.quickAddEnabled !== false && ui.quickAddLaneId == lane.id">Enter to add&nbsp;&bull;&nbsp;Esc to close</div>
 
                               <ul class="kfo-tasklist kfo-tasklist" ui-sortable="sortableOptions" ng-model="lane.filteredTasks" data-lane-id="{{lane.id}}">
-                                 <li class="kfo-task" ng-repeat="task in lane.filteredTasks track by task.entryID" ng-dblclick="editTask(task)" ng-click="onTaskClicked($event, task)" ng-class="taskCardClasses(task)" ng-style="taskItemStyle($parent.$index, $index)">
+                                 <li class="kfo-task" ng-repeat="task in lane.filteredTasks track by task.entryID" ng-dblclick="editTask(task)" ng-click="onTaskClicked($event, task)" ng-class="taskCardClasses(task)" ng-style="taskItemStyle($parent.$index, $index)" tabindex="0" ng-focus="onTaskCardFocus(task)" ng-keydown="taskCardKeyDown($event, task)">
                                      <div class="kfo-taskHeader">
                                          <div class="kfo-taskHeaderLeft">
                                               <button class="kfo-iconBtn kfo-taskSelectBtn" type="button" ng-click="toggleTaskSelected($event, task)" aria-label="{{(isTaskSelected(task) ? 'Unselect' : 'Select') + ' (Shift for range)'}}" title="{{(isTaskSelected(task) ? 'Unselect' : 'Select') + ' (Shift for range)'}}">
@@ -445,15 +445,27 @@
                             </div>
                         </div>
 
-                        <div class="kfo-row">
-                            <div class="kfo-rowLabel">Due</div>
-                            <div class="kfo-rowControl">
-                                <button class="kfo-btn kfo-btn--field" type="button" ng-click="openDrawerDuePicker($event)" ng-disabled="ui.drawer.saving || ui.drawer.editing" aria-label="Change due date">
-                                    <span class="glyphicon glyphicon-calendar" aria-hidden="true"></span>
-                                    <span>{{ui.drawer.task.dueText || 'No due date'}}</span>
-                                </button>
-                            </div>
-                        </div>
+                         <div class="kfo-row">
+                             <div class="kfo-rowLabel">Due</div>
+                             <div class="kfo-rowControl">
+                                 <button class="kfo-btn kfo-btn--field" type="button" ng-click="openDrawerDuePicker($event)" ng-disabled="ui.drawer.saving || ui.drawer.editing" aria-label="Change due date">
+                                     <span class="glyphicon glyphicon-calendar" aria-hidden="true"></span>
+                                     <span>{{ui.drawer.task.dueText || 'No due date'}}</span>
+                                 </button>
+                             </div>
+                         </div>
+
+                         <div class="kfo-row">
+                             <div class="kfo-rowLabel">Snooze</div>
+                             <div class="kfo-rowControl">
+                                 <div class="kfo-row" style="margin:0;">
+                                     <button class="kfo-btn" type="button" ng-click="drawerSnooze('tomorrow')" ng-disabled="ui.drawer.saving || ui.drawer.editing" title="Snooze until tomorrow (from today)">Tomorrow</button>
+                                     <button class="kfo-btn" type="button" ng-click="drawerSnooze('3d')" ng-disabled="ui.drawer.saving || ui.drawer.editing" title="Snooze 3 days (from today)">+3 days</button>
+                                     <button class="kfo-btn" type="button" ng-click="drawerSnooze('week')" ng-disabled="ui.drawer.saving || ui.drawer.editing" title="Snooze until next week (from today)">Next week</button>
+                                     <button class="kfo-btn" type="button" ng-click="drawerSnooze('clear')" ng-disabled="ui.drawer.saving || ui.drawer.editing" title="Clear due date">Clear</button>
+                                 </div>
+                             </div>
+                         </div>
                         <div class="kfo-row">
                             <div class="kfo-rowLabel">Categories</div>
                             <div class="kfo-rowControl">
@@ -1187,14 +1199,15 @@
                         <p><strong>Local-only</strong>: this app does not require or use network access.</p>
 
                         <div class="kfo-row">
-                            <div class="kfo-rowLabel">Docs</div>
-                            <div class="kfo-rowControl">
-                                <button class="kfo-btn" type="button" ng-click="openLocal('docs/SETUP.md')">Setup</button>
-                                <button class="kfo-btn" type="button" ng-click="openLocal('docs/USAGE.md')">Usage</button>
-                                <button class="kfo-btn" type="button" ng-click="openLocal('docs/THEMES.md')">Themes</button>
-                                <div class="kfo-small">Opens local Markdown docs in a new window/tab if supported by your Outlook security settings.</div>
-                            </div>
-                        </div>
+                             <div class="kfo-rowLabel">Docs</div>
+                             <div class="kfo-rowControl">
+                                 <button class="kfo-btn" type="button" ng-click="openLocal('docs/SETUP.md')">Setup</button>
+                                 <button class="kfo-btn" type="button" ng-click="openLocal('docs/USAGE.md')">Usage</button>
+                                 <button class="kfo-btn" type="button" ng-click="openLocal('docs/THEMES.md')">Themes</button>
+                                 <button class="kfo-btn" type="button" ng-click="openLocal('docs/ACCESSIBILITY.md')">Accessibility</button>
+                                 <div class="kfo-small">Opens local Markdown docs in a new window/tab if supported by your Outlook security settings.</div>
+                             </div>
+                         </div>
 
                         <div class="kfo-row">
                             <div class="kfo-rowLabel">Pages</div>
@@ -1240,7 +1253,7 @@
 
             <!-- Setup wizard (first run / migration) -->
             <div class="kfo-modalBackdrop" ng-if="ui.showSetupWizard">
-                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-setup-title" tabindex="-1">
+                <div class="kfo-modal" id="kfo-modal-setupWizard" role="dialog" aria-modal="true" aria-labelledby="kfo-setup-title" tabindex="-1" ng-keydown="trapFocusKeyDown($event)">
                     <div class="kfo-modalHeader">
                         <h3 class="kfo-modalTitle" id="kfo-setup-title">Welcome to Kanban for Outlook</h3>
                         <button class="kfo-iconBtn" type="button" ng-click="closeSetupWizard()" aria-label="Close">
@@ -1343,10 +1356,10 @@
 
             <!-- Create project modal -->
             <div class="kfo-modalBackdrop" ng-if="ui.showCreateProject">
-                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-create-project-title" tabindex="-1">
+                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-create-project-title" tabindex="-1" ng-keydown="trapFocusKeyDown($event)">
                     <div class="kfo-modalHeader">
                         <h3 class="kfo-modalTitle" id="kfo-create-project-title">Create Project</h3>
-                        <button class="kfo-iconBtn" type="button" ng-click="ui.showCreateProject = false" aria-label="Close">
+                        <button class="kfo-iconBtn" type="button" ng-click="closeCreateProject()" aria-label="Close">
                             <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
                         </button>
                     </div>
@@ -1378,7 +1391,7 @@
                         </div>
                     </div>
                     <div class="kfo-modalFooter">
-                        <button class="kfo-btn" type="button" ng-click="ui.showCreateProject = false">Cancel</button>
+                        <button class="kfo-btn" type="button" ng-click="closeCreateProject()">Cancel</button>
                         <button class="kfo-btn" type="button" ng-click="submitCreateProject()">Save</button>
                     </div>
                 </div>
@@ -1386,7 +1399,7 @@
 
             <!-- Save view modal -->
             <div class="kfo-modalBackdrop" ng-if="ui.showSaveView">
-                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-save-view-title" tabindex="-1">
+                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-save-view-title" tabindex="-1" ng-keydown="trapFocusKeyDown($event)">
                     <div class="kfo-modalHeader">
                         <h3 class="kfo-modalTitle" id="kfo-save-view-title">Save View</h3>
                         <button class="kfo-iconBtn" type="button" ng-click="closeSaveView()" aria-label="Close">
@@ -1425,10 +1438,10 @@
 
             <!-- Diagnostics modal -->
             <div class="kfo-modalBackdrop" ng-if="ui.showDiagnostics">
-                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-diagnostics-title" aria-describedby="kfo-diagnostics-desc" tabindex="-1">
+                <div class="kfo-modal" id="kfo-modal-diagnostics" role="dialog" aria-modal="true" aria-labelledby="kfo-diagnostics-title" aria-describedby="kfo-diagnostics-desc" tabindex="-1" ng-keydown="trapFocusKeyDown($event)">
                     <div class="kfo-modalHeader">
                         <h3 class="kfo-modalTitle" id="kfo-diagnostics-title">Diagnostics (Local)</h3>
-                        <button class="kfo-iconBtn" type="button" ng-click="ui.showDiagnostics = false" aria-label="Close">
+                        <button class="kfo-iconBtn" type="button" ng-click="closeDiagnostics()" aria-label="Close">
                             <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
                         </button>
                     </div>
@@ -1438,14 +1451,14 @@
                     </div>
                     <div class="kfo-modalFooter">
                         <button class="kfo-btn" type="button" ng-click="copyDiagnostics()">Copy</button>
-                        <button class="kfo-btn" type="button" ng-click="ui.showDiagnostics = false">Close</button>
+                        <button class="kfo-btn" type="button" ng-click="closeDiagnostics()">Close</button>
                     </div>
                 </div>
             </div>
 
             <!-- Settings transfer modal -->
             <div class="kfo-modalBackdrop" ng-if="ui.showSettingsTransfer">
-                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-settings-transfer-title" aria-describedby="kfo-settings-transfer-desc" tabindex="-1">
+                <div class="kfo-modal" id="kfo-modal-settingsTransfer" role="dialog" aria-modal="true" aria-labelledby="kfo-settings-transfer-title" aria-describedby="kfo-settings-transfer-desc" tabindex="-1" ng-keydown="trapFocusKeyDown($event)">
                     <div class="kfo-modalHeader">
                         <h3 class="kfo-modalTitle" id="kfo-settings-transfer-title">Export / Import Settings (Local)</h3>
                         <button class="kfo-iconBtn" type="button" ng-click="closeSettingsTransfer()" aria-label="Close">
@@ -1497,7 +1510,7 @@
 
             <!-- Lane id migration tool -->
             <div class="kfo-modalBackdrop" ng-if="ui.showLaneIdTool">
-                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-laneid-title" aria-describedby="kfo-laneid-desc" tabindex="-1">
+                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-laneid-title" aria-describedby="kfo-laneid-desc" tabindex="-1" ng-keydown="trapFocusKeyDown($event)">
                     <div class="kfo-modalHeader">
                         <h3 class="kfo-modalTitle" id="kfo-laneid-title">Change Lane Id (Migrate Tasks)</h3>
                         <button class="kfo-iconBtn" type="button" ng-click="closeLaneIdTool()" aria-label="Close" ng-disabled="ui.laneIdTool.running">
@@ -1561,7 +1574,7 @@
 
             <!-- Keyboard shortcuts modal -->
             <div class="kfo-modalBackdrop" ng-if="ui.showShortcuts">
-                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-shortcuts-title" tabindex="-1">
+                <div class="kfo-modal" id="kfo-modal-shortcuts" role="dialog" aria-modal="true" aria-labelledby="kfo-shortcuts-title" tabindex="-1" ng-keydown="trapFocusKeyDown($event)">
                     <div class="kfo-modalHeader">
                         <h3 class="kfo-modalTitle" id="kfo-shortcuts-title">Keyboard Shortcuts</h3>
                         <button class="kfo-iconBtn" type="button" ng-click="closeShortcuts()" aria-label="Close">
@@ -1628,10 +1641,10 @@
 
             <!-- Error details modal -->
             <div class="kfo-modalBackdrop" ng-if="ui.showErrorDetails">
-                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-error-details-title" aria-describedby="kfo-error-details-desc" tabindex="-1">
+                <div class="kfo-modal" id="kfo-modal-errorDetails" role="dialog" aria-modal="true" aria-labelledby="kfo-error-details-title" aria-describedby="kfo-error-details-desc" tabindex="-1" ng-keydown="trapFocusKeyDown($event)">
                     <div class="kfo-modalHeader">
                         <h3 class="kfo-modalTitle" id="kfo-error-details-title">Error details (Local)</h3>
-                        <button class="kfo-iconBtn" type="button" ng-click="ui.showErrorDetails = false" aria-label="Close">
+                        <button class="kfo-iconBtn" type="button" ng-click="closeErrorDetails()" aria-label="Close">
                             <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
                         </button>
                     </div>
@@ -1642,11 +1655,11 @@
                     <div class="kfo-modalFooter">
                         <div class="kfo-modalFooterGroup">
                             <button class="kfo-btn" type="button" ng-click="copyErrorDetails()">Copy</button>
-                            <button class="kfo-btn" type="button" ng-click="openDiagnostics(); ui.showErrorDetails = false">Open diagnostics</button>
+                            <button class="kfo-btn" type="button" ng-click="openDiagnostics(); closeErrorDetails(true)">Open diagnostics</button>
                         </div>
                         <div class="kfo-modalFooterGroup">
                             <button class="kfo-btn" type="button" ng-click="clearLastError()">Clear</button>
-                            <button class="kfo-btn" type="button" ng-click="ui.showErrorDetails = false">Close</button>
+                            <button class="kfo-btn" type="button" ng-click="closeErrorDetails()">Close</button>
                         </div>
                     </div>
                 </div>
@@ -1654,10 +1667,10 @@
 
             <!-- Rename project modal -->
             <div class="kfo-modalBackdrop" ng-if="ui.showRenameProject">
-                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-rename-project-title" tabindex="-1">
+                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-rename-project-title" tabindex="-1" ng-keydown="trapFocusKeyDown($event)">
                     <div class="kfo-modalHeader">
                         <h3 class="kfo-modalTitle" id="kfo-rename-project-title">Rename Project</h3>
-                        <button class="kfo-iconBtn" type="button" ng-click="ui.showRenameProject = false" aria-label="Close">
+                        <button class="kfo-iconBtn" type="button" ng-click="closeRenameProject()" aria-label="Close">
                             <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
                         </button>
                     </div>
@@ -1671,7 +1684,7 @@
                         </div>
                     </div>
                     <div class="kfo-modalFooter">
-                        <button class="kfo-btn" type="button" ng-click="ui.showRenameProject = false">Cancel</button>
+                        <button class="kfo-btn" type="button" ng-click="closeRenameProject()">Cancel</button>
                         <button class="kfo-btn" type="button" ng-click="submitRenameProject()">Rename</button>
                     </div>
                 </div>
@@ -1679,7 +1692,7 @@
 
             <!-- Move tasks modal -->
             <div class="kfo-modalBackdrop" ng-if="ui.showMoveTasks">
-                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-move-tasks-title" tabindex="-1">
+                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-move-tasks-title" tabindex="-1" ng-keydown="trapFocusKeyDown($event)">
                     <div class="kfo-modalHeader">
                         <h3 class="kfo-modalTitle" id="kfo-move-tasks-title">Move Tasks Between Projects</h3>
                         <button class="kfo-iconBtn" type="button" ng-click="closeMoveTasks()" aria-label="Close">
@@ -1734,7 +1747,7 @@
 
             <!-- Migration modal -->
             <div class="kfo-modalBackdrop" ng-if="ui.showMigration">
-                <div class="kfo-modal" role="dialog" aria-modal="true" aria-labelledby="kfo-migration-title" aria-describedby="kfo-migration-desc" tabindex="-1">
+                <div class="kfo-modal" id="kfo-modal-migration" role="dialog" aria-modal="true" aria-labelledby="kfo-migration-title" aria-describedby="kfo-migration-desc" tabindex="-1" ng-keydown="trapFocusKeyDown($event)">
                     <div class="kfo-modalHeader">
                         <h3 class="kfo-modalTitle" id="kfo-migration-title">Migrate Lanes (Local)</h3>
                         <button class="kfo-iconBtn" type="button" ng-click="closeMigration()" aria-label="Close">
@@ -1807,7 +1820,7 @@
 
             <!-- Popovers / custom dropdowns -->
             <div class="kfo-popBackdrop" ng-if="ui.pop.open" ng-click="closePop()"></div>
-            <div class="kfo-pop" ng-if="ui.pop.open" ng-style="ui.pop.style" role="dialog" aria-modal="true" aria-label="{{ui.pop.title || 'Menu'}}">
+            <div class="kfo-pop" ng-if="ui.pop.open" ng-style="ui.pop.style" role="dialog" aria-modal="true" aria-label="{{ui.pop.title || 'Menu'}}" ng-keydown="trapFocusKeyDown($event)">
                 <div class="kfo-popHeader">
                     <div class="kfo-popTitle">{{ui.pop.title}}</div>
                     <button class="kfo-iconBtn" type="button" ng-click="closePop()" aria-label="Close">

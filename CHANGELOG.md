@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.3.0
+
+- Add Snooze quick actions (drawer buttons + card Actions presets) computed from today
+- Improve keyboard access: focus task cards with Tab and open drawer with Enter/Space
+- Improve focus handling for popovers and dialogs (focus trap + return focus)
+- Add non-drag alternatives for manual ordering (Actions: move up/down/top/bottom)
+- Add accessibility documentation
+
 ## 1.2.0
 
 - Add a Select menu plus Shift+click range selection (within a lane)

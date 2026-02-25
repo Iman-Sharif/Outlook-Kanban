@@ -147,6 +147,9 @@
                 lastError: null,
                 showErrorDetails: false,
 
+                // Focus return stack for modal dialogs (best-effort)
+                returnFocusStack: [],
+
                 // Selection + details drawer
                 selection: { keys: {}, order: [], count: 0, anchorKey: '' },
                 focusTaskKey: '',
@@ -175,7 +178,22 @@
                 lastViewId: '',
 
                 // Global popover / dropdown layer (for custom dropdowns and task quick actions)
-                pop: { open: false, kind: '', style: {}, title: '', query: '', options: [], taskKey: '', task: null },
+                pop: {
+                    open: false,
+                    kind: '',
+                    style: {},
+                    title: '',
+                    query: '',
+                    options: [],
+                    visibleOptions: [],
+                    showSearch: false,
+                    context: null,
+                    returnFocusEl: null,
+                    dueText: '',
+                    categoryMode: 'add',
+                    taskKey: '',
+                    task: null
+                },
 
                 // Bulk operations (multi-select)
                 bulk: {
@@ -330,6 +348,64 @@
                         }
                     }, 0);
                 } catch (e0) {
+                    // ignore
+                }
+            }
+
+            function isElementInDocument(el) {
+                try {
+                    if (!el) return false;
+                    if (!document || !document.documentElement || !document.documentElement.contains) return true;
+                    return document.documentElement.contains(el);
+                } catch (e) {
+                    return true;
+                }
+            }
+
+            function pushReturnFocus() {
+                try {
+                    if (!$scope.ui) return;
+                    if (!$scope.ui.returnFocusStack) {
+                        $scope.ui.returnFocusStack = [];
+                    }
+                    var el = null;
+                    try { el = document.activeElement; } catch (e0) { el = null; }
+                    if (el) {
+                        $scope.ui.returnFocusStack.push(el);
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            function restoreReturnFocus() {
+                try {
+                    if (!$scope.ui || !$scope.ui.returnFocusStack || $scope.ui.returnFocusStack.length === 0) return;
+                    var target = null;
+                    while ($scope.ui.returnFocusStack.length > 0) {
+                        try {
+                            target = $scope.ui.returnFocusStack.pop();
+                            if (target && target.focus && isElementInDocument(target)) {
+                                break;
+                            }
+                        } catch (e0) {
+                            target = null;
+                        }
+                        target = null;
+                    }
+                    if (!target) return;
+                    (function (t) {
+                        $timeout(function () {
+                            try {
+                                if (t && t.focus && isElementInDocument(t)) {
+                                    t.focus();
+                                }
+                            } catch (e1) {
+                                // ignore
+                            }
+                        }, 0);
+                    })(target);
+                } catch (e) {
                     // ignore
                 }
             }
@@ -2700,6 +2776,36 @@
                 }
             };
 
+            $scope.drawerSnooze = function (kind) {
+                try {
+                    if (!drawerFieldEditAllowed()) return;
+                    var keys = drawerTaskKeys();
+                    if (keys.length === 0) return;
+
+                    var k = String(kind || '');
+                    var today = nowDayStart();
+
+                    if (k === 'clear') {
+                        bulkSetDue(keys, null);
+                        return;
+                    }
+                    if (k === 'tomorrow') {
+                        bulkSetDue(keys, addDays(today, 1));
+                        return;
+                    }
+                    if (k === '3d') {
+                        bulkSetDue(keys, addDays(today, 3));
+                        return;
+                    }
+                    if (k === 'week') {
+                        bulkSetDue(keys, addDays(today, 7));
+                        return;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            };
+
             $scope.openDrawerCategoryPicker = function (ev) {
                 try {
                     if (!drawerFieldEditAllowed()) return;
@@ -2868,6 +2974,40 @@
 
                     // Normal click focuses and opens the drawer
                     $scope.openDrawerForTask(task);
+                } catch (e2) {
+                    // ignore
+                }
+            };
+
+            $scope.onTaskCardFocus = function (task) {
+                try {
+                    var k = taskKey(task);
+                    if (k && $scope.ui) {
+                        $scope.ui.focusTaskKey = k;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            $scope.taskCardKeyDown = function (ev, task) {
+                try {
+                    var e = ev || window.event;
+                    var code = e ? (e.keyCode || e.which) : 0;
+
+                    // Enter / Space
+                    if (code !== 13 && code !== 32) return;
+
+                    // Do not steal keyboard actions from child controls.
+                    if (e && isInteractiveElement(e.target, 'kfo-task')) {
+                        return;
+                    }
+
+                    try { if (e.preventDefault) e.preventDefault(); } catch (e1) { /* ignore */ }
+                    e.returnValue = false;
+
+                    $scope.openDrawerForTask(task);
+                    return false;
                 } catch (e2) {
                     // ignore
                 }
@@ -3184,9 +3324,87 @@
                 }
             };
 
+            function collectFocusableElements(root) {
+                var out = [];
+                try {
+                    if (!root || !root.querySelectorAll) return out;
+                    var nodes = root.querySelectorAll('button, [href], input, select, textarea, [tabindex]');
+                    for (var i = 0; i < nodes.length; i++) {
+                        var el = nodes[i];
+                        if (!el) continue;
+                        try {
+                            if (el.disabled) continue;
+                        } catch (eDis) {
+                            // ignore
+                        }
+                        try {
+                            if (el.tabIndex < 0) continue;
+                        } catch (eTi) {
+                            // ignore
+                        }
+                        try {
+                            if (el.getClientRects && el.getClientRects().length === 0) continue;
+                        } catch (eVis) {
+                            // ignore
+                        }
+                        out.push(el);
+                    }
+                } catch (e) {
+                    out = [];
+                }
+                return out;
+            }
+
+            function trapFocusInContainer(root, ev) {
+                try {
+                    if (!root || !ev) return;
+                    var code = ev.keyCode || ev.which;
+                    if (code !== 9) return;
+
+                    var items = collectFocusableElements(root);
+                    if (!items || items.length === 0) return;
+                    var first = items[0];
+                    var last = items[items.length - 1];
+
+                    var active = null;
+                    try { active = document.activeElement; } catch (e0) { active = null; }
+
+                    if (ev.shiftKey) {
+                        if (active === first || active === root) {
+                            try { last.focus(); } catch (e1) { /* ignore */ }
+                            try { if (ev.preventDefault) ev.preventDefault(); } catch (e2) { /* ignore */ }
+                            ev.returnValue = false;
+                            return false;
+                        }
+                    } else {
+                        if (active === last) {
+                            try { first.focus(); } catch (e3) { /* ignore */ }
+                            try { if (ev.preventDefault) ev.preventDefault(); } catch (e4) { /* ignore */ }
+                            ev.returnValue = false;
+                            return false;
+                        }
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            $scope.trapFocusKeyDown = function (ev) {
+                try {
+                    var e = ev || window.event;
+                    if (!e) return;
+                    var code = e.keyCode || e.which;
+                    if (code !== 9) return;
+                    trapFocusInContainer(e.currentTarget, e);
+                } catch (e0) {
+                    // ignore
+                }
+            };
+
             $scope.closePop = function () {
                 try {
                     if ($scope.ui && $scope.ui.pop) {
+                        var ret = $scope.ui.pop.returnFocusEl;
                         $scope.ui.pop.open = false;
                         $scope.ui.pop.kind = '';
                         $scope.ui.pop.title = '';
@@ -3195,6 +3413,19 @@
                         $scope.ui.pop.visibleOptions = [];
                         $scope.ui.pop.showSearch = false;
                         $scope.ui.pop.context = null;
+                        $scope.ui.pop.returnFocusEl = null;
+
+                        (function (r) {
+                            $timeout(function () {
+                                try {
+                                    if ($scope.ui && $scope.ui.pop && !$scope.ui.pop.open && r && r.focus && isElementInDocument(r)) {
+                                        r.focus();
+                                    }
+                                } catch (e1) {
+                                    // ignore
+                                }
+                            }, 0);
+                        })(ret);
                     }
                 } catch (e) {
                     // ignore
@@ -3299,9 +3530,70 @@
                 }
             };
 
+            function focusDefaultInPop() {
+                try {
+                    if (!$scope.ui || !$scope.ui.pop || !$scope.ui.pop.open) return;
+                    var pops = document.getElementsByClassName('kfo-pop');
+                    if (!pops || pops.length === 0) return;
+                    var root = pops[0];
+                    if (!root) return;
+
+                    var el = null;
+                    var kind = String($scope.ui.pop.kind || '');
+                    if (kind === 'due-picker') {
+                        try {
+                            el = root.querySelector('input[aria-label="Custom due date"]');
+                        } catch (e0) {
+                            el = null;
+                        }
+                    }
+                    if (!el && $scope.ui.pop.showSearch) {
+                        try {
+                            el = root.querySelector('.kfo-popSearch');
+                        } catch (e1) {
+                            el = null;
+                        }
+                    }
+                    if (!el) {
+                        try {
+                            el = root.querySelector('.kfo-popOption');
+                        } catch (e2) {
+                            el = null;
+                        }
+                    }
+                    if (!el) {
+                        try {
+                            el = root.querySelector('.kfo-popHeader button');
+                        } catch (e3) {
+                            el = null;
+                        }
+                    }
+                    if (el && el.focus) {
+                        el.focus();
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
             function openPop(ev, kind, title, options, showSearch, context) {
                 try {
                     if (!$scope.ui || !$scope.ui.pop) return;
+
+                    // Remember the element that opened the popover (for focus return) unless we're just switching kinds.
+                    try {
+                        if (!$scope.ui.pop.open) {
+                            var ret = null;
+                            try { ret = ev ? (ev.currentTarget || ev.target || ev.srcElement) : null; } catch (eRet0) { ret = null; }
+                            if (!ret) {
+                                try { ret = document.activeElement; } catch (eRet1) { ret = null; }
+                            }
+                            $scope.ui.pop.returnFocusEl = ret;
+                        }
+                    } catch (eRet2) {
+                        // ignore
+                    }
+
                     $scope.ui.pop.open = true;
                     $scope.ui.pop.kind = String(kind || '');
                     $scope.ui.pop.title = String(title || '');
@@ -3314,19 +3606,10 @@
                     $scope.ui.pop.categoryMode = ($scope.ui.pop.categoryMode || 'add');
                     positionPopFromEvent(ev);
 
-                    // default search focus
-                    if ($scope.ui.pop.showSearch) {
-                        $timeout(function () {
-                            try {
-                                var inputs = document.getElementsByClassName('kfo-popSearch');
-                                if (inputs && inputs.length > 0 && inputs[0].focus) {
-                                    inputs[0].focus();
-                                }
-                            } catch (e0) {
-                                // ignore
-                            }
-                        }, 0);
-                    }
+                    // Focus the first useful control inside the popover.
+                    $timeout(function () {
+                        focusDefaultInPop();
+                    }, 0);
                 } catch (e) {
                     // ignore
                 }
@@ -3599,6 +3882,7 @@
             $scope.openSaveView = function () {
                 try {
                     if (!$scope.ui) return;
+                    pushReturnFocus();
                     $scope.ui.saveViewName = '';
                     $scope.ui.saveViewPinned = true;
                     $scope.ui.saveViewIncludeLaneLayout = true;
@@ -3617,6 +3901,7 @@
                 } catch (e) {
                     // ignore
                 }
+                restoreReturnFocus();
             };
 
             $scope.saveViewNameKeyDown = function (ev) {
@@ -3703,6 +3988,7 @@
                     }
 
                     $scope.ui.showSaveView = false;
+                    restoreReturnFocus();
                     $scope.ui.lastViewId = id;
                     touchRecentViewId(id);
                     saveState();
@@ -3821,6 +4107,40 @@
                 }
             };
 
+            function canManualReorderInLane(lane) {
+                try {
+                    if (!$scope.config || !$scope.config.BOARD || !$scope.config.BOARD.saveOrder) return false;
+                    if ($scope.ui && $scope.ui.filtersActive) return false;
+                    if (!lane || !lane.filteredTasks) return false;
+                    var allCount = (lane && lane.tasks) ? lane.tasks.length : 0;
+                    var visCount = (lane && lane.filteredTasks) ? lane.filteredTasks.length : 0;
+                    return (allCount === visCount);
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            function reorderLaneTask(lane, fromIndex, toIndex) {
+                try {
+                    if (!lane || !lane.filteredTasks) return false;
+                    var list = lane.filteredTasks;
+                    var n = list.length;
+                    if (fromIndex < 0 || fromIndex >= n) return false;
+                    var to = toIndex;
+                    if (to < 0) to = 0;
+                    if (to >= n) to = n - 1;
+                    if (to === fromIndex) return true;
+
+                    var item = list.splice(fromIndex, 1)[0];
+                    list.splice(to, 0, item);
+                    fixLaneOrder(lane);
+                    showToast('success', 'Order updated', '', 1400);
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            }
+
             $scope.openTaskActions = function (ev, task) {
                 try {
                     var k = taskKey(task);
@@ -3828,12 +4148,84 @@
                     $scope.ui.focusTaskKey = k;
                     var keys = [k];
 
+                    var hit = null;
+                    try { hit = findTaskByKey(k); } catch (e0) { hit = null; }
+                    var lane = hit ? hit.lane : null;
+                    var idx = (hit && hit.taskIndex !== undefined && hit.taskIndex !== null) ? hit.taskIndex : -1;
+
                     var opts = [];
                     opts.push({ label: 'Move to lane...', meta: '', icon: 'glyphicon-transfer', onClick: function () { openLanePicker(ev, keys); } });
                     opts.push({ label: 'Set due...', meta: '', icon: 'glyphicon-calendar', onClick: function () { openDuePicker(ev, keys); } });
+
+                    // Snooze quick actions (computed from today)
+                    opts.push({ label: 'Snooze to tomorrow', meta: '', icon: 'glyphicon-time', onClick: function () { $scope.closePop(); bulkSetDue(keys, addDays(nowDayStart(), 1)); } });
+                    opts.push({ label: 'Snooze 3 days', meta: '', icon: 'glyphicon-time', onClick: function () { $scope.closePop(); bulkSetDue(keys, addDays(nowDayStart(), 3)); } });
+                    opts.push({ label: 'Snooze next week', meta: '', icon: 'glyphicon-time', onClick: function () { $scope.closePop(); bulkSetDue(keys, addDays(nowDayStart(), 7)); } });
+                    opts.push({ label: 'Clear due date', meta: '', icon: 'glyphicon-remove', onClick: function () { $scope.closePop(); bulkSetDue(keys, null); } });
+
                     opts.push({ label: 'Category...', meta: '', icon: 'glyphicon-tag', onClick: function () { openCategoryPicker(ev, keys); } });
                     opts.push({ label: 'Priority...', meta: '', icon: 'glyphicon-flag', onClick: function () { openPriorityPicker(ev, keys); } });
                     opts.push({ label: 'Privacy...', meta: '', icon: 'glyphicon-lock', onClick: function () { openPrivacyPicker(ev, keys); } });
+
+                    // Alternative to drag reordering (WCAG 2.2 - Dragging Movements)
+                    if (lane && idx >= 0 && canManualReorderInLane(lane)) {
+                        if (idx > 0) {
+                            opts.push({
+                                label: 'Move up',
+                                meta: '',
+                                icon: 'glyphicon-arrow-up',
+                                onClick: function () {
+                                    $scope.closePop();
+                                    var h1 = findTaskByKey(k);
+                                    if (h1 && h1.lane && h1.taskIndex > 0) {
+                                        reorderLaneTask(h1.lane, h1.taskIndex, h1.taskIndex - 1);
+                                    }
+                                }
+                            });
+                        }
+                        if (idx < (lane.filteredTasks.length - 1)) {
+                            opts.push({
+                                label: 'Move down',
+                                meta: '',
+                                icon: 'glyphicon-arrow-down',
+                                onClick: function () {
+                                    $scope.closePop();
+                                    var h2 = findTaskByKey(k);
+                                    if (h2 && h2.lane && h2.taskIndex < (h2.lane.filteredTasks.length - 1)) {
+                                        reorderLaneTask(h2.lane, h2.taskIndex, h2.taskIndex + 1);
+                                    }
+                                }
+                            });
+                        }
+                        if (idx > 0) {
+                            opts.push({
+                                label: 'Send to top',
+                                meta: '',
+                                icon: 'glyphicon-upload',
+                                onClick: function () {
+                                    $scope.closePop();
+                                    var h3 = findTaskByKey(k);
+                                    if (h3 && h3.lane && h3.taskIndex > 0) {
+                                        reorderLaneTask(h3.lane, h3.taskIndex, 0);
+                                    }
+                                }
+                            });
+                        }
+                        if (idx < (lane.filteredTasks.length - 1)) {
+                            opts.push({
+                                label: 'Send to bottom',
+                                meta: '',
+                                icon: 'glyphicon-download',
+                                onClick: function () {
+                                    $scope.closePop();
+                                    var h4 = findTaskByKey(k);
+                                    if (h4 && h4.lane && h4.taskIndex < (h4.lane.filteredTasks.length - 1)) {
+                                        reorderLaneTask(h4.lane, h4.taskIndex, h4.lane.filteredTasks.length - 1);
+                                    }
+                                }
+                            });
+                        }
+                    }
 
                     if (task && task.statusValue !== 2) {
                         opts.push({ label: 'Complete', meta: '', icon: 'glyphicon-ok', className: 'kfo-popOption--success', onClick: function () { $scope.closePop(); $scope.completeTask(null, task); } });
@@ -6126,6 +6518,8 @@
                     if (!$scope.ui || !$scope.ui.laneIdTool) return;
                     if (!lane || !lane.id) return;
 
+                    pushReturnFocus();
+
                     $scope.ui.laneIdTool.oldId = sanitizeId(lane.id) || String(lane.id || '');
                     $scope.ui.laneIdTool.laneTitle = String(lane.title || lane.id || 'Lane');
                     $scope.ui.laneIdTool.newId = $scope.ui.laneIdTool.oldId;
@@ -6166,6 +6560,7 @@
                 } catch (e) {
                     // ignore
                 }
+                restoreReturnFocus();
             };
 
             $scope.cancelLaneIdTool = function () {
@@ -6511,6 +6906,7 @@
 
             // Projects
             $scope.openCreateProject = function () {
+                pushReturnFocus();
                 $scope.ui.createProjectMode = 'create';
                 $scope.ui.linkProjectEntryID = '';
                 $scope.ui.newProjectName = '';
@@ -6519,11 +6915,23 @@
             };
 
             $scope.openLinkProject = function () {
+                pushReturnFocus();
                 $scope.ui.createProjectMode = 'link';
                 $scope.ui.linkProjectEntryID = '';
                 $scope.ui.newProjectName = '';
                 $scope.ui.showCreateProject = true;
                 focusById('kfo-modal-createProject-existing', false);
+            };
+
+            $scope.closeCreateProject = function () {
+                try {
+                    if ($scope.ui) {
+                        $scope.ui.showCreateProject = false;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+                restoreReturnFocus();
             };
 
             $scope.createProjectNameKeyDown = function (ev) {
@@ -6669,11 +7077,23 @@
                     showUserError('Cannot rename folder', 'The default Tasks folder cannot be renamed from here.');
                     return;
                 }
+                pushReturnFocus();
                 $scope.ui.renameProjectEntryID = p.entryID;
                 $scope.ui.renameProjectStoreID = p.storeID;
                 $scope.ui.renameProjectName = p.name;
                 $scope.ui.showRenameProject = true;
                 focusById('kfo-modal-renameProject-name', true);
+            };
+
+            $scope.closeRenameProject = function () {
+                try {
+                    if ($scope.ui) {
+                        $scope.ui.showRenameProject = false;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+                restoreReturnFocus();
             };
 
             $scope.renameProjectNameKeyDown = function (ev) {
@@ -6717,6 +7137,7 @@
                     saveConfig();
                     loadProjects();
                     $scope.ui.showRenameProject = false;
+                    restoreReturnFocus();
                     showToast('success', 'Project renamed', newName);
                 } catch (e) {
                     writeLog('submitRenameProject: ' + e);
@@ -6771,6 +7192,7 @@
                     }
                     saveState();
                     $scope.ui.showCreateProject = false;
+                    restoreReturnFocus();
                     showToast('success', 'Project linked', f.name || 'Project');
                     $scope.refreshTasks();
                     return;
@@ -6810,6 +7232,7 @@
 
                     $scope.ui.showCreateProject = false;
                     $scope.ui.newProjectName = '';
+                    restoreReturnFocus();
                     showToast('success', 'Project created', projectName);
                     $scope.refreshTasks();
                 } catch (e) {
@@ -6821,6 +7244,7 @@
             // Tools: Move tasks between projects
             $scope.openMoveTasks = function () {
                 try {
+                    pushReturnFocus();
                     rebuildLaneOptions();
                     $scope.ui.move.fromProjectEntryID = $scope.ui.projectEntryID;
                     $scope.ui.move.toProjectEntryID = '';
@@ -6850,6 +7274,7 @@
                     return;
                 }
                 $scope.ui.showMoveTasks = false;
+                restoreReturnFocus();
             };
 
             function getProjectFolderByEntryID(entryID) {
@@ -7074,6 +7499,7 @@
 
             $scope.openMigration = function () {
                 try {
+                    pushReturnFocus();
                     rebuildLaneOptions();
                     $scope.ui.migration.running = false;
                     $scope.ui.migration.progress = { total: 0, done: 0, percent: 0, updated: 0, skipped: 0, errors: 0 };
@@ -7097,6 +7523,7 @@
                         $scope.ui.migration.scanTasks = [];
                         updateMigrationCounts();
                         $scope.ui.showMigration = true;
+                        focusById('kfo-modal-migration', false);
                         return;
                     }
 
@@ -7123,6 +7550,7 @@
                     $scope.ui.migration.scanTasks = scan;
                     updateMigrationCounts();
                     $scope.ui.showMigration = true;
+                    focusById('kfo-modal-migration', false);
                 } catch (e) {
                     writeLog('openMigration: ' + e);
                 }
@@ -7134,6 +7562,7 @@
                     return;
                 }
                 $scope.ui.showMigration = false;
+                restoreReturnFocus();
             };
 
             $scope.runMigration = function () {
@@ -7625,6 +8054,7 @@
             $scope.openSettingsTransfer = function () {
                 try {
                     if (!$scope.ui) return;
+                    pushReturnFocus();
                     if ($scope.ui.settingsExportIncludeState === undefined) {
                         $scope.ui.settingsExportIncludeState = true;
                     }
@@ -7638,6 +8068,7 @@
                     $scope.ui.settingsImportText = '';
                     $scope.refreshSettingsExportText();
                     $scope.ui.showSettingsTransfer = true;
+                    focusById('kfo-modal-settingsTransfer', false);
                 } catch (e) {
                     reportError('openSettingsTransfer', e, 'Export/import failed', 'Could not open settings transfer. Click the ! icon for details.');
                 }
@@ -7660,6 +8091,7 @@
                 } catch (e) {
                     // ignore
                 }
+                restoreReturnFocus();
             };
 
             $scope.copySettingsExport = function () {
@@ -7798,27 +8230,27 @@
                     }
 
                     if ($scope.ui.showShortcuts) {
-                        $scope.ui.showShortcuts = false;
+                        $scope.closeShortcuts();
                         closed = true;
                     }
                     if ($scope.ui.showSettingsTransfer) {
-                        $scope.ui.showSettingsTransfer = false;
+                        $scope.closeSettingsTransfer();
                         closed = true;
                     }
                     if ($scope.ui.showErrorDetails) {
-                        $scope.ui.showErrorDetails = false;
+                        $scope.closeErrorDetails();
                         closed = true;
                     }
                     if ($scope.ui.showDiagnostics) {
-                        $scope.ui.showDiagnostics = false;
+                        $scope.closeDiagnostics();
                         closed = true;
                     }
                     if ($scope.ui.showRenameProject) {
-                        $scope.ui.showRenameProject = false;
+                        $scope.closeRenameProject();
                         closed = true;
                     }
                     if ($scope.ui.showCreateProject) {
-                        $scope.ui.showCreateProject = false;
+                        $scope.closeCreateProject();
                         closed = true;
                     }
                     if ($scope.ui.showMoveTasks) {
@@ -8083,7 +8515,9 @@
             $scope.openShortcuts = function () {
                 try {
                     if ($scope.ui) {
+                        pushReturnFocus();
                         $scope.ui.showShortcuts = true;
+                        focusById('kfo-modal-shortcuts', false);
                     }
                 } catch (e) {
                     // ignore
@@ -8094,6 +8528,7 @@
                 try {
                     if ($scope.ui) {
                         $scope.ui.showShortcuts = false;
+                        restoreReturnFocus();
                     }
                 } catch (e) {
                     // ignore
@@ -8103,6 +8538,7 @@
             // Diagnostics
             $scope.openDiagnostics = function () {
                 try {
+                    pushReturnFocus();
                     runStorageHealthCheck();
 
                     var persistedLogRaw = storageRead(LOG_ID, 'log', false);
@@ -8156,9 +8592,21 @@
                     };
                     $scope.diagnosticsText = JSON.stringify(payload, null, 2);
                     $scope.ui.showDiagnostics = true;
+                    focusById('kfo-modal-diagnostics', false);
                 } catch (e) {
                     reportError('openDiagnostics', e, 'Diagnostics failed', 'Could not build diagnostics output. Click the ! icon for details.');
                 }
+            };
+
+            $scope.closeDiagnostics = function () {
+                try {
+                    if ($scope.ui) {
+                        $scope.ui.showDiagnostics = false;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+                restoreReturnFocus();
             };
 
             $scope.copyDiagnostics = function () {
@@ -8182,6 +8630,7 @@
 
             $scope.openErrorDetails = function () {
                 try {
+                    pushReturnFocus();
                     var support = (function () {
                         try {
                             if (outlook && outlook.getBrowserSupportDetails) {
@@ -8213,8 +8662,22 @@
                     };
                     $scope.errorDetailsText = JSON.stringify(payload, null, 2);
                     $scope.ui.showErrorDetails = true;
+                    focusById('kfo-modal-errorDetails', false);
                 } catch (e) {
                     reportError('openErrorDetails', e, 'Error details failed', 'Could not build error details output.');
+                }
+            };
+
+            $scope.closeErrorDetails = function (skipRestore) {
+                try {
+                    if ($scope.ui) {
+                        $scope.ui.showErrorDetails = false;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+                if (!skipRestore) {
+                    restoreReturnFocus();
                 }
             };
 
@@ -8304,6 +8767,7 @@
                     $scope.ui.setupStep = 1;
                     $scope.ui.setupProjectMode = 'default';
                     $scope.applyLaneTemplate($scope.ui.setupLaneTemplate);
+                    focusById('kfo-modal-setupWizard', false);
                     saveConfig();
                 }
 

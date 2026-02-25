@@ -648,6 +648,11 @@ body.kfo {
   align-items: flex-start;
 }
 
+.kfo-popOption:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.22);
+}
+
 .kfo-popOption--danger {
   border-color: rgba(239, 68, 68, 0.40);
   background: rgba(239, 68, 68, 0.08);
@@ -765,6 +770,12 @@ body.kfo {
   border-radius: 12px;
   margin: 0 0 10px 0;
   overflow: hidden;
+}
+
+.kfo-task:focus {
+  outline: none;
+  border-color: rgba(0,120,212,0.85) !important;
+  box-shadow: 0 0 0 2px rgba(0,120,212,0.22), 0 8px 22px rgba(2,6,23,0.10);
 }
 
 .kfo-task--selected {
@@ -989,8 +1000,8 @@ body.kfo {
 }
 
 .kfo-taskSelectBtn {
-  height: 22px;
-  width: 22px;
+  height: 26px;
+  width: 26px;
   padding: 0;
   border-radius: 8px;
   opacity: 0.25;
