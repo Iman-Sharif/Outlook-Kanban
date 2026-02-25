@@ -22,10 +22,10 @@ echo.
 echo Disclaimer: provided "AS IS" (no warranty).
 echo.
 echo Install folder:
-echo   %APPDIR%
+echo   "%APPDIR%"
 echo.
 echo Installer log:
-echo   %KFO_LOG%
+echo   "%KFO_LOG%"
 echo.
 echo This tool can install/upgrade, repair, or uninstall.
 echo It writes registry keys under HKCU (current user).
@@ -100,21 +100,8 @@ exit /b 0
 
 :RegisterHomePage
 call :DetectOfficeVersion
-if "%KFO_OFFVER%"=="" (
-  if not "%KFO_LOG%"=="" (
-    echo RegisterHomePage: could not detect Office version>> "%KFO_LOG%"
-  )
-  echo.
-  echo Could not detect your Office version.
-  echo You can still set the Folder Home Page manually to:
-  echo   %~1
-  echo.
-  exit /b 1
-)
-
-if not "%KFO_LOG%"=="" (
-  echo RegisterHomePage: Office=%KFO_OFFVER% Path=%~1>> "%KFO_LOG%"
-)
+if "%KFO_OFFVER%"=="" goto :RegisterHomePageNoOffice
+if not "%KFO_LOG%"=="" echo RegisterHomePage: Office=%KFO_OFFVER% Path="%~1">> "%KFO_LOG%"
 
 reg add "HKCU\Software\Microsoft\Office\%KFO_OFFVER%.0\Outlook\Today" /v Stamp /t REG_DWORD /d 1 /f >nul 2>&1
 set "R1=!errorlevel!"
@@ -127,6 +114,15 @@ if not "%KFO_LOG%"=="" echo reg add UserDefinedUrl exit code: !R2!>> "%KFO_LOG%"
 if not "!R2!"=="0" exit /b 1
 exit /b 0
 
+:RegisterHomePageNoOffice
+if not "%KFO_LOG%"=="" echo RegisterHomePage: could not detect Office version>> "%KFO_LOG%"
+echo.
+echo Could not detect your Office version.
+echo You can still set the Folder Home Page manually to:
+echo   "%~1"
+echo.
+exit /b 1
+
 :UnregisterHomePage
 call :DetectOfficeVersion
 if "%KFO_OFFVER%"=="" (
@@ -137,38 +133,37 @@ reg delete "HKCU\Software\Microsoft\Office\%KFO_OFFVER%.0\Outlook\Today" /v User
 exit /b 0
 
 :CheckSourceFolder
-if not exist "%SOURCEDIR%kanban.html" (
-  echo.
-  echo This script is running in the wrong folder.
-  echo It must be located next to kanban.html.
-  echo.
-  echo If you ran this from inside a zip preview, extract the zip first.
-  echo.
-  pause
-  exit /b 1
-)
-
+if not exist "%SOURCEDIR%kanban.html" goto :CheckSourceFolderWrong
 rem Extra sanity checks (avoid installing from a partial/extracted script only)
-if not exist "%SOURCEDIR%js\app\controller.js" (
-  echo.
-  echo This folder is missing required app files (js\app\controller.js).
-  echo Please extract the full release zip and run install.cmd from inside it.
-  echo.
-  pause
-  exit /b 1
-)
+if not exist "%SOURCEDIR%js\app\controller.js" goto :CheckSourceFolderMissing
 exit /b 0
 
+:CheckSourceFolderWrong
+echo.
+echo This script is running in the wrong folder.
+echo It must be located next to kanban.html.
+echo.
+echo If you ran this from inside a zip preview, extract the zip first.
+echo.
+pause
+exit /b 1
+
+:CheckSourceFolderMissing
+echo.
+echo This folder is missing required app files (js\app\controller.js).
+echo Please extract the full release zip and run install.cmd from inside it.
+echo.
+pause
+exit /b 1
+
 :InitLog
-(
-  echo ============================================================
-  echo %APPNAME% - install log
-  echo ============================================================
-  echo Time: %DATE% %TIME%
-  echo Source: %SOURCEDIR%
-  echo Target: %APPDIR%
-  echo.
-) > "%KFO_LOG%"
+> "%KFO_LOG%" echo ============================================================
+>> "%KFO_LOG%" echo %APPNAME% - install log
+>> "%KFO_LOG%" echo ============================================================
+>> "%KFO_LOG%" echo Time: %DATE% %TIME%
+>> "%KFO_LOG%" echo Source: "%SOURCEDIR%"
+>> "%KFO_LOG%" echo Target: "%APPDIR%"
+>> "%KFO_LOG%" echo.
 exit /b 0
 
 :VerifyInstallFiles
@@ -224,50 +219,65 @@ call :CheckSourceFolder
 if errorlevel 1 exit /b 0
 
 if not exist "%APPDIR%" mkdir "%APPDIR%" >nul 2>&1
+if errorlevel 1 goto :InstallMkdirFailed
+
+rem Ensure a log exists even if a later step fails.
+call :InitLog
 
 echo.
 echo Copying files to:
-echo   %APPDIR%
+echo   "%APPDIR%"
 
 call :CopyFiles
-if errorlevel 1 (
-  echo.
-  echo Install failed: files were not copied into the install folder.
-  echo.
-  echo Install folder exists but required files are missing.
-  echo Common causes:
-  echo   - Antivirus / Controlled folder access blocked the copy
-  echo   - The zip was not fully extracted
-  echo.
-  echo Log saved to:
-  echo   %KFO_LOG%
-  echo.
-  echo Try: extract the zip to a normal folder (e.g. Desktop) and re-run install.cmd.
-  pause
-  exit /b 1
-)
+if errorlevel 1 goto :InstallCopyFailed
 
 call :RegisterHomePage "%APPDIR%\kanban.html"
-if errorlevel 1 (
-  echo.
-  echo Files were installed to:
-  echo   %APPDIR%
-  echo.
-  echo But automatic home page registration failed.
-  echo You can still set the Folder Home Page manually to:
-  echo   %APPDIR%\kanban.html
-  echo.
-  echo Log saved to:
-  echo   %KFO_LOG%
-  pause
-  exit /b 0
-)
+if errorlevel 1 goto :InstallRegFailed
 
 echo.
 echo Installed to:
-echo   %APPDIR%
+echo   "%APPDIR%"
 echo.
 echo Restart Outlook to load the board.
+pause
+exit /b 0
+
+:InstallMkdirFailed
+echo.
+echo Could not create install folder:
+echo   "%APPDIR%"
+echo.
+echo This may be blocked by security policy or permissions.
+pause
+exit /b 1
+
+:InstallCopyFailed
+echo.
+echo Install failed: files were not copied into the install folder.
+echo.
+echo Install folder exists but required files are missing.
+echo Common causes:
+echo   - Antivirus / Controlled folder access blocked the copy
+echo   - The zip was not fully extracted
+echo.
+echo Log saved to:
+echo   "%KFO_LOG%"
+echo.
+echo Try: extract the zip to a normal folder (e.g. Desktop) and re-run install.cmd.
+pause
+exit /b 1
+
+:InstallRegFailed
+echo.
+echo Files were installed to:
+echo   "%APPDIR%"
+echo.
+echo But automatic home page registration failed.
+echo You can still set the Folder Home Page manually to:
+echo   "%APPDIR%\kanban.html"
+echo.
+echo Log saved to:
+echo   "%KFO_LOG%"
 pause
 exit /b 0
 
@@ -285,30 +295,32 @@ set "TARGET="
 if exist "%APPDIR%\kanban.html" set "TARGET=%APPDIR%\kanban.html"
 if "%TARGET%"=="" if exist "%SOURCEDIR%kanban.html" set "TARGET=%SOURCEDIR%kanban.html"
 
-if "%TARGET%"=="" (
-  echo.
-  echo Could not find kanban.html.
-  echo Run Install / Upgrade first.
-  pause
-  exit /b 1
-)
+if "%TARGET%"=="" goto :RepairNoTarget
 
 call :RegisterHomePage "%TARGET%"
-if errorlevel 1 (
-  echo.
-  echo Registration failed.
-  echo You can still set the Folder Home Page manually to:
-  echo   %TARGET%
-  pause
-  exit /b 1
-)
+if errorlevel 1 goto :RepairRegFailed
 echo.
 echo Registered:
-echo   %TARGET%
+echo   "%TARGET%"
 echo.
 echo Restart Outlook to load the board.
 pause
 exit /b 0
+
+:RepairNoTarget
+echo.
+echo Could not find kanban.html.
+echo Run Install / Upgrade first.
+pause
+exit /b 1
+
+:RepairRegFailed
+echo.
+echo Registration failed.
+echo You can still set the Folder Home Page manually to:
+echo   "%TARGET%"
+pause
+exit /b 1
 
 :Uninstall
 cls
@@ -325,9 +337,7 @@ call :UnregisterHomePage
 rem If running from inside the installed folder, move out first.
 cd /d "%TEMP%" >nul 2>&1
 
-if exist "%APPDIR%" (
-  rmdir "%APPDIR%" /s /q
-)
+if exist "%APPDIR%" rmdir "%APPDIR%" /s /q
 
 echo.
 echo Uninstalled.
@@ -345,8 +355,8 @@ set "BASEDIR=%SOURCEDIR%"
 if exist "%APPDIR%\START_HERE.html" set "BASEDIR=%APPDIR%\"
 
 echo Opening:
-echo   %BASEDIR%START_HERE.html
-echo   %BASEDIR%docs\index.html
+echo   "%BASEDIR%START_HERE.html"
+echo   "%BASEDIR%docs\index.html"
 echo.
 
 start "" "%BASEDIR%START_HERE.html" >nul 2>&1
