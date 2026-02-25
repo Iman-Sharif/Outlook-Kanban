@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=11">
+    <title>Kanban for Outlook - Setup</title>
+    <link rel="stylesheet" href="site.css">
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <div class="nav">
+          <a href="../START_HERE.html">Start here</a>
+          <a href="index.html">Docs</a>
+          <a href="setup.html"><strong>Setup</strong></a>
+        </div>
+
+        <h1>Setup</h1>
+
+        <h2>Requirements</h2>
+        <ul>
+          <li>Windows + classic Outlook for Windows (not the new Outlook)</li>
+          <li>Folder Home Pages must be allowed by your organisation (some policies disable them)</li>
+        </ul>
+
+        <h2>Install / upgrade (recommended)</h2>
+        <ol>
+          <li>Extract the release zip (it contains a <code>kanban-for-outlook</code> folder).</li>
+          <li>Open that folder and run <code>install.cmd</code>.</li>
+          <li>Choose <strong>Install / Upgrade</strong> from the menu.</li>
+          <li>Restart Outlook.</li>
+        </ol>
+
+        <div class="callout calloutWarn">
+          <p><strong>Windows SmartScreen</strong></p>
+          <p class="muted">If Windows shows "Windows protected your PC", click "More info" then "Run anyway".</p>
+        </div>
+
+        <h2>Manual setup (no scripts)</h2>
+        <ol>
+          <li>Copy the extracted folder to a location you control.</li>
+          <li>In Outlook: right-click the folder you want the board on (often your mailbox root) then choose <strong>Properties</strong>.</li>
+          <li>Home Page tab: set the Address to your local <code>kanban.html</code> and enable "Show home page by default for this folder".</li>
+        </ol>
+
+        <h2>Uninstall</h2>
+        <p>Run <code>install.cmd</code> and choose <strong>Uninstall</strong>.</p>
+
+        <hr class="hr">
+
+        <h2>Troubleshooting</h2>
+        <ul>
+          <li>If your organisation blocks Folder Home Pages, the app cannot run.</li>
+          <li>If you opened <code>kanban.html</code> in a normal browser, it will show the "Home Page" warning. It must run inside Outlook.</li>
+          <li>If you are using the new Outlook or Outlook on the web: they are not supported.</li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>

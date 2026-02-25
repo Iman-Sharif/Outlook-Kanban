@@ -50,14 +50,14 @@
             <p><strong>Next steps</strong></p>
             <ol>
                 <li>Extract this folder to a location you control (for example under your user profile).</li>
-                <li>Run <code>install-local.cmd</code> to register the home page for Outlook.</li>
+                 <li>Run <code>install.cmd</code> to install/register the home page for Outlook.</li>
                 <li>Restart Outlook.</li>
             </ol>
 
             <p>
-                <a href="docs/SETUP.md">Setup guide</a>
+                <a href="docs/setup.html">Setup guide</a>
                 &nbsp;&bull;&nbsp;
-                <a href="docs/SETUP.md">Troubleshooting</a>
+                <a href="docs/setup.html">Troubleshooting</a>
             </p>
 
             <div class="kfo-small" style="margin-top: 10px;">
@@ -1199,15 +1199,16 @@
                         <p><strong>Local-only</strong>: this app does not require or use network access.</p>
 
                         <div class="kfo-row">
-                             <div class="kfo-rowLabel">Docs</div>
-                             <div class="kfo-rowControl">
-                                 <button class="kfo-btn" type="button" ng-click="openLocal('docs/SETUP.md')">Setup</button>
-                                 <button class="kfo-btn" type="button" ng-click="openLocal('docs/USAGE.md')">Usage</button>
-                                 <button class="kfo-btn" type="button" ng-click="openLocal('docs/THEMES.md')">Themes</button>
-                                 <button class="kfo-btn" type="button" ng-click="openLocal('docs/ACCESSIBILITY.md')">Accessibility</button>
-                                 <div class="kfo-small">Opens local Markdown docs in a new window/tab if supported by your Outlook security settings.</div>
-                             </div>
-                         </div>
+                              <div class="kfo-rowLabel">Docs</div>
+                              <div class="kfo-rowControl">
+                                  <button class="kfo-btn" type="button" ng-click="openLocal('docs/index.html')">Docs home</button>
+                                  <button class="kfo-btn" type="button" ng-click="openLocal('docs/setup.html')">Setup</button>
+                                  <button class="kfo-btn" type="button" ng-click="openLocal('docs/usage.html')">Usage</button>
+                                  <button class="kfo-btn" type="button" ng-click="openLocal('docs/themes.html')">Themes</button>
+                                  <button class="kfo-btn" type="button" ng-click="openLocal('docs/accessibility.html')">Accessibility</button>
+                                  <div class="kfo-small">Opens local HTML docs in a new window/tab if supported by your Outlook security settings.</div>
+                              </div>
+                          </div>
 
                         <div class="kfo-row">
                             <div class="kfo-rowLabel">Pages</div>

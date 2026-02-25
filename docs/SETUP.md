@@ -23,7 +23,7 @@ Kanban for Outlook is designed to run fully locally as an Outlook Folder Home Pa
 > For installation, do not use GitHub's green `Code` button -> `Download ZIP`, and do not use the Release page's `Source code (zip/tar.gz)` downloads. Those are for developers.
 
 2) Extract the zip (it contains a `kanban-for-outlook` folder).
-3) Open that folder and run `install.cmd` (or `install-local.cmd`).
+3) Open that folder and run `install.cmd`.
 4) Restart Outlook.
 
 The installer copies the app into:
@@ -36,7 +36,7 @@ If you prefer not to run scripts, use the manual steps below.
 
 ## Windows SmartScreen warning
 
-If you see a warning like "Windows protected your PC" when running `install.cmd` / `install-local.cmd`, this is Windows Defender SmartScreen.
+If you see a warning like "Windows protected your PC" when running `install.cmd`, this is Windows Defender SmartScreen.
 
 ### Why it happens
 
@@ -73,13 +73,13 @@ Upgrading is a file replacement.
 
 1) Close Outlook.
 2) Extract the new release zip to a temporary folder.
-3) Run `install.cmd` (safe to re-run), then restart Outlook.
+3) Run `install.cmd` (safe to re-run) and choose Install / Upgrade, then restart Outlook.
 
 See [`upgrade.html`](../upgrade.html) for the short checklist.
 
 ## Uninstall
 
-Run `uninstall.cmd`.
+Run `install.cmd` and choose Uninstall.
 
 ## Notes
 

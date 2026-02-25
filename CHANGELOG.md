@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.3.2
+
+- Replace multiple installer scripts with a single `install.cmd` menu (install/upgrade/repair/uninstall)
+- Ship offline HTML docs in the release zip (`docs/index.html`, `docs/setup.html`, etc.) and update in-app Help to use them
+- Simplify the release zip contents (remove extra `.cmd` files and Markdown docs under `docs/`)
+- Extend the local-only audit to include shipped offline docs pages
+
 ## 1.3.1
 
 - Fix release zip packaging to include `docs/ACCESSIBILITY.md`

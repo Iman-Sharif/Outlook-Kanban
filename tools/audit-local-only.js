@@ -209,7 +209,14 @@ function main() {
   [
     'kanban.html',
     'upgrade.html',
-    'whatsnew.html'
+    'whatsnew.html',
+
+    // Offline HTML docs shipped in the release zip
+    'docs/index.html',
+    'docs/setup.html',
+    'docs/usage.html',
+    'docs/themes.html',
+    'docs/accessibility.html'
   ].forEach(p => auditHtml(p, errors));
 
   // CSS: app-owned styles and themes (exclude vendor CSS)

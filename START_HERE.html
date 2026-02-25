@@ -21,6 +21,8 @@
       a:hover { text-decoration: underline; }
       .btn { display: inline-block; background: #111827; color: #ffffff; padding: 10px 12px; border-radius: 12px; text-decoration: none; }
       .btn:hover { text-decoration: none; background: #0b1220; }
+      .btnSecondary { display: inline-block; background: #ffffff; color: #111827; border: 1px solid #e5e7eb; padding: 10px 12px; border-radius: 12px; text-decoration: none; }
+      .btnSecondary:hover { text-decoration: none; background: #f3f4f6; }
       .grid { display: grid; grid-template-columns: 1fr; grid-gap: 12px; }
       @media (min-width: 860px) { .grid { grid-template-columns: 1fr 1fr; } }
     </style>
@@ -39,7 +41,12 @@
               <li>Run <code>install.cmd</code>.</li>
               <li>Restart Outlook.</li>
             </ul>
+            <p>
+              <a class="btn" href="install.cmd">Run install.cmd</a>
+              <a class="btnSecondary" href="docs/index.html">Open offline docs</a>
+            </p>
             <p class="hint">If Windows SmartScreen blocks the script: click "More info" -> "Run anyway" (or use manual install).</p>
+            <p class="hint">If clicking the button does not run the script, open the folder in File Explorer and double-click <code>install.cmd</code>.</p>
           </div>
           <div class="warn">
             <h2>Did you use "Code -> Download ZIP"?</h2>
@@ -59,12 +66,12 @@
         <h2>Install options</h2>
         <ul>
           <li><strong>Recommended:</strong> run <code>install.cmd</code> (copies files to your profile and registers the home page).</li>
-          <li><strong>Manual:</strong> follow the steps in <code>docs/SETUP.md</code> (no scripts required).</li>
+          <li><strong>Manual:</strong> follow the steps in <code>docs/setup.html</code> (no scripts required).</li>
         </ul>
 
         <h2>Troubleshooting</h2>
         <ul>
-          <li>If your organisation blocks Folder Home Pages, the app cannot run. See <code>docs/SETUP.md</code> (Troubleshooting section).</li>
+          <li>If your organisation blocks Folder Home Pages, the app cannot run. See <code>docs/setup.html</code> (Troubleshooting section).</li>
           <li>If you are using the new Outlook: it is not supported.</li>
         </ul>
 

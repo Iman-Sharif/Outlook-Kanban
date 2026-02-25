@@ -26,7 +26,7 @@ End users should start with [`START_HERE.html`](../START_HERE.html) and [`docs/S
 ├─ css/                         # Base UI components + vendored Bootstrap CSS
 ├─ vendor/                      # Vendored JS libs (local, no CDN)
 ├─ themes/                      # Built-in themes + skeleton template
-└─ install*.cmd / uninstall.cmd # Local install/uninstall helpers
+└─ install.cmd                  # Local install/upgrade/repair/uninstall menu
 ```
 
 Key storage model:

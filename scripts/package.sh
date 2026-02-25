@@ -22,8 +22,6 @@ cp "$ROOT_DIR/upgrade.html" "$PKG_DIR/"
 cp "$ROOT_DIR/whatsnew.html" "$PKG_DIR/"
 
 cp "$ROOT_DIR/install.cmd" "$PKG_DIR/"
-cp "$ROOT_DIR/install-local.cmd" "$PKG_DIR/"
-cp "$ROOT_DIR/uninstall.cmd" "$PKG_DIR/"
 
 cp "$ROOT_DIR/LICENSE" "$PKG_DIR/"
 cp "$ROOT_DIR/THIRD_PARTY_NOTICES.md" "$PKG_DIR/"
@@ -35,11 +33,12 @@ cp -R "$ROOT_DIR/vendor" "$PKG_DIR/"
 cp -R "$ROOT_DIR/themes" "$PKG_DIR/"
 
 mkdir -p "$PKG_DIR/docs"
-cp "$ROOT_DIR/docs/README.md" "$PKG_DIR/docs/"
-cp "$ROOT_DIR/docs/SETUP.md" "$PKG_DIR/docs/"
-cp "$ROOT_DIR/docs/USAGE.md" "$PKG_DIR/docs/"
-cp "$ROOT_DIR/docs/THEMES.md" "$PKG_DIR/docs/"
-cp "$ROOT_DIR/docs/ACCESSIBILITY.md" "$PKG_DIR/docs/"
+cp "$ROOT_DIR/docs/site.css" "$PKG_DIR/docs/"
+cp "$ROOT_DIR/docs/index.html" "$PKG_DIR/docs/"
+cp "$ROOT_DIR/docs/setup.html" "$PKG_DIR/docs/"
+cp "$ROOT_DIR/docs/usage.html" "$PKG_DIR/docs/"
+cp "$ROOT_DIR/docs/themes.html" "$PKG_DIR/docs/"
+cp "$ROOT_DIR/docs/accessibility.html" "$PKG_DIR/docs/"
 
 # Create zip with a single top-level folder.
 (cd "$STAGE_DIR" && zip -r "$OUT_ZIP" "$PKG_NAME" -x "*.zip")

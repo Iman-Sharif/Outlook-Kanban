@@ -24,7 +24,7 @@ Credits: [`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md).
 
 1) Download: [`kanban-for-outlook.zip`](https://github.com/Iman-Sharif/Outlook-Kanban/releases/latest/download/kanban-for-outlook.zip)
 2) Extract it.
-3) Run `install.cmd` (or `install-local.cmd`).
+3) Run `install.cmd` (menu: install/upgrade/repair/uninstall).
 4) Restart Outlook.
 
 Tip: if you'd like a simple walkthrough, open `START_HERE.html`.

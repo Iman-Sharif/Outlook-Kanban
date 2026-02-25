@@ -1,0 +1,129 @@
+/* Kanban for Outlook docs (offline, IE11-safe) */
+
+body {
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  font-size: 14px;
+  margin: 0;
+  background: #f6f7fb;
+  color: #111827;
+}
+
+.wrap {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 22px 16px 40px 16px;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 10px 28px rgba(17,24,39,0.08);
+}
+
+.nav {
+  font-size: 13px;
+  margin: 6px 0 14px 0;
+}
+
+.nav a {
+  margin-right: 12px;
+}
+
+h1 {
+  margin: 0 0 10px 0;
+  font-size: 24px;
+}
+
+h2 {
+  margin: 18px 0 8px 0;
+  font-size: 16px;
+}
+
+p {
+  margin: 10px 0;
+  line-height: 1.45;
+}
+
+ul, ol {
+  margin: 10px 0 10px 22px;
+}
+
+li {
+  line-height: 1.45;
+  margin: 4px 0;
+}
+
+code {
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+a {
+  color: #0b5fff;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.hr {
+  height: 1px;
+  background: #e5e7eb;
+  border: 0;
+  margin: 16px 0;
+}
+
+.callout {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.calloutOk {
+  border-color: #a5f3fc;
+  background: #ecfeff;
+}
+
+.calloutWarn {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.btn {
+  display: inline-block;
+  background: #111827;
+  color: #ffffff;
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+}
+
+.btn:hover {
+  text-decoration: none;
+  background: #0b1220;
+}
+
+.btnSecondary {
+  display: inline-block;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+}
+
+.btnSecondary:hover {
+  text-decoration: none;
+  background: #f3f4f6;
+}
