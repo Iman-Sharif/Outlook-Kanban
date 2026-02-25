@@ -161,7 +161,7 @@ exit /b 1
 >> "%KFO_LOG%" echo %APPNAME% - install log
 >> "%KFO_LOG%" echo ============================================================
 >> "%KFO_LOG%" echo Time: %DATE% %TIME%
->> "%KFO_LOG%" echo Source: "%SOURCEDIR%"
+>> "%KFO_LOG%" echo Source: "%SOURCEDIR%."
 >> "%KFO_LOG%" echo Target: "%APPDIR%"
 >> "%KFO_LOG%" echo.
 exit /b 0
@@ -180,7 +180,10 @@ where robocopy >> "%KFO_LOG%" 2>&1
 if errorlevel 1 goto :CopyFilesXcopy
 
 rem Copy/overwrite files without purging extras (safer than /MIR).
-robocopy "%SOURCEDIR%" "%APPDIR%" /E /R:2 /W:1 /XD .git .github dist node_modules tools tests /XF "*.zip" "package.json" "package-lock.json" ".gitignore" >> "%KFO_LOG%" 2>&1
+rem NOTE: %SOURCEDIR% ends with a trailing backslash. Quoting a path that ends in \
+rem can break argument parsing for some programs (the closing quote is escaped).
+rem Using "%SOURCEDIR%." avoids a trailing backslash inside the quoted argument.
+robocopy "%SOURCEDIR%." "%APPDIR%" /E /R:2 /W:1 /XD .git .github dist node_modules tools tests /XF "*.zip" "package.json" "package-lock.json" ".gitignore" >> "%KFO_LOG%" 2>&1
 set "RC=!errorlevel!"
 echo.>> "%KFO_LOG%"
 echo robocopy exit code: !RC!>> "%KFO_LOG%"
@@ -194,7 +197,8 @@ exit /b 0
 echo robocopy not available; falling back to xcopy>> "%KFO_LOG%"
 echo.>> "%KFO_LOG%"
 
-xcopy "%SOURCEDIR%*" "%APPDIR%\" /E /I /H /K /Y >> "%KFO_LOG%" 2>&1
+rem Avoid quoting a destination that ends with a backslash (can confuse arg parsing).
+xcopy "%SOURCEDIR%*" "%APPDIR%" /E /I /H /K /Y >> "%KFO_LOG%" 2>&1
 set "RC=!errorlevel!"
 echo.>> "%KFO_LOG%"
 echo xcopy exit code: !RC!>> "%KFO_LOG%"
