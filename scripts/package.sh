@@ -39,6 +39,7 @@ cp "$ROOT_DIR/docs/README.md" "$PKG_DIR/docs/"
 cp "$ROOT_DIR/docs/SETUP.md" "$PKG_DIR/docs/"
 cp "$ROOT_DIR/docs/USAGE.md" "$PKG_DIR/docs/"
 cp "$ROOT_DIR/docs/THEMES.md" "$PKG_DIR/docs/"
+cp "$ROOT_DIR/docs/ACCESSIBILITY.md" "$PKG_DIR/docs/"
 
 # Create zip with a single top-level folder.
 (cd "$STAGE_DIR" && zip -r "$OUT_ZIP" "$PKG_NAME" -x "*.zip")

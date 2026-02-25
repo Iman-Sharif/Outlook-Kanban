@@ -16,7 +16,7 @@
 - Drag a task card between lanes.
 - Click a card to open the task drawer (details, notes, checklist, and quick actions).
 - Double-click a card to open it in Outlook.
-- Snooze: use the drawer Snooze buttons (or Card Actions -> Snooze) to set the due date relative to today.
+- Snooze: use the drawer Snooze buttons (or Card Actions snooze presets) to set the due date relative to today.
 - Selection: use the checkbox on cards; Shift+click selects a range within the same lane.
 - Use the top-bar Select (checkmark) menu for actions like Select all visible / Select all in lane / Invert selection.
 - After a lane move, you can Undo from the toast for a short time.

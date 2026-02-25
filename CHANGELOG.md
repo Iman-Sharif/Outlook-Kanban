@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.3.1
+
+- Fix release zip packaging to include `docs/ACCESSIBILITY.md`
+- Fix focus return after long-running tools (Move tasks, Migration, Lane id tool)
+- Fix non-drag manual ordering to persist consistently across filtering
+- Add `lang` to shipped HTML pages
+
 ## 1.3.0
 
 - Add Snooze quick actions (drawer buttons + card Actions presets) computed from today

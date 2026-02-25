@@ -4133,6 +4133,14 @@
 
                     var item = list.splice(fromIndex, 1)[0];
                     list.splice(to, 0, item);
+
+                    // Keep lane.tasks in sync so future filtering preserves the new order.
+                    try {
+                        lane.tasks = list.slice(0);
+                    } catch (e0) {
+                        // ignore
+                    }
+
                     fixLaneOrder(lane);
                     showToast('success', 'Order updated', '', 1400);
                     return true;
@@ -6748,6 +6756,7 @@
                                 $scope.ui.laneIdTool.running = false;
                                 showToast('success', 'Lane id updated', String($scope.ui.laneIdTool.progress.updated) + ' tasks migrated', 2600);
                                 $scope.ui.showLaneIdTool = false;
+                                restoreReturnFocus();
                                 $scope.refreshTasks();
                                 return;
                             }
@@ -7416,6 +7425,7 @@
                         } else {
                             $scope.ui.move.running = false;
                             $scope.ui.showMoveTasks = false;
+                            restoreReturnFocus();
                             showToast('success', 'Move completed', String(moveList.length) + ' tasks moved');
                             $scope.refreshTasks();
                         }
@@ -7655,6 +7665,7 @@
                         } else {
                             $scope.ui.migration.running = false;
                             $scope.ui.showMigration = false;
+                            restoreReturnFocus();
                             showToast('success', 'Migration completed', String($scope.ui.migration.progress.updated) + ' tasks updated');
                             $scope.refreshTasks();
                         }
