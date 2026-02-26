@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.4.4
+
+- Fix the board only showing a single task in some scenarios
+- Improve new task creation reliability when saving lane metadata
+- Unassigned/unknown-lane tasks now default to the first enabled lane
+
 ## 1.4.3
 
 - Fix `install.cmd` file copy failing with Robocopy (`Invalid Parameter`) when the source path ends with a trailing backslash (eg extracted folder paths)
