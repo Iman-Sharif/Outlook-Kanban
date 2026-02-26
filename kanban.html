@@ -554,23 +554,33 @@
                             <div class="kfo-small" ng-if="ui.drawer.details && ui.drawer.details.ok === false">{{ui.drawer.details.error}}</div>
 
                             <div ng-if="ui.drawer.details && ui.drawer.details.ok">
-                                <div class="kfo-checklist" ng-if="!ui.drawer.editing && ui.drawer.checklist && ui.drawer.checklist.items && ui.drawer.checklist.items.length">
-                                    <div class="kfo-checklistTitle">Subtasks</div>
+                                <div class="kfo-drawerBox">
+                                    <textarea class="kfo-input kfo-textarea" id="kfo-drawer-body" ng-if="ui.drawer.editing" ng-model="ui.drawer.draftBody" aria-label="Task body" placeholder="Type notes..." ng-disabled="ui.drawer.saving"></textarea>
+                                    <div class="kfo-drawerNotesText" ng-if="!ui.drawer.editing">{{(ui.drawer.checklist && ui.drawer.checklist.otherText !== undefined) ? ui.drawer.checklist.otherText : ui.drawer.details.body}}</div>
+                                </div>
+
+                                <div class="kfo-checklist" ng-if="!ui.drawer.editing">
+                                    <div class="kfo-checklistTitleRow">
+                                        <div class="kfo-checklistTitle">Subtasks</div>
+                                        <button class="kfo-iconBtn kfo-iconBtn--subtle kfo-iconBtn--mini" type="button" title="Subtasks are stored as - [ ] lines in the task body." aria-label="Subtasks are stored as - [ ] lines in the task body.">
+                                            <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
+                                        </button>
+                                    </div>
+
+                                    <div class="kfo-small" ng-if="!(ui.drawer.checklist && ui.drawer.checklist.items && ui.drawer.checklist.items.length)">No subtasks yet.</div>
+
                                     <label class="kfo-checkItem" ng-repeat="it in ui.drawer.checklist.items">
                                         <input type="checkbox" ng-checked="it.checked" ng-click="toggleDrawerChecklistItem(it)" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.subjectEditing" />
                                         <span class="kfo-checkText" ng-class="{'kfo-checkText--done': it.checked}">{{it.text || '(Untitled)'}} </span>
                                     </label>
+
+                                    <div class="kfo-checkAdd">
+                                        <input class="kfo-input" type="text" ng-model="ui.drawer.newChecklistText" placeholder="Add subtask" aria-label="Add subtask" ng-keydown="drawerChecklistKeyDown($event)" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.subjectEditing" />
+                                        <button class="kfo-iconBtn kfo-iconBtn--subtle" type="button" ng-click="addDrawerChecklistItem()" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.subjectEditing" aria-label="Add subtask" title="Add subtask">
+                                            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                                        </button>
+                                    </div>
                                 </div>
-
-                                <div class="kfo-checkAdd" ng-if="!ui.drawer.editing">
-                                    <input class="kfo-input" type="text" ng-model="ui.drawer.newChecklistText" placeholder="Add subtask" aria-label="Add subtask" ng-keydown="drawerChecklistKeyDown($event)" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.subjectEditing" />
-                                    <button class="kfo-btn" type="button" ng-click="addDrawerChecklistItem()" ng-disabled="ui.drawer.saving || ui.drawer.savingSubject || ui.drawer.subjectEditing">Add</button>
-                                </div>
-                                <div class="kfo-small" ng-if="!ui.drawer.editing">Tip: subtasks are stored as <code>- [ ]</code> lines in the task body.</div>
-
-                                <textarea class="kfo-input kfo-textarea" id="kfo-drawer-body" ng-if="ui.drawer.editing" ng-model="ui.drawer.draftBody" aria-label="Task body" placeholder="Type notes..." ng-disabled="ui.drawer.saving"></textarea>
-
-                                <div class="kfo-drawerNotesText" ng-if="!ui.drawer.editing">{{(ui.drawer.checklist && ui.drawer.checklist.otherText !== undefined) ? ui.drawer.checklist.otherText : ui.drawer.details.body}}</div>
                             </div>
 
                             <div class="kfo-drawerNotesText" ng-if="!ui.drawer.details && ui.drawer.task.notes">{{ui.drawer.task.notes}}</div>

@@ -458,6 +458,14 @@ body.kfo {
   margin-left: 8px;
 }
 
+.kfo-drawerBox {
+  border: 1px solid rgba(127,127,127,0.18);
+  background: rgba(127,127,127,0.06);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
 .kfo-checklist {
   border: 1px solid rgba(127,127,127,0.18);
   background: rgba(127,127,127,0.06);
@@ -466,11 +474,22 @@ body.kfo {
   margin-bottom: 10px;
 }
 
+.kfo-checklistTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
 .kfo-checklistTitle {
   font-size: 11px;
   font-weight: 900;
   opacity: 0.9;
   margin-bottom: 6px;
+}
+
+.kfo-checklistTitleRow .kfo-checklistTitle {
+  margin-bottom: 0;
 }
 
 .kfo-checkItem {
@@ -499,6 +518,10 @@ body.kfo {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
+}
+
+.kfo-checklist .kfo-checkAdd {
+  margin-bottom: 0;
 }
 
 .kfo-checkAdd > * + * {
@@ -1163,6 +1186,22 @@ body.kfo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.kfo-iconBtn--subtle {
+  border-color: rgba(127,127,127,0.22);
+  background: rgba(127,127,127,0.06);
+}
+
+.kfo-iconBtn--subtle:hover {
+  background: rgba(127,127,127,0.10);
+  border-color: rgba(127,127,127,0.34);
+}
+
+.kfo-iconBtn--mini {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
 }
 
 .kfo-iconBtn--danger {
