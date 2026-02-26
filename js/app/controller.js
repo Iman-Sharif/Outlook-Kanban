@@ -149,6 +149,7 @@
                 settingsDirty: false,
                 settingsBaselineRaw: '',
                 isRefreshing: false,
+                refreshQueued: false,
                 lastRefreshedAtMs: 0,
                 lastRefreshedAtText: '',
                 filtersActive: false,
@@ -1917,11 +1918,14 @@
                     var today0 = new Date();
                     today0.setHours(0, 0, 0, 0);
 
-                    var items = folder.Items;
-                    var count = items.Count;
+                    var folderItems = folder.Items;
+                    var count = folderItems.Count;
                     for (var i = 1; i <= count; i++) {
-                        var task = items(i);
                         try {
+                            var task = folderItems(i);
+                            if (!task) {
+                                continue;
+                            }
                             var due = new Date(task.DueDate);
                             var dueText = '';
                             var dueMs = null;
@@ -2008,10 +2012,10 @@
                             var otherText = body;
                             try {
                                 var cl = parseChecklist(body);
-                                var items = (cl && cl.items) ? cl.items : [];
-                                checkTotal = items.length;
-                                for (var ci = 0; ci < items.length; ci++) {
-                                    if (items[ci] && items[ci].checked) checkDone++;
+                                var clItems = (cl && cl.items) ? cl.items : [];
+                                checkTotal = clItems.length;
+                                for (var ci = 0; ci < clItems.length; ci++) {
+                                    if (clItems[ci] && clItems[ci].checked) checkDone++;
                                 }
                                 if (checkTotal > 0) {
                                     otherText = (cl && cl.otherText !== undefined) ? String(cl.otherText || '') : body;
@@ -2056,7 +2060,7 @@
                                 laneAgeDays: laneAgeDays
                             });
                         } catch (inner) {
-                            writeLog('read task: ' + inner);
+                            writeLog('read task #' + i + ': ' + inner);
                         }
                     }
                 } catch (e) {
@@ -5988,6 +5992,8 @@
             $scope.refreshTasks = function () {
                 try {
                     if ($scope.ui.isRefreshing) {
+                        // Coalesce refresh requests while a refresh is in progress.
+                        $scope.ui.refreshQueued = true;
                         return;
                     }
                     $scope.ui.isRefreshing = true;
@@ -6003,6 +6009,18 @@
                             } catch (e1) {
                                 $scope.ui.lastRefreshedAtMs = 0;
                                 $scope.ui.lastRefreshedAtText = '';
+                            }
+
+                            // Run one additional refresh if requests came in during the last refresh.
+                            try {
+                                if ($scope.ui && $scope.ui.refreshQueued) {
+                                    $scope.ui.refreshQueued = false;
+                                    $timeout(function () {
+                                        try { $scope.refreshTasks(); } catch (e2) { /* ignore */ }
+                                    }, 0);
+                                }
+                            } catch (eQueued) {
+                                // ignore
                             }
                         }
                     }, 0);
@@ -6417,9 +6435,15 @@
                         taskitem.Sensitivity = SENSITIVITY.olPrivate;
                     }
 
+                     // Save first to ensure the item is fully materialized in the folder.
+                     // Some Outlook installs do not reliably persist UserProperties on brand-new items
+                     // unless the item has been saved at least once.
+                     taskitem.Save();
+
                     if (lane && lane.id) {
+                        var desiredLaneId = sanitizeId(lane.id);
                         if (outlook && outlook.setUserProperty) {
-                            outlook.setUserProperty(taskitem, PROP_LANE_ID, lane.id, OlUserPropertyType.olText);
+                            outlook.setUserProperty(taskitem, PROP_LANE_ID, desiredLaneId, OlUserPropertyType.olText);
                             try {
                                 outlook.setUserProperty(taskitem, PROP_LANE_CHANGED_AT, nowIso(), OlUserPropertyType.olText);
                             } catch (eTs) {
@@ -6440,9 +6464,31 @@
                                 taskitem.Status = lane.outlookStatus;
                             }
                         }
-                    }
 
-                    taskitem.Save();
+                        // Persist lane metadata/status updates.
+                        try {
+                            taskitem.Save();
+                        } catch (eSave2) {
+                            // Keep task creation successful even if metadata persistence fails.
+                            writeLog('quickAdd save2: ' + eSave2);
+                        }
+
+                        // Verify lane property stuck; retry once if needed.
+                        try {
+                            var actualLaneId = sanitizeId(readUserProp(taskitem, PROP_LANE_ID, LEGACY_PROP_LANE_ID));
+                            if (desiredLaneId && actualLaneId !== desiredLaneId && outlook && outlook.setUserProperty) {
+                                outlook.setUserProperty(taskitem, PROP_LANE_ID, desiredLaneId, OlUserPropertyType.olText);
+                                try {
+                                    outlook.setUserProperty(taskitem, PROP_LANE_CHANGED_AT, nowIso(), OlUserPropertyType.olText);
+                                } catch (eTs2) {
+                                    // ignore
+                                }
+                                taskitem.Save();
+                            }
+                        } catch (eVerify) {
+                            // ignore
+                        }
+                    }
 
                     $scope.ui.quickAddText = '';
                     $scope.ui.quickAddSaving = false;
@@ -6657,9 +6703,13 @@
                         taskitem.Sensitivity = SENSITIVITY.olPrivate;
                     }
 
+                     // Save first so the item is materialized before writing UserProperties.
+                     taskitem.Save();
+
                     if (lane && lane.id) {
+                        var desiredLaneId = sanitizeId(lane.id);
                         if (outlook && outlook.setUserProperty) {
-                            outlook.setUserProperty(taskitem, PROP_LANE_ID, lane.id, OlUserPropertyType.olText);
+                            outlook.setUserProperty(taskitem, PROP_LANE_ID, desiredLaneId, OlUserPropertyType.olText);
                             try {
                                 outlook.setUserProperty(taskitem, PROP_LANE_CHANGED_AT, nowIso(), OlUserPropertyType.olText);
                             } catch (eTs0) {
@@ -6678,8 +6728,33 @@
                                 taskitem.Status = lane.outlookStatus;
                             }
                         }
+
+                        // Persist lane metadata/status updates.
+                        try {
+                            taskitem.Save();
+                        } catch (eSave2) {
+                            writeLog('addTask save2: ' + eSave2);
+                        }
+
+                        // Verify lane property stuck; retry once if needed.
+                        try {
+                            var actualLaneId = sanitizeId(readUserProp(taskitem, PROP_LANE_ID, LEGACY_PROP_LANE_ID));
+                            if (desiredLaneId && actualLaneId !== desiredLaneId && outlook && outlook.setUserProperty) {
+                                outlook.setUserProperty(taskitem, PROP_LANE_ID, desiredLaneId, OlUserPropertyType.olText);
+                                try {
+                                    outlook.setUserProperty(taskitem, PROP_LANE_CHANGED_AT, nowIso(), OlUserPropertyType.olText);
+                                } catch (eTs2) {
+                                    // ignore
+                                }
+                                taskitem.Save();
+                            }
+                        } catch (eVerify) {
+                            // ignore
+                        }
                     }
-                    taskitem.Save();
+
+                    // Refresh now so the new task appears immediately on the board.
+                    $scope.refreshTasks();
                     taskitem.Display();
 
                     // Refresh after save
