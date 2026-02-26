@@ -46,6 +46,29 @@ test('buildLanes() sorts by due date, priority, then subject when saveOrder disa
   assert.deepEqual(lanes[0].tasks.map(t => t.entryID), ['c', 'b', 'a', 'd']);
 });
 
+test('buildLanes() assigns unassigned/unknown tasks to first enabled lane', () => {
+  const config = {
+    BOARD: { saveOrder: false },
+    LANES: [
+      { id: 'backlog', title: 'Backlog', color: '#94a3b8', wipLimit: 0, enabled: false, outlookStatus: 0 },
+      { id: 'doing', title: 'Doing', color: '#60a5fa', wipLimit: 0, enabled: true, outlookStatus: 1 }
+    ]
+  };
+
+  const tasks = [
+    { entryID: 'a', laneId: '', subject: 'Unassigned', dueDateMs: 1, priority: 0 },
+    { entryID: 'b', laneId: 'old-lane', subject: 'Unknown lane', dueDateMs: 2, priority: 0 }
+  ];
+
+  const lanes = board.buildLanes(tasks, config);
+  assert.equal(lanes.length, 2);
+  assert.equal(lanes[0].id, 'backlog');
+  assert.equal(lanes[1].id, 'doing');
+
+  assert.deepEqual(lanes[0].tasks.map(t => t.entryID), []);
+  assert.deepEqual(lanes[1].tasks.map(t => t.entryID), ['a', 'b']);
+});
+
 test('applyFilters() filters by privacy, search, and category', () => {
   const config = {
     BOARD: { saveOrder: false },

@@ -60,7 +60,23 @@
 
     function buildLanes(tasks, config) {
         var enabledLanes = normaliseLanes(config);
+        // Default unassigned tasks to the first *enabled* lane.
+        // If all lanes are disabled (or missing), fall back to the first lane.
         var defaultLaneId = enabledLanes[0].id;
+        for (var di = 0; di < enabledLanes.length; di++) {
+            if (enabledLanes[di] && enabledLanes[di].enabled !== false) {
+                defaultLaneId = enabledLanes[di].id;
+                break;
+            }
+        }
+
+        var defaultLane = enabledLanes[0];
+        for (var dj = 0; dj < enabledLanes.length; dj++) {
+            if (enabledLanes[dj] && enabledLanes[dj].id === defaultLaneId) {
+                defaultLane = enabledLanes[dj];
+                break;
+            }
+        }
 
         (tasks || []).forEach(function (t) {
             var laneId = util.sanitizeId(t.laneId) || defaultLaneId;
@@ -72,7 +88,7 @@
                 }
             }
             if (!lane) {
-                lane = enabledLanes[0];
+                lane = defaultLane;
             }
             lane.tasks.push(t);
         });
