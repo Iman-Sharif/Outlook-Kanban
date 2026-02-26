@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.4.5
+
+- Improve the task drawer layout: show Notes and Subtasks in separate boxes
+- Replace the subtasks storage tip text with an info icon
+- Add a plus icon button for adding subtasks
+
 ## 1.4.4
 
 - Fix the board only showing a single task in some scenarios
