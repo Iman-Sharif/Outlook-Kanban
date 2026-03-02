@@ -957,6 +957,13 @@ body.kfo {
   transform: translateY(1px);
 }
 
+.kfo-btn:disabled, .kfo-btn[disabled],
+.kfo-iconBtn:disabled, .kfo-iconBtn[disabled] {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+
 .kfo-task {
   transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
 }
@@ -1658,5 +1665,17 @@ body.kfo {
   }
   .kfo-rowLabel {
     width: 120px;
+  }
+}
+
+/* Respect OS-level reduced-motion preference.
+   IE11 ignores unrecognised media queries; modern Edge WebView2 applies it. */
+@media (prefers-reduced-motion: reduce) {
+  .kfo *,
+  .kfo *::before,
+  .kfo *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
