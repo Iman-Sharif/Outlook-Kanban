@@ -25,7 +25,9 @@
 
     var BUILTIN_THEMES = [
         { id: 'kfo-light', name: 'Light mode', cssHref: 'themes/kfo-light/theme.css', kind: 'builtin' },
-        { id: 'kfo-dark', name: 'Dark mode', cssHref: 'themes/kfo-dark/theme.css', kind: 'builtin' }
+        { id: 'kfo-dark', name: 'Dark mode', cssHref: 'themes/kfo-dark/theme.css', kind: 'builtin' },
+        { id: 'kfo-command-glass', name: 'Command Glass', cssHref: 'themes/kfo-command-glass/theme.css', kind: 'builtin' },
+        { id: 'kfo-command-glass-hc', name: 'Command Glass High Contrast', cssHref: 'themes/kfo-command-glass-hc/theme.css', kind: 'builtin' }
     ];
 
     function nowStamp() {

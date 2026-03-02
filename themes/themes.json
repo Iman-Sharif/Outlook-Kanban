@@ -14,6 +14,20 @@
       "description": "Deep, low-glare dark theme.",
       "cssHref": "themes/kfo-dark/theme.css",
       "kind": "builtin"
+    },
+    {
+      "id": "kfo-command-glass",
+      "name": "Command Glass",
+      "description": "Layered command-center theme with strong board hierarchy.",
+      "cssHref": "themes/kfo-command-glass/theme.css",
+      "kind": "builtin"
+    },
+    {
+      "id": "kfo-command-glass-hc",
+      "name": "Command Glass High Contrast",
+      "description": "High-contrast variant of Command Glass for stronger visual separation.",
+      "cssHref": "themes/kfo-command-glass-hc/theme.css",
+      "kind": "builtin"
     }
   ]
 }
