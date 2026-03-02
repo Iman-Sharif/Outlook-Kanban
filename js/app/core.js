@@ -52,6 +52,10 @@
         return util && util.isRealDate ? util.isRealDate(d) : false;
     }
 
+    function isSafeOpenUrl(url) {
+        return util && util.isSafeOpenUrl ? util.isSafeOpenUrl(url) : false;
+    }
+
     function isCssLocalOnly(cssText) {
         return themeSafety && themeSafety.isCssLocalOnly ? themeSafety.isCssLocalOnly(cssText) : false;
     }
@@ -192,6 +196,7 @@
         sanitizeId: sanitizeId,
         isValidHexColor: isValidHexColor,
         isRealDate: isRealDate,
+        isSafeOpenUrl: isSafeOpenUrl,
         isCssLocalOnly: isCssLocalOnly,
         isSafeLocalCssPath: isSafeLocalCssPath,
         DEFAULT_CONFIG_V3: DEFAULT_CONFIG_V3,

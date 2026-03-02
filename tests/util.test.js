@@ -36,3 +36,18 @@ test('isRealDate() rejects invalid/sentinel dates', () => {
   assert.equal(util.isRealDate(new Date(4501, 0, 1)), false);
   assert.equal(util.isRealDate(new Date()), true);
 });
+
+test('isSafeOpenUrl() allows normal links used by the app', () => {
+  assert.equal(util.isSafeOpenUrl('onenote:https://contoso.example/notebook'), true);
+  assert.equal(util.isSafeOpenUrl('https://contoso.example/path'), true);
+});
+
+test('isSafeOpenUrl() blocks unsafe schemes with mixed case and leading/trailing whitespace', () => {
+  assert.equal(util.isSafeOpenUrl('  JavaScript:alert(1)  '), false);
+  assert.equal(util.isSafeOpenUrl('\tvBsCrIpT:msgbox(1)\n'), false);
+  assert.equal(util.isSafeOpenUrl(' data:text/html,hello'), false);
+});
+
+test('isSafeOpenUrl() blocks protocol-relative links', () => {
+  assert.equal(util.isSafeOpenUrl('//example.com/path'), false);
+});

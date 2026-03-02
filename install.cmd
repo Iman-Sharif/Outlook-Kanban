@@ -343,6 +343,16 @@ cd /d "%TEMP%" >nul 2>&1
 
 if exist "%APPDIR%" rmdir "%APPDIR%" /s /q
 
+if exist "%APPDIR%" (
+echo.
+echo Uninstall completed, but some files could not be removed:
+echo   "%APPDIR%"
+echo.
+echo Close Outlook and any open files, then remove this folder manually if needed.
+pause
+exit /b 0
+)
+
 echo.
 echo Uninstalled.
 pause

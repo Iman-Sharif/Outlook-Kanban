@@ -9,6 +9,10 @@ STAGE_DIR="$DIST_DIR/stage"
 PKG_NAME="kanban-for-outlook"
 PKG_DIR="$STAGE_DIR/$PKG_NAME"
 
+# Preflight: required packaging tools
+command -v zip >/dev/null 2>&1 || { echo "Error: zip is required."; exit 1; }
+command -v sha256sum >/dev/null 2>&1 || { echo "Error: sha256sum is required."; exit 1; }
+
 mkdir -p "$DIST_DIR"
 rm -f "$OUT_ZIP"
 
@@ -41,7 +45,7 @@ cp "$ROOT_DIR/docs/themes.html" "$PKG_DIR/docs/"
 cp "$ROOT_DIR/docs/accessibility.html" "$PKG_DIR/docs/"
 
 # Create zip with a single top-level folder.
-(cd "$STAGE_DIR" && zip -r "$OUT_ZIP" "$PKG_NAME" -x "*.zip")
+(cd "$STAGE_DIR" && zip -r -X "$OUT_ZIP" "$PKG_NAME" -x "*.zip")
 
 rm -rf "$STAGE_DIR"
 

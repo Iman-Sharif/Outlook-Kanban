@@ -1294,10 +1294,10 @@
                     </div>
                     <div class="kfo-modalBody">
                         <div class="kfo-stepper">
-                            <span class="kfo-step" ng-class="{'kfo-stepActive': ui.setupStep == 1}">Theme</span>
-                            <span class="kfo-step" ng-class="{'kfo-stepActive': ui.setupStep == 2}">Projects</span>
-                            <span class="kfo-step" ng-class="{'kfo-stepActive': ui.setupStep == 3}">Lanes</span>
-                            <span class="kfo-step" ng-class="{'kfo-stepActive': ui.setupStep == 4}">Finish</span>
+                            <span class="kfo-step" ng-class="{'kfo-stepActive': ui.setupStep == 1}" ng-attr-aria-current="{{ui.setupStep == 1 ? 'step' : undefined}}">Theme</span>
+                            <span class="kfo-step" ng-class="{'kfo-stepActive': ui.setupStep == 2}" ng-attr-aria-current="{{ui.setupStep == 2 ? 'step' : undefined}}">Projects</span>
+                            <span class="kfo-step" ng-class="{'kfo-stepActive': ui.setupStep == 3}" ng-attr-aria-current="{{ui.setupStep == 3 ? 'step' : undefined}}">Lanes</span>
+                            <span class="kfo-step" ng-class="{'kfo-stepActive': ui.setupStep == 4}" ng-attr-aria-current="{{ui.setupStep == 4 ? 'step' : undefined}}">Finish</span>
                         </div>
 
                         <div ng-if="ui.setupStep == 1">

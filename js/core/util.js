@@ -58,6 +58,21 @@
         }
     }
 
+    function isSafeOpenUrl(url) {
+        try {
+            var s = String(url || '').replace(/^\s+|\s+$/g, '');
+            if (!s) return false;
+            var lower = s.toLowerCase();
+            if (lower.indexOf('javascript:') === 0) return false;
+            if (lower.indexOf('vbscript:') === 0) return false;
+            if (lower.indexOf('data:') === 0) return false;
+            if (lower.indexOf('//') === 0) return false;
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
     function detectEol(text) {
         try {
             return (String(text || '').indexOf('\r\n') !== -1) ? '\r\n' : '\n';
@@ -226,6 +241,7 @@
         sanitizeId: sanitizeId,
         isValidHexColor: isValidHexColor,
         isRealDate: isRealDate,
+        isSafeOpenUrl: isSafeOpenUrl,
 
         // Task body helpers (pure)
         parseChecklist: parseChecklist,
