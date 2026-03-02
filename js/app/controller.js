@@ -595,6 +595,10 @@
                 return core && core.safeErrorString ? core.safeErrorString(e) : String(e || '');
             }
 
+            function isSafeOpenUrl(url) {
+                return core && core.isSafeOpenUrl ? core.isSafeOpenUrl(url) : false;
+            }
+
             function pushSessionLog(line) {
                 try {
                     sessionLog.unshift(String(line || ''));
@@ -6890,6 +6894,10 @@
                     var u = String(url || '');
                     if (!u) {
                         showToast('info', 'OneNote', 'No OneNote link on this task', 2000);
+                        return false;
+                    }
+                    if (!isSafeOpenUrl(u)) {
+                        showUserError('Open link blocked', 'This task contains an unsafe link scheme.');
                         return false;
                     }
 
