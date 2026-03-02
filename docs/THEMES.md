@@ -8,10 +8,12 @@ Themes are local CSS overrides.
 
 - Light mode
 - Dark mode
+- Command Glass
+- Command Glass High Contrast
 
 ## Theme types
 
-- Built-in: shipped in `themes/kfo-light/` and `themes/kfo-dark/`.
+- Built-in: shipped in `themes/kfo-light/`, `themes/kfo-dark/`, `themes/kfo-command-glass/`, and `themes/kfo-command-glass-hc/`.
 - Folder theme (recommended): a `themes/<id>/theme.css` file you ship locally.
 - Imported theme: you import a local `.css` file in Settings; the CSS is stored in your Outlook config.
 

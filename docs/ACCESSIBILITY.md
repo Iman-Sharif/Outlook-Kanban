@@ -26,3 +26,7 @@ Keyboard shortcuts (like `/` for search) are opt-in (Settings -> Board -> Shortc
 
 - Popovers and dialogs keep focus inside while open.
 - When a popover/dialog closes, focus returns to the control that opened it (best-effort).
+
+## Visual contrast
+
+- Settings -> Appearance includes a built-in `Command Glass High Contrast` theme for stronger separation of lanes, cards, and controls.
