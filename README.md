@@ -27,7 +27,7 @@ Credits: [`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md).
 3) Run `install.cmd` (menu: install/upgrade/repair/uninstall).
 4) Restart Outlook.
 
-Tip: if you'd like a simple walkthrough, open `START_HERE.html`.
+Tip: if you'd like a simple walkthrough, open [`START_HERE.html`](START_HERE.html).
 
 Optional verification:
 
