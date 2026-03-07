@@ -97,10 +97,6 @@ See [`ROADMAP.md`](ROADMAP.md).
 
 This project is provided "AS IS" with no warranty. See [`DISCLAIMER.md`](DISCLAIMER.md) and [`LICENSE`](LICENSE).
 
-## License
-
-MIT, see [`LICENSE`](LICENSE).
-
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md).
