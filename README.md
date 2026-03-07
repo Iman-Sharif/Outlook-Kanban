@@ -33,12 +33,6 @@ Optional verification:
 
 - Checksum: [`kanban-for-outlook.zip.sha256`](https://github.com/Iman-Sharif/Outlook-Kanban/releases/latest/download/kanban-for-outlook.zip.sha256)
 
-> [!IMPORTANT]
-> For installation, do not use GitHub's green `Code` button -> `Download ZIP`.
-> On the Releases page, do not download `Source code (zip/tar.gz)`.
->
-> If you already downloaded a source code zip, you can still install (it just includes extra files): extract it, run `install.cmd`, then restart Outlook.
-
 See [`docs/SETUP.md`](docs/SETUP.md) for the full setup guide (including manual install).
 
 ## What it is
