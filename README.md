@@ -96,3 +96,7 @@ This project is provided "AS IS" with no warranty. See [`DISCLAIMER.md`](DISCLAI
 ## 🤝 Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+---
+
+Test line added at the bottom of the readme page.
