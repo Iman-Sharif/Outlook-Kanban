@@ -89,10 +89,6 @@ See [`PRIVACY.md`](PRIVACY.md) and [`SECURITY.md`](SECURITY.md).
 - Supported: classic Outlook for Windows (Folder Home Page / IE engine)
 - Not supported: new Outlook, Outlook on the web, macOS
 
-## 🗺️ Roadmap
-
-See [`ROADMAP.md`](ROADMAP.md).
-
 ## ⚠️ Disclaimer
 
 This project is provided "AS IS" with no warranty. See [`DISCLAIMER.md`](DISCLAIMER.md) and [`LICENSE`](LICENSE).
