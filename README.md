@@ -1,4 +1,4 @@
-# Kanban for Outlook
+# 📋 Kanban for Outlook
 
 <img width="1859" height="317" alt="image" src="https://github.com/user-attachments/assets/d6aae5ac-b873-4d10-8934-87a9cb86311a" />
 
@@ -18,9 +18,9 @@ Credits: [`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md).
 
 
 > [!IMPORTANT]
-> Local-only. No external downloads, update checks, telemetry, or prefilled support email targets.
+> 🔒 Local-only. No external downloads, update checks, telemetry, or prefilled support email targets.
 
-## Get started (recommended)
+## 🚀 Get started (recommended)
 
 1) Download: [`kanban-for-outlook.zip`](https://github.com/Iman-Sharif/Outlook-Kanban/releases/latest/download/kanban-for-outlook.zip)
 2) Extract it.
@@ -35,7 +35,7 @@ Optional verification:
 
 See [`docs/SETUP.md`](docs/SETUP.md) for the full setup guide (including manual install).
 
-## What it is
+## 📊 What it is
 
 - A board UI hosted as an Outlook Folder Home Page (classic Outlook on Windows)
 - Projects = Outlook Task folders
@@ -51,7 +51,7 @@ flowchart LR
 ```
 ![Recording 2026-02-24 160511](https://github.com/user-attachments/assets/54e3db92-735c-4643-b1ad-4c6dd7fd8f86)
 
-## Features
+## ✨ Features
 
 - Modern light/dark UI with density + motion controls
 - Fully configurable lanes (title, colour, WIP limit, optional Outlook Status sync)
@@ -62,7 +62,7 @@ flowchart LR
 
 ![Recording 2026-02-24 161525](https://github.com/user-attachments/assets/b1dcb8f0-aede-4670-8fed-52a7ee749a37)
 
-## Documentation
+## 📚 Documentation
 
 - Docs index: [`docs/README.md`](docs/README.md)
 - Setup / upgrade / troubleshooting: [`docs/SETUP.md`](docs/SETUP.md)
@@ -74,7 +74,7 @@ flowchart LR
 - Third-party notices: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
 - Disclaimer: [`DISCLAIMER.md`](DISCLAIMER.md)
 
-## Security + privacy
+## 🔒 Security + privacy
 
 Everything stays in your local Outlook profile.
 
@@ -84,19 +84,19 @@ Everything stays in your local Outlook profile.
 
 See [`PRIVACY.md`](PRIVACY.md) and [`SECURITY.md`](SECURITY.md).
 
-## Compatibility
+## ✅ Compatibility
 
 - Supported: classic Outlook for Windows (Folder Home Page / IE engine)
 - Not supported: new Outlook, Outlook on the web, macOS
 
-## Roadmap
+## 🛣️ Roadmap
 
 See [`ROADMAP.md`](ROADMAP.md).
 
-## Disclaimer
+## ⚖️ Disclaimer
 
 This project is provided "AS IS" with no warranty. See [`DISCLAIMER.md`](DISCLAIMER.md) and [`LICENSE`](LICENSE).
 
-## Contributing
+## 🤝 Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md).
