@@ -234,6 +234,91 @@
         }
     }
 
+    function parseQuickAddLine(rawLine) {
+        var src = String(rawLine || '').replace(/^\s+|\s+$/g, '');
+        var out = {
+            subject: src,
+            due: null,
+            priority: null,
+            laneId: '',
+            categories: [],
+            sensitivity: null
+        };
+        if (!src) return out;
+
+        var tokens = src.split(/\s+/);
+        var keep = [];
+        for (var i = 0; i < tokens.length; i++) {
+            var tk = String(tokens[i] || '');
+            var lower = tk.toLowerCase();
+
+            if (lower === '@today') {
+                out.due = 'today';
+                continue;
+            }
+            if (lower === '@tomorrow') {
+                out.due = 'tomorrow';
+                continue;
+            }
+            if (lower === '@next7') {
+                out.due = 'next7';
+                continue;
+            }
+            if (lower === '@nodue') {
+                out.due = 'nodue';
+                continue;
+            }
+            var duePlus = lower.match(/^@\+(\d+)d$/);
+            if (duePlus) {
+                out.due = 'plus:' + String(duePlus[1] || '0');
+                continue;
+            }
+
+            if (lower === '!high' || lower === '!h' || lower === '!2') {
+                out.priority = 2;
+                continue;
+            }
+            if (lower === '!normal' || lower === '!n' || lower === '!1') {
+                out.priority = 1;
+                continue;
+            }
+            if (lower === '!low' || lower === '!l' || lower === '!0') {
+                out.priority = 0;
+                continue;
+            }
+
+            if (tk.charAt(0) === '/' && tk.length > 1) {
+                var lid = sanitizeId(tk.substring(1));
+                if (lid) {
+                    out.laneId = lid;
+                    continue;
+                }
+            }
+
+            if (tk.charAt(0) === '#' && tk.length > 1) {
+                var cat = tk.substring(1).replace(/^\s+|\s+$/g, '');
+                if (cat && /[a-z]/i.test(cat)) {
+                    out.categories.push(cat);
+                    continue;
+                }
+            }
+
+            if (lower === '+private') {
+                out.sensitivity = 2;
+                continue;
+            }
+            if (lower === '+public') {
+                out.sensitivity = 0;
+                continue;
+            }
+
+            keep.push(tk);
+        }
+
+        out.subject = keep.join(' ').replace(/^\s+|\s+$/g, '');
+        return out;
+    }
+
     return {
         nowIso: nowIso,
         nowStamp: nowStamp,
@@ -247,6 +332,7 @@
         parseChecklist: parseChecklist,
         toggleChecklistItem: toggleChecklistItem,
         addChecklistItem: addChecklistItem,
-        mergeNotesAndChecklist: mergeNotesAndChecklist
+        mergeNotesAndChecklist: mergeNotesAndChecklist,
+        parseQuickAddLine: parseQuickAddLine
     };
 });

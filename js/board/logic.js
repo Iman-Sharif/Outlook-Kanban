@@ -109,6 +109,10 @@
             if (String(filter.due || 'any') !== 'any') return true;
             if (String(filter.status || 'all') !== 'all') return true;
             if (String(filter.stale || 'any') !== 'any') return true;
+            if (String(filter.priority || 'any') !== 'any') return true;
+            if (String(filter.lane || 'any') !== 'any') return true;
+            if (String(filter.notes || 'any') !== 'any') return true;
+            if (String(filter.subtasks || 'any') !== 'any') return true;
         } catch (e) {
             // ignore
         }
@@ -124,6 +128,10 @@
         var due = String(filter.due || 'any');
         var status = String(filter.status || 'all');
         var stale = String(filter.stale || 'any');
+        var priority = String(filter.priority || 'any');
+        var laneFilter = util.sanitizeId(filter.lane || 'any');
+        var notes = String(filter.notes || 'any');
+        var subtasks = String(filter.subtasks || 'any');
 
         var showDoneCompletedInActiveView = !!(config && config.BOARD && config.BOARD.showDoneCompletedInActiveView);
 
@@ -206,6 +214,36 @@
                         }
                         if (sd === null || sd < threshold) return false;
                     }
+                }
+
+                if (priority && priority !== 'any') {
+                    var p = parseInt(t.priority, 10);
+                    if (isNaN(p)) p = 1;
+                    if (priority === 'high' && p !== 2) return false;
+                    if (priority === 'normal' && p !== 1) return false;
+                    if (priority === 'low' && p !== 0) return false;
+                }
+
+                if (laneFilter && laneFilter !== 'any') {
+                    var taskLaneId = util.sanitizeId(t.laneId || '');
+                    if (laneFilter === 'unassigned') {
+                        if (taskLaneId) return false;
+                    } else {
+                        var currentLaneId = util.sanitizeId(lane && lane.id ? lane.id : '');
+                        if (currentLaneId !== laneFilter) return false;
+                    }
+                }
+
+                if (notes && notes !== 'any') {
+                    var hasNotes = !!t.hasNotes;
+                    if (notes === 'with' && !hasNotes) return false;
+                    if (notes === 'without' && hasNotes) return false;
+                }
+
+                if (subtasks && subtasks !== 'any') {
+                    var hasSubtasks = !!t.hasChecklist;
+                    if (subtasks === 'with' && !hasSubtasks) return false;
+                    if (subtasks === 'without' && hasSubtasks) return false;
                 }
 
                 return true;

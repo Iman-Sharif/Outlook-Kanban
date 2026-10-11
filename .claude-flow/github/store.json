@@ -1,0 +1,20 @@
+{
+  "repos": {
+    "owner/repo": {
+      "owner": "owner",
+      "name": "repo",
+      "branch": "main",
+      "lastAnalyzed": "2026-03-02T18:40:41.408Z",
+      "metrics": {
+        "commits": 865,
+        "branches": 11,
+        "contributors": 12,
+        "openIssues": 25,
+        "openPRs": 3
+      }
+    }
+  },
+  "prs": {},
+  "issues": {},
+  "version": "3.0.0"
+}

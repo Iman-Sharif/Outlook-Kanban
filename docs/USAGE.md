@@ -23,7 +23,9 @@
 - Selection (keyboard): Shift+Up/Down extends selection within a lane.
 - Use the top-bar Select (checkmark) menu for actions like Select all visible / Select all in lane / Invert selection.
 - After a lane move, you can Undo from the toast for a short time.
-- Quick add: click the lightning icon on a lane, type a subject, then press Enter.
+- Quick add: click the lightning icon on a lane, type one task per line, then press Enter to add all lines.
+- Quick add tokens: `@today`, `@tomorrow`, `@+3d`, `@next7`, `@nodue`, `!high`, `!normal`, `!low`, `#Category`, `/lane-id`, `+private`, `+public`.
+- In quick add, use `Shift+Enter` for a new line and `Esc` to close.
 - Header toggles: switch Light/Dark mode and Compact/Comfortable mode.
 
 > [!NOTE]
@@ -34,7 +36,14 @@
 - Search: filters by subject and notes preview
 - Category: show tasks in a category (or "No Category")
 - Due: Any / Overdue / Today / Next 7 days / No due date
+- Status: All / Active / Completed
+- Stale: Any / 7+ days / 14+ days / 30+ days in lane
+- Priority: Any / High / Normal / Low
+- Lane: Any / specific lane / Unassigned lane
+- Notes: Any / Has notes / No notes
+- Subtasks: Any / Has subtasks / No subtasks
 - Privacy: show All / Private only / Not Private only
+- Review presets: use Overdue / Stale / No due / Unassigned for one-click review contexts.
 - On narrow panes, the filter dropdowns collapse into a single Filters button.
 - Active filters appear as chips under the header (click a chip to clear it).
 
@@ -66,12 +75,16 @@ Use Views to save and quickly re-apply a working context (project + filters).
 
 ## Settings
 
+- Settings mode: use `Basic` for common options and `Advanced` for migration/id/theme management controls.
+- Search settings: type in the Settings search box, then jump directly to matching sections.
+- Unsaved changes: a sticky bar appears in Settings with `Review changes`, `Discard`, and `Save settings` actions.
 - Appearance: theme, density, motion, lane width, card fields, notes preview length (Comfortable mode)
 - Board: manual ordering, drag handle only, remember filters/project, date format, categories colour options, keyboard shortcuts (opt-in)
 - Projects: create/link/hide/rename projects
 - Lanes: create lanes, reorder them, set colours, WIP limits, optional Outlook Status sync
 - Lane ids: stored on tasks as `KFOLaneId` (legacy: `KFO_LaneId`) (use Change... if you need to rename an id and migrate tasks)
 - Tools: migrate lanes, move tasks between projects, export/import settings, diagnostics
+- Setup wizard: run it any time from Settings Actions or Help -> Pages -> `Run setup wizard`.
 
 ## Tools
 

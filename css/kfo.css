@@ -95,6 +95,16 @@ body.kfo {
   display: none;
 }
 
+.kfo-topbarReviewInline {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kfo-topbarReviewInline > * {
+  margin: 4px 6px 4px 0;
+}
+
 @media (max-width: 980px) {
   .kfo-topbarFiltersInline {
     display: none;
@@ -809,6 +819,11 @@ body.kfo {
   min-width: 0;
 }
 
+.kfo-quickAddInput--multi {
+  min-height: 58px;
+  resize: vertical;
+}
+
 .kfo-quickAddHint {
   padding: 0 10px 10px 10px;
 }
@@ -1321,6 +1336,21 @@ body.kfo {
   box-shadow: 0 0 0 2px rgba(0,120,212,0.14);
 }
 
+.kfo-settingsSearchResults {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.kfo-settingsSearchResults > * {
+  margin: 4px 8px 0 0;
+}
+
+.kfo .kfo-settingsCard--match {
+  border: 1px solid rgba(0,120,212,0.35);
+  box-shadow: inset 0 0 0 1px rgba(0,120,212,0.12);
+}
+
 .kfo-grid {
   /* Single-column layout (Outlook panes are often narrow) */
   display: flex;
@@ -1404,6 +1434,55 @@ body.kfo {
 .kfo-small {
   font-size: 11px;
   opacity: 0.85;
+}
+
+.kfo-settingsSticky {
+  position: sticky;
+  bottom: 0;
+  margin-top: 8px;
+  border: 1px solid rgba(127,127,127,0.22);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(2px);
+  z-index: 6;
+}
+
+.kfo-settingsStickyMain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.kfo-settingsStickyLeft,
+.kfo-settingsStickyActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kfo-settingsStickyLeft > * {
+  margin: 4px 8px 4px 0;
+}
+
+.kfo-settingsStickyActions > * {
+  margin: 4px 0 4px 8px;
+}
+
+.kfo-settingsReview {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(127,127,127,0.2);
+}
+
+.kfo-settingsReviewList {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.kfo-settingsReviewList > * {
+  margin: 4px 8px 0 0;
 }
 
 .kfo-divider {

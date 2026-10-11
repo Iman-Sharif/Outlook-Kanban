@@ -51,3 +51,44 @@ test('isSafeOpenUrl() blocks unsafe schemes with mixed case and leading/trailing
 test('isSafeOpenUrl() blocks protocol-relative links', () => {
   assert.equal(util.isSafeOpenUrl('//example.com/path'), false);
 });
+
+test('parseQuickAddLine() extracts tokens and keeps subject text', () => {
+  const p = util.parseQuickAddLine('Prepare Q1 report @tomorrow !high #Work #Finance /doing +private');
+  assert.equal(p.subject, 'Prepare Q1 report');
+  assert.equal(p.due, 'tomorrow');
+  assert.equal(p.priority, 2);
+  assert.equal(p.laneId, 'doing');
+  assert.deepEqual(p.categories, ['Work', 'Finance']);
+  assert.equal(p.sensitivity, 2);
+});
+
+test('parseQuickAddLine() supports plus-days and nodue tokens', () => {
+  const p1 = util.parseQuickAddLine('Schedule follow-up @+3d');
+  assert.equal(p1.subject, 'Schedule follow-up');
+  assert.equal(p1.due, 'plus:3');
+
+  const p2 = util.parseQuickAddLine('Tidy backlog @nodue');
+  assert.equal(p2.subject, 'Tidy backlog');
+  assert.equal(p2.due, 'nodue');
+
+  const p3 = util.parseQuickAddLine('Share update +public');
+  assert.equal(p3.subject, 'Share update');
+  assert.equal(p3.sensitivity, 0);
+});
+
+test('parseQuickAddLine() leaves unknown tokens in subject', () => {
+  const p = util.parseQuickAddLine('Investigate @later ???');
+  assert.equal(p.subject, 'Investigate @later ???');
+  assert.equal(p.due, null);
+  assert.equal(p.priority, null);
+  assert.equal(p.laneId, '');
+  assert.deepEqual(p.categories, []);
+  assert.equal(p.sensitivity, null);
+});
+
+test('parseQuickAddLine() does not treat numeric hashtags or plain words as tokens', () => {
+  const p = util.parseQuickAddLine('Fix #123 public roadmap');
+  assert.equal(p.subject, 'Fix #123 public roadmap');
+  assert.deepEqual(p.categories, []);
+  assert.equal(p.sensitivity, null);
+});

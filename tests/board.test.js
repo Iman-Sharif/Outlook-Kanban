@@ -217,3 +217,54 @@ test('applyFilters() filters by staleness (time in lane)', () => {
   board.applyFilters(lanes, filter, privacyFilter, config);
   assert.deepEqual(lanes[0].filteredTasks.map(t => t.entryID), ['s20']);
 });
+
+test('applyFilters() filters by priority, lane, notes, and subtasks', () => {
+  const config = {
+    BOARD: { saveOrder: false },
+    LANES: [
+      { id: 'backlog', title: 'Backlog', color: '#94a3b8', wipLimit: 0, enabled: true, outlookStatus: 0 },
+      { id: 'doing', title: 'Doing', color: '#60a5fa', wipLimit: 0, enabled: true, outlookStatus: 1 }
+    ]
+  };
+
+  const tasks = [
+    { entryID: 'a', laneId: 'backlog', subject: 'A', sensitivity: 0, categoriesCsv: '', categories: [], dueDateMs: 100, priority: 2, hasNotes: true, hasChecklist: true },
+    { entryID: 'b', laneId: 'doing', subject: 'B', sensitivity: 0, categoriesCsv: '', categories: [], dueDateMs: 200, priority: 1, hasNotes: false, hasChecklist: true },
+    { entryID: 'c', laneId: '', subject: 'C', sensitivity: 0, categoriesCsv: '', categories: [], dueDateMs: 300, priority: 0, hasNotes: true, hasChecklist: false }
+  ];
+
+  const lanes = board.buildLanes(tasks, config);
+  const privacyFilter = mkPrivacyFilter();
+  const base = {
+    private: privacyFilter.all.value,
+    search: '',
+    category: '<All Categories>',
+    due: 'any',
+    status: 'all',
+    stale: 'any',
+    priority: 'any',
+    lane: 'any',
+    notes: 'any',
+    subtasks: 'any'
+  };
+
+  let filter = { ...base, priority: 'high' };
+  board.applyFilters(lanes, filter, privacyFilter, config);
+  assert.deepEqual(lanes.flatMap(l => l.filteredTasks.map(t => t.entryID)), ['a']);
+
+  filter = { ...base, lane: 'doing' };
+  board.applyFilters(lanes, filter, privacyFilter, config);
+  assert.deepEqual(lanes.flatMap(l => l.filteredTasks.map(t => t.entryID)), ['b']);
+
+  filter = { ...base, lane: 'unassigned' };
+  board.applyFilters(lanes, filter, privacyFilter, config);
+  assert.deepEqual(lanes.flatMap(l => l.filteredTasks.map(t => t.entryID)), ['c']);
+
+  filter = { ...base, notes: 'without' };
+  board.applyFilters(lanes, filter, privacyFilter, config);
+  assert.deepEqual(lanes.flatMap(l => l.filteredTasks.map(t => t.entryID)), ['b']);
+
+  filter = { ...base, subtasks: 'without' };
+  board.applyFilters(lanes, filter, privacyFilter, config);
+  assert.deepEqual(lanes.flatMap(l => l.filteredTasks.map(t => t.entryID)), ['c']);
+});
